@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local environment variables (do not commit)
+.env
+# Local config files with keys
+config.*.json
