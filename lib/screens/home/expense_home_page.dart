@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../components/common/compact_header.dart';
 import '../../components/dialogs/add_expense_dialog.dart';
 // Home content composed via components
@@ -11,10 +12,7 @@ import '../../utils/snackbar_helper.dart';
 
 /// Home page for viewing and managing expenses
 class ExpenseHomePage extends StatefulWidget {
-  const ExpenseHomePage({
-    super.key,
-    required this.onSignOut,
-  });
+  const ExpenseHomePage({super.key, required this.onSignOut});
 
   final VoidCallback onSignOut;
 
@@ -50,7 +48,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     required int index,
   }) {
     final isSelected = _selectedIndex == index;
-    final color = isSelected ? Theme.of(context).colorScheme.primary : Colors.grey;
+    final color = isSelected
+        ? Theme.of(context).colorScheme.primary
+        : Colors.grey;
 
     return MaterialButton(
       minWidth: 60,
@@ -61,10 +61,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
         children: [
           Icon(icon, color: color),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(color: color, fontSize: 12),
-          ),
+          Text(label, style: TextStyle(color: color, fontSize: 12)),
         ],
       ),
     );
@@ -87,7 +84,10 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      SnackbarHelper.showMessage(context, '${AppConstants.errorFailedToLoadExpenses}: $error');
+      SnackbarHelper.showMessage(
+        context,
+        '${AppConstants.errorFailedToLoadExpenses}: $error',
+      );
     }
   }
 
@@ -102,7 +102,10 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       SnackbarHelper.showSuccess(context, 'Expense saved successfully');
     } catch (error) {
       if (!mounted) return;
-      SnackbarHelper.showMessage(context, '${AppConstants.errorFailedToSaveExpense}: $error');
+      SnackbarHelper.showMessage(
+        context,
+        '${AppConstants.errorFailedToSaveExpense}: $error',
+      );
     }
   }
 
@@ -116,7 +119,22 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
   }
 
-  String get _currentEmail => SupabaseService.currentUser?.email ?? 'Unknown user';
+  String get _currentEmail =>
+      SupabaseService.currentUser?.email ?? 'Unknown user';
+
+  double get _totalAmount {
+    return _expenses.fold<double>(0.0, (sum, expense) => sum + expense.amount);
+  }
+
+  int get _recurringCount {
+    return _expenses.where((expense) => expense.isRecurring).length;
+  }
+
+  String get _profileInitial {
+    final email = _currentEmail.trim();
+    if (email.isEmpty || email == 'Unknown user') return '?';
+    return email.characters.first.toUpperCase();
+  }
 
   Widget _buildHomeContent(BuildContext context) {
     return HomeContent(expenses: _expenses, isLoading: _isLoading);
@@ -133,10 +151,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
         children: [
           Icon(icon, size: 72, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 16),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          Text(title, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           const Text('Content will be available soon.'),
         ],
@@ -145,44 +160,138 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _onChangePassword() {
-    SnackbarHelper.showMessage(context, 'Change password will be available soon.');
+    SnackbarHelper.showMessage(
+      context,
+      'Change password will be available soon.',
+    );
   }
 
   Widget _buildProfileContent(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(Icons.person, size: 72, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 16),
-            Text(
-              'Profile',
-              style: Theme.of(context).textTheme.headlineSmall,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final currency = NumberFormat.simpleCurrency();
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            elevation: 1,
+            color: colorScheme.surface,
+            surfaceTintColor: colorScheme.surfaceTint,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${AppConstants.signedInAsLabel} $_currentEmail',
-              style: Theme.of(context).textTheme.bodyMedium,
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withAlpha(24),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _profileInitial,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Profile',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _currentEmail,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ProfileMetric(
+                          value: currency.format(_totalAmount),
+                          label: 'tracked',
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _ProfileMetric(
+                          value: _expenses.length.toString(),
+                          label: 'entries',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _ProfileMetric(
+                    value: _recurringCount.toString(),
+                    label: 'recurring expenses',
+                    icon: Icons.repeat_rounded,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            const Text('Manage your account and sign out from here.'),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _onChangePassword,
-              icon: const Icon(Icons.lock),
-              label: const Text('Change password'),
+          ),
+          const SizedBox(height: 18),
+          Card(
+            elevation: 0,
+            color: colorScheme.surface,
+            surfaceTintColor: colorScheme.surfaceTint,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: widget.onSignOut,
-              icon: const Icon(Icons.logout),
-              label: const Text('Sign out'),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                children: [
+                  _ProfileActionTile(
+                    icon: Icons.lock_outline_rounded,
+                    title: 'Change password',
+                    subtitle: 'Update your account credentials',
+                    onTap: _onChangePassword,
+                  ),
+                  Divider(height: 1, color: colorScheme.outlineVariant),
+                  _ProfileActionTile(
+                    icon: Icons.logout_rounded,
+                    title: 'Sign out',
+                    subtitle: 'End this session',
+                    isDestructive: true,
+                    onTap: widget.onSignOut,
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -251,12 +360,108 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.miniCenterDocked,
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.miniCenterDocked,
       floatingActionButton: FloatingActionButton(
         onPressed: _openAddExpenseDialog,
         tooltip: 'Add expense',
         child: const Icon(Icons.add),
       ),
+    );
+  }
+}
+
+class _ProfileMetric extends StatelessWidget {
+  const _ProfileMetric({required this.value, required this.label, this.icon});
+
+  final String value;
+  final String label;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withAlpha(115),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 17, color: colorScheme.primary),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileActionTile extends StatelessWidget {
+  const _ProfileActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.isDestructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool isDestructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final foreground = isDestructive ? colorScheme.error : colorScheme.primary;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: foreground.withAlpha(22),
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Icon(icon, color: foreground, size: 21),
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+      subtitle: Text(subtitle),
+      trailing: Icon(Icons.chevron_right_rounded, color: foreground),
+      onTap: onTap,
     );
   }
 }

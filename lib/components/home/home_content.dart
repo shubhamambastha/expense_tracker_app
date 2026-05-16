@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/expense.dart';
 import 'expense_summary_card.dart';
-import 'expense_list.dart';
+import 'monthly_analytics_card.dart';
 
 class HomeContent extends StatelessWidget {
   const HomeContent({super.key, required this.expenses, required this.isLoading});
@@ -11,16 +11,15 @@ class HomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
+      physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ExpenseSummaryCard(expenses: expenses),
           const SizedBox(height: 16),
-          Expanded(
-            child: ExpenseList(expenses: expenses, isLoading: isLoading),
-          ),
+          MonthlyAnalyticsCard(expenses: expenses),
         ],
       ),
     );
