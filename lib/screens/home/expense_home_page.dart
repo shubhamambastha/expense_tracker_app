@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../components/common/compact_header.dart';
 import '../../components/dialogs/add_expense_dialog.dart';
-import '../../components/home/expense_list.dart';
-import '../../components/home/expense_summary_card.dart';
+// Home content composed via components
+import '../../components/home/home_content.dart';
+import '../../components/home/expenses_content.dart';
 import '../../models/expense.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/constants.dart';
@@ -116,51 +118,12 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
   String get _currentEmail => SupabaseService.currentUser?.email ?? 'Unknown user';
 
-  String get _currentPageTitle {
-    return [
-      'Dashboard',
-      'Expenses',
-      'Add Expense',
-      'Advise',
-      'Profile',
-    ][_selectedIndex];
-  }
-
   Widget _buildHomeContent(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ExpenseSummaryCard(expenses: _expenses),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ExpenseList(
-              expenses: _expenses,
-              isLoading: _isLoading,
-            ),
-          ),
-        ],
-      ),
-    );
+    return HomeContent(expenses: _expenses, isLoading: _isLoading);
   }
 
   Widget _buildExpensesContent(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          Expanded(
-            child: ExpenseList(
-              expenses: _expenses,
-              isLoading: _isLoading,
-            ),
-          ),
-        ],
-      ),
-    );
+    return ExpensesContent(expenses: _expenses, isLoading: _isLoading);
   }
 
   Widget _buildPlaceholderContent(String title, IconData icon) {
@@ -242,10 +205,12 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        title: Text(_currentPageTitle),
+      body: Column(
+        children: [
+          const CompactHeader(),
+          Expanded(child: _buildBody(context)),
+        ],
       ),
-      body: _buildBody(context),
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
