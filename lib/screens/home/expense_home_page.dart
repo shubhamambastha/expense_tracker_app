@@ -132,11 +132,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${AppConstants.signedInAsLabel} $_currentEmail',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
           ExpenseSummaryCard(expenses: _expenses),
           const SizedBox(height: 16),
           Expanded(
@@ -156,10 +151,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${AppConstants.signedInAsLabel} $_currentEmail',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
           const SizedBox(height: 16),
           Expanded(
             child: ExpenseList(
@@ -190,12 +181,17 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
   }
 
+  void _onChangePassword() {
+    SnackbarHelper.showMessage(context, 'Change password will be available soon.');
+  }
+
   Widget _buildProfileContent(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(Icons.person, size: 72, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 16),
@@ -204,8 +200,19 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
+            Text(
+              '${AppConstants.signedInAsLabel} $_currentEmail',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
             const Text('Manage your account and sign out from here.'),
             const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _onChangePassword,
+              icon: const Icon(Icons.lock),
+              label: const Text('Change password'),
+            ),
+            const SizedBox(height: 12),
             ElevatedButton.icon(
               onPressed: widget.onSignOut,
               icon: const Icon(Icons.logout),
@@ -234,6 +241,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: Text(_currentPageTitle),
       ),
