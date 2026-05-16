@@ -117,7 +117,7 @@ class _ExpenseListState extends State<ExpenseList> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String?>(
-                  value: localCategory,
+                  initialValue: localCategory,
                   decoration: const InputDecoration(labelText: 'Category'),
                   items: [null, ...AppConstants.expenseCategories]
                       .map((c) => DropdownMenuItem<String?>(value: c, child: Text(c ?? 'All')))
@@ -126,7 +126,7 @@ class _ExpenseListState extends State<ExpenseList> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<AccountType?>(
-                  value: localAccount,
+                  initialValue: localAccount,
                   decoration: const InputDecoration(labelText: 'Account'),
                   items: [null, ...AccountType.values]
                       .map((a) => DropdownMenuItem<AccountType?>(value: a, child: Text(a?.label ?? 'All')))
@@ -135,7 +135,7 @@ class _ExpenseListState extends State<ExpenseList> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<ExpenseType?>(
-                  value: localType,
+                  initialValue: localType,
                   decoration: const InputDecoration(labelText: 'Type'),
                   items: [null, ...ExpenseType.values]
                       .map((t) => DropdownMenuItem<ExpenseType?>(value: t, child: Text(t?.label ?? 'All')))
@@ -281,7 +281,7 @@ class _ExpenseListState extends State<ExpenseList> {
 }
 
 class _PaginatedExpenseTable extends StatefulWidget {
-  const _PaginatedExpenseTable({Key? key, required this.expenses}) : super(key: key);
+  const _PaginatedExpenseTable({required this.expenses});
 
   final List<Expense> expenses;
 
@@ -292,7 +292,7 @@ class _PaginatedExpenseTable extends StatefulWidget {
 class _PaginatedExpenseTableState extends State<_PaginatedExpenseTable> {
   int _rowsPerPage = PaginatedDataTable.defaultRowsPerPage;
   int? _sortColumnIndex;
-  bool _sortAscending = true;
+  final bool _sortAscending = true;
 
   @override
   Widget build(BuildContext context) {

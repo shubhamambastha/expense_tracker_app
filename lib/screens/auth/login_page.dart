@@ -44,10 +44,11 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       SnackbarHelper.showError(context, error);
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
