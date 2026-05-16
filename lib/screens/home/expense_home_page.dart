@@ -23,11 +23,49 @@ class ExpenseHomePage extends StatefulWidget {
 class _ExpenseHomePageState extends State<ExpenseHomePage> {
   final List<Expense> _expenses = [];
   bool _isLoading = true;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _loadExpenses();
+  }
+
+  void _onNavItemTapped(int index) {
+    if (index == 2) {
+      _openAddExpenseDialog();
+      return;
+    }
+
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  Widget _buildBottomBarItem({
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+    final isSelected = _selectedIndex == index;
+    final color = isSelected ? Theme.of(context).colorScheme.primary : Colors.grey;
+
+    return MaterialButton(
+      minWidth: 60,
+      onPressed: () => _onNavItemTapped(index),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(color: color, fontSize: 12),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadExpenses() async {
@@ -78,49 +116,173 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
   String get _currentEmail => SupabaseService.currentUser?.email ?? 'Unknown user';
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Expense Tracker'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: widget.onSignOut,
-            tooltip: 'Sign out',
+  String get _currentPageTitle {
+    return [
+      'Dashboard',
+      'Expenses',
+      'Add Expense',
+      'Advise',
+      'Profile',
+    ][_selectedIndex];
+  }
+
+  Widget _buildHomeContent(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${AppConstants.signedInAsLabel} $_currentEmail',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _openAddExpenseDialog,
-            tooltip: 'Add expense',
+          const SizedBox(height: 16),
+          ExpenseSummaryCard(expenses: _expenses),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ExpenseList(
+              expenses: _expenses,
+              isLoading: _isLoading,
+            ),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${AppConstants.signedInAsLabel} $_currentEmail',
-              style: Theme.of(context).textTheme.bodyMedium,
+    );
+  }
+
+  Widget _buildExpensesContent(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${AppConstants.signedInAsLabel} $_currentEmail',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ExpenseList(
+              expenses: _expenses,
+              isLoading: _isLoading,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderContent(String title, IconData icon) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 72, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          const Text('Content will be available soon.'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileContent(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.person, size: 72, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 16),
-            ExpenseSummaryCard(expenses: _expenses),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ExpenseList(
-                expenses: _expenses,
-                isLoading: _isLoading,
-              ),
+            Text(
+              'Profile',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            const Text('Manage your account and sign out from here.'),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: widget.onSignOut,
+              icon: const Icon(Icons.logout),
+              label: const Text('Sign out'),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    switch (_selectedIndex) {
+      case 1:
+        return _buildExpensesContent(context);
+      case 3:
+        return _buildPlaceholderContent('Advise', Icons.psychology);
+      case 4:
+        return _buildProfileContent(context);
+      case 0:
+      default:
+        return _buildHomeContent(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_currentPageTitle),
+      ),
+      body: _buildBody(context),
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8.0,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  _buildBottomBarItem(
+                    icon: Icons.dashboard,
+                    label: 'Home',
+                    index: 0,
+                  ),
+                  _buildBottomBarItem(
+                    icon: Icons.list_alt,
+                    label: 'Expenses',
+                    index: 1,
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  _buildBottomBarItem(
+                    icon: Icons.psychology,
+                    label: 'Advise',
+                    index: 3,
+                  ),
+                  _buildBottomBarItem(
+                    icon: Icons.person,
+                    label: 'Profile',
+                    index: 4,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.miniCenterDocked,
+      floatingActionButton: FloatingActionButton(
         onPressed: _openAddExpenseDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Expense'),
+        tooltip: 'Add expense',
+        child: const Icon(Icons.add),
       ),
     );
   }
