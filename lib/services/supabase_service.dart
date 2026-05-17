@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/account.dart';
 import '../models/expense.dart';
 
 class SupabaseService {
@@ -14,28 +15,33 @@ class SupabaseService {
     final anon = anonFromDefine.isNotEmpty ? anonFromDefine : '';
 
     if (url.isEmpty || anon.isEmpty) {
-      throw Exception('Missing SUPABASE_URL or SUPABASE_ANON_KEY. Provide via --dart-define');
+      throw Exception(
+        'Missing SUPABASE_URL or SUPABASE_ANON_KEY. Provide via --dart-define',
+      );
     }
 
-    await Supabase.initialize(
-      url: url,
-      anonKey: anon,
-      debug: true,
-    );
+    await Supabase.initialize(url: url, anonKey: anon, debug: true);
   }
 
   static User? get currentUser => Supabase.instance.client.auth.currentUser;
 
-  static Stream<dynamic> get authStateChanges => Supabase.instance.client.auth.onAuthStateChange;
+  static Stream<dynamic> get authStateChanges =>
+      Supabase.instance.client.auth.onAuthStateChange;
 
-  static Future<AuthResponse> signInWithEmail(String email, String password) async {
+  static Future<AuthResponse> signInWithEmail(
+    String email,
+    String password,
+  ) async {
     return Supabase.instance.client.auth.signInWithPassword(
       email: email,
       password: password,
     );
   }
 
-  static Future<AuthResponse> signUpWithEmail(String email, String password) async {
+  static Future<AuthResponse> signUpWithEmail(
+    String email,
+    String password,
+  ) async {
     return Supabase.instance.client.auth.signUp(
       email: email,
       password: password,
@@ -61,6 +67,39 @@ class SupabaseService {
     return (data as List<dynamic>)
         .map((item) => Expense.fromMap(item as Map<String, dynamic>))
         .toList();
+  }
+
+  static Future<List<Account>> fetchAccounts() async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to load accounts.');
+    }
+
+    final data = await Supabase.instance.client
+        .from('accounts')
+        .select()
+        .eq('user_id', user.id)
+        .order('name');
+
+    return (data as List<dynamic>)
+        .map((item) => Account.fromMap(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  static Future<Account> insertAccount(Account account) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to save accounts.');
+    }
+
+    final payload = account.toMap()..['user_id'] = user.id;
+    final data = await Supabase.instance.client
+        .from('accounts')
+        .insert(payload)
+        .select()
+        .single();
+
+    return Account.fromMap(data);
   }
 
   static Future<Expense> insertExpense(Expense expense) async {

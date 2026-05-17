@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import '../../models/account.dart';
 import '../../models/expense.dart';
 import 'expense_list.dart';
 
 class ExpensesContent extends StatelessWidget {
-  const ExpensesContent({super.key, required this.expenses, required this.isLoading});
+  const ExpensesContent({
+    super.key,
+    required this.expenses,
+    required this.accounts,
+    required this.isLoading,
+  });
 
   final List<Expense> expenses;
+  final List<Account> accounts;
   final bool isLoading;
 
   @override
@@ -17,7 +24,11 @@ class ExpensesContent extends StatelessWidget {
         children: [
           const SizedBox(height: 16),
           Expanded(
-            child: ExpenseList(expenses: expenses, isLoading: isLoading),
+            child: ExpenseList(
+              expenses: expenses,
+              accounts: accounts,
+              isLoading: isLoading,
+            ),
           ),
         ],
       ),

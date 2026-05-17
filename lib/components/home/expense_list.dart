@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../models/account.dart';
 import '../../models/expense.dart';
 import '../../utils/constants.dart';
+import 'expense_list_item.dart';
 
 /// Expense list component - displays expenses with filters and search.
 class ExpenseList extends StatefulWidget {
   const ExpenseList({
     super.key,
     required this.expenses,
+    required this.accounts,
     required this.isLoading,
   });
 
   final List<Expense> expenses;
+  final List<Account> accounts;
   final bool isLoading;
 
   @override
@@ -44,7 +48,8 @@ class _ExpenseListState extends State<ExpenseList> {
           expense.category != _categoryFilter) {
         return false;
       }
-      if (_accountFilter != null && expense.accountType != _accountFilter) {
+      final account = _accountForExpense(expense);
+      if (_accountFilter != null && account?.type != _accountFilter) {
         return false;
       }
       if (_typeFilter != null && expense.type != _typeFilter) return false;
@@ -54,8 +59,10 @@ class _ExpenseListState extends State<ExpenseList> {
       if (_endDate != null && expense.date.isAfter(_endDate!)) return false;
       if (query.isEmpty) return true;
 
+      final accountLabel = _accountLabelForExpense(account).toLowerCase();
       return expense.name.toLowerCase().contains(query) ||
-          expense.category.toLowerCase().contains(query);
+          expense.category.toLowerCase().contains(query) ||
+          accountLabel.contains(query);
     }).toList();
   }
 
@@ -85,6 +92,20 @@ class _ExpenseListState extends State<ExpenseList> {
       return _categoryColors[index];
     }
     return _categoryColors[category.hashCode.abs() % _categoryColors.length];
+  }
+
+  Account? _accountForExpense(Expense expense) {
+    final accountId = expense.accountId;
+    if (accountId != null) {
+      for (final account in widget.accounts) {
+        if (account.id == accountId) return account;
+      }
+    }
+    return null;
+  }
+
+  String _accountLabelForExpense(Account? account) {
+    return account?.name ?? 'Unknown account';
   }
 
   void _resetFilters() {
@@ -337,9 +358,11 @@ class _ExpenseListState extends State<ExpenseList> {
             ),
             itemBuilder: (context, index) {
               final expense = rows[index];
-              return _ExpenseRowCard(
+              final account = _accountForExpense(expense);
+              return ExpenseListItem(
                 expense: expense,
                 categoryColor: _colorForCategory(expense.category),
+                account: account,
               );
             },
           ),
@@ -557,225 +580,6 @@ class _ActiveFilterChips extends StatelessWidget {
           label: Text(filter),
         );
       }).toList(),
-    );
-  }
-}
-
-class _ExpenseRowCard extends StatelessWidget {
-  const _ExpenseRowCard({required this.expense, required this.categoryColor});
-
-  final Expense expense;
-  final Color categoryColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      color: colorScheme.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth: MediaQuery.sizeOf(context).width - 52,
-          ),
-          child: Row(
-            children: [
-              Tooltip(
-                message: expense.category,
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: categoryColor.withAlpha(28),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Icon(
-                    _iconForCategory(expense.category),
-                    color: categoryColor,
-                    size: 16,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 9),
-              SizedBox(
-                width: 108,
-                child: Text(
-                  expense.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              _InlineMeta(
-                icon: _iconForType(expense.type),
-                label: _shortTypeLabel(expense.type),
-                tooltip: expense.type.label,
-                color: expense.isRecurring
-                    ? colorScheme.tertiary
-                    : colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              if (expense.isRecurring) ...[
-                _IconOnlyMeta(
-                  icon: Icons.repeat_rounded,
-                  tooltip: expense.endDate == null
-                      ? 'Recurring'
-                      : 'Recurring until ${DateFormat.MMMd().format(expense.endDate!)}',
-                  color: colorScheme.tertiary,
-                ),
-                const SizedBox(width: 8),
-              ],
-              _IconOnlyMeta(
-                icon: _iconForAccount(expense.accountType),
-                tooltip: expense.accountType.label,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 10),
-              Text(
-                DateFormat.MMMd().format(expense.date),
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                NumberFormat.simpleCurrency().format(expense.amount),
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  IconData _iconForCategory(String category) {
-    switch (category) {
-      case 'Food':
-        return Icons.restaurant_rounded;
-      case 'Shopping':
-        return Icons.shopping_bag_rounded;
-      case 'Travel':
-        return Icons.flight_takeoff_rounded;
-      case 'Bills':
-        return Icons.receipt_rounded;
-      case 'Health':
-        return Icons.favorite_rounded;
-      case 'Entertainment':
-        return Icons.movie_rounded;
-      default:
-        return Icons.more_horiz_rounded;
-    }
-  }
-
-  IconData _iconForType(ExpenseType type) {
-    switch (type) {
-      case ExpenseType.oneTime:
-        return Icons.event_available_rounded;
-      case ExpenseType.recurring:
-        return Icons.autorenew_rounded;
-    }
-  }
-
-  IconData _iconForAccount(AccountType accountType) {
-    switch (accountType) {
-      case AccountType.bank:
-        return Icons.account_balance_rounded;
-      case AccountType.creditCard:
-        return Icons.credit_card_rounded;
-      case AccountType.cash:
-        return Icons.payments_rounded;
-      case AccountType.other:
-        return Icons.account_balance_wallet_rounded;
-    }
-  }
-
-  String _shortTypeLabel(ExpenseType type) {
-    switch (type) {
-      case ExpenseType.oneTime:
-        return 'Once';
-      case ExpenseType.recurring:
-        return 'Recur';
-    }
-  }
-}
-
-class _InlineMeta extends StatelessWidget {
-  const _InlineMeta({
-    required this.icon,
-    required this.label,
-    required this.tooltip,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String tooltip;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-        decoration: BoxDecoration(
-          color: color.withAlpha(20),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 13),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _IconOnlyMeta extends StatelessWidget {
-  const _IconOnlyMeta({
-    required this.icon,
-    required this.tooltip,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: color.withAlpha(18),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Icon(icon, size: 13, color: color),
-      ),
     );
   }
 }

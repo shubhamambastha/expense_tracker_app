@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../models/account.dart';
 import '../../models/expense.dart';
 import '../../utils/validators.dart';
 
@@ -8,10 +9,12 @@ class AddExpenseDialog extends StatefulWidget {
   const AddExpenseDialog({
     super.key,
     required this.categories,
+    required this.accounts,
     required this.onSave,
   });
 
   final List<String> categories;
+  final List<Account> accounts;
   final void Function(Expense expense) onSave;
 
   @override
@@ -23,7 +26,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
   late String _selectedCategory;
-  AccountType _selectedAccount = AccountType.bank;
+  Account? _selectedAccount;
   ExpenseType _selectedType = ExpenseType.oneTime;
   DateTime _selectedDate = DateTime.now();
   DateTime? _selectedEndDate;
@@ -32,6 +35,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
   void initState() {
     super.initState();
     _selectedCategory = widget.categories.first;
+    _selectedAccount = widget.accounts.isEmpty ? null : widget.accounts.first;
   }
 
   @override
@@ -44,7 +48,9 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
   Future<void> _pickDate(BuildContext context, bool isEndDate) async {
     final newDate = await showDatePicker(
       context: context,
-      initialDate: isEndDate ? (_selectedEndDate ?? DateTime.now()) : _selectedDate,
+      initialDate: isEndDate
+          ? (_selectedEndDate ?? DateTime.now())
+          : _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
@@ -60,6 +66,12 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedAccount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add an account from Profile first.')),
+      );
+      return;
+    }
     final amount = double.tryParse(_amountController.text) ?? 0;
 
     widget.onSave(
@@ -69,8 +81,10 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
         amount: amount,
         date: _selectedDate,
         type: _selectedType,
-        accountType: _selectedAccount,
-        endDate: _selectedType == ExpenseType.recurring ? _selectedEndDate : null,
+        accountId: _selectedAccount!.id,
+        endDate: _selectedType == ExpenseType.recurring
+            ? _selectedEndDate
+            : null,
       ),
     );
     Navigator.of(context).pop();
@@ -94,7 +108,9 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(labelText: 'Amount'),
                 validator: validateAmount,
               ),
@@ -102,7 +118,12 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
               DropdownButtonFormField<String>(
                 initialValue: _selectedCategory,
                 items: widget.categories
-                    .map((category) => DropdownMenuItem(value: category, child: Text(category)))
+                    .map(
+                      (category) => DropdownMenuItem(
+                        value: category,
+                        child: Text(category),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   if (value != null) {
@@ -114,25 +135,38 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                 decoration: const InputDecoration(labelText: 'Category'),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<AccountType>(
+              DropdownButtonFormField<Account?>(
                 initialValue: _selectedAccount,
-                items: AccountType.values
-                    .map((value) => DropdownMenuItem(value: value, child: Text(value.label)))
+                items: widget.accounts
+                    .map(
+                      (account) => DropdownMenuItem<Account?>(
+                        value: account,
+                        child: Text('${account.name} • ${account.type.label}'),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedAccount = value;
-                    });
-                  }
+                  setState(() {
+                    _selectedAccount = value;
+                  });
                 },
-                decoration: const InputDecoration(labelText: 'Account type'),
+                decoration: InputDecoration(
+                  labelText: 'Account',
+                  helperText: widget.accounts.isEmpty
+                      ? 'Add named accounts from Profile'
+                      : null,
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<ExpenseType>(
                 initialValue: _selectedType,
                 items: ExpenseType.values
-                    .map((value) => DropdownMenuItem(value: value, child: Text(value.label)))
+                    .map(
+                      (value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(value.label),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   if (value != null) {
@@ -149,7 +183,9 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => _pickDate(context, false),
-                      child: Text('Date: ${DateFormat.yMMMd().format(_selectedDate)}'),
+                      child: Text(
+                        'Date: ${DateFormat.yMMMd().format(_selectedDate)}',
+                      ),
                     ),
                   ),
                 ],
@@ -161,9 +197,11 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => _pickDate(context, true),
-                        child: Text(_selectedEndDate == null
-                            ? 'Select end date'
-                            : 'Ends: ${DateFormat.yMMMd().format(_selectedEndDate!)}'),
+                        child: Text(
+                          _selectedEndDate == null
+                              ? 'Select end date'
+                              : 'Ends: ${DateFormat.yMMMd().format(_selectedEndDate!)}',
+                        ),
                       ),
                     ),
                   ],
@@ -174,7 +212,10 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         ElevatedButton(onPressed: _submit, child: const Text('Save')),
       ],
     );

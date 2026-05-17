@@ -10,7 +10,7 @@ class Expense {
   final DateTime date;
   final ExpenseType type;
   final DateTime? endDate;
-  final AccountType accountType;
+  final int? accountId;
   final double amount;
 
   Expense({
@@ -20,8 +20,8 @@ class Expense {
     required this.category,
     required this.date,
     required this.type,
-    required this.accountType,
     required this.amount,
+    required this.accountId,
     this.endDate,
   });
 
@@ -29,9 +29,10 @@ class Expense {
 
   factory Expense.fromMap(Map<String, dynamic> map) {
     final typeString = map['type'] as String? ?? 'oneTime';
-    final accountString = map['account_type'] as String? ?? 'bank';
     return Expense(
-      id: map['id'] is int ? map['id'] as int : int.tryParse(map['id']?.toString() ?? ''),
+      id: map['id'] is int
+          ? map['id'] as int
+          : int.tryParse(map['id']?.toString() ?? ''),
       userId: map['user_id'] as String?,
       name: map['name'] as String? ?? '',
       category: map['category'] as String? ?? 'Other',
@@ -41,11 +42,12 @@ class Expense {
         (value) => value.name == typeString,
         orElse: () => ExpenseType.oneTime,
       ),
-      accountType: AccountType.values.firstWhere(
-        (value) => value.name == accountString,
-        orElse: () => AccountType.bank,
-      ),
-      endDate: map['end_date'] == null ? null : DateTime.parse(map['end_date'] as String),
+      accountId: map['account_id'] is int
+          ? map['account_id'] as int
+          : int.tryParse(map['account_id']?.toString() ?? ''),
+      endDate: map['end_date'] == null
+          ? null
+          : DateTime.parse(map['end_date'] as String),
     );
   }
 
@@ -58,7 +60,7 @@ class Expense {
       'amount': amount,
       'date': date.toIso8601String(),
       'type': type.name,
-      'account_type': accountType.name,
+      'account_id': accountId,
       'end_date': endDate?.toIso8601String(),
     };
   }

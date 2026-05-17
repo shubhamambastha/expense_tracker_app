@@ -5,6 +5,7 @@ import '../../components/dialogs/add_expense_dialog.dart';
 // Home content composed via components
 import '../../components/home/home_content.dart';
 import '../../components/home/expenses_content.dart';
+import '../../models/account.dart';
 import '../../models/expense.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/constants.dart';
@@ -22,6 +23,7 @@ class ExpenseHomePage extends StatefulWidget {
 
 class _ExpenseHomePageState extends State<ExpenseHomePage> {
   final List<Expense> _expenses = [];
+  final List<Account> _accounts = [];
   bool _isLoading = true;
   int _selectedIndex = 0;
 
@@ -74,11 +76,25 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
     try {
       final expenses = await SupabaseService.fetchExpenses();
+      List<Account> accounts = [];
+      try {
+        accounts = await SupabaseService.fetchAccounts();
+      } catch (error) {
+        if (mounted) {
+          SnackbarHelper.showMessage(
+            context,
+            'Could not load accounts: $error',
+          );
+        }
+      }
       if (!mounted) return;
       setState(() {
         _expenses
           ..clear()
           ..addAll(expenses);
+        _accounts
+          ..clear()
+          ..addAll(accounts);
         _isLoading = false;
       });
     } catch (error) {
@@ -109,14 +125,103 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     }
   }
 
+  Future<void> _saveAccount(Account account) async {
+    try {
+      final savedAccount = await SupabaseService.insertAccount(account);
+      if (!mounted) return;
+      setState(() {
+        _accounts.add(savedAccount);
+        _accounts.sort((a, b) => a.name.compareTo(b.name));
+      });
+      SnackbarHelper.showSuccess(context, 'Account saved successfully');
+    } catch (error) {
+      if (!mounted) return;
+      SnackbarHelper.showMessage(context, 'Could not save account: $error');
+    }
+  }
+
   void _openAddExpenseDialog() {
     showDialog<void>(
       context: context,
       builder: (context) => AddExpenseDialog(
         categories: AppConstants.expenseCategories,
+        accounts: _accounts,
         onSave: _saveExpense,
       ),
     );
+  }
+
+  void _openAddAccountDialog() {
+    final nameController = TextEditingController();
+    var selectedType = AccountType.bank;
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Add account'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Account name',
+                      hintText: 'HDFC Credit Card',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<AccountType>(
+                    initialValue: selectedType,
+                    decoration: const InputDecoration(
+                      labelText: 'Account type',
+                    ),
+                    items: AccountType.values
+                        .map(
+                          (type) => DropdownMenuItem(
+                            value: type,
+                            child: Text(type.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setDialogState(() {
+                        selectedType = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) {
+                      SnackbarHelper.showMessage(
+                        context,
+                        'Enter an account name',
+                      );
+                      return;
+                    }
+                    Navigator.of(context).pop();
+                    _saveAccount(Account(name: name, type: selectedType));
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).whenComplete(nameController.dispose);
   }
 
   String get _currentEmail =>
@@ -141,7 +246,11 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   Widget _buildExpensesContent(BuildContext context) {
-    return ExpensesContent(expenses: _expenses, isLoading: _isLoading);
+    return ExpensesContent(
+      expenses: _expenses,
+      accounts: _accounts,
+      isLoading: _isLoading,
+    );
   }
 
   Widget _buildPlaceholderContent(String title, IconData icon) {
@@ -262,6 +371,11 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
             ),
           ),
           const SizedBox(height: 18),
+          _ProfileAccountsSection(
+            accounts: _accounts,
+            onAddAccount: _openAddAccountDialog,
+          ),
+          const SizedBox(height: 18),
           Card(
             elevation: 0,
             color: colorScheme.surface,
@@ -368,6 +482,102 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+}
+
+class _ProfileAccountsSection extends StatelessWidget {
+  const _ProfileAccountsSection({
+    required this.accounts,
+    required this.onAddAccount,
+  });
+
+  final List<Account> accounts;
+  final VoidCallback onAddAccount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      elevation: 0,
+      color: colorScheme.surface,
+      surfaceTintColor: colorScheme.surfaceTint,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Accounts',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                IconButton.filledTonal(
+                  tooltip: 'Add account',
+                  onPressed: onAddAccount,
+                  icon: const Icon(Icons.add_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (accounts.isEmpty)
+              Text(
+                'Add bank accounts, credit cards, cash wallets, or other sources.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: accounts.map((account) {
+                  return _AccountChip(account: account);
+                }).toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AccountChip extends StatelessWidget {
+  const _AccountChip({required this.account});
+
+  final Account account;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Chip(
+      avatar: Icon(_iconForAccount(account.type), size: 16),
+      label: Text(account.name),
+      side: BorderSide.none,
+      backgroundColor: colorScheme.surfaceContainerHighest.withAlpha(115),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  IconData _iconForAccount(AccountType type) {
+    switch (type) {
+      case AccountType.bank:
+        return Icons.account_balance_rounded;
+      case AccountType.creditCard:
+        return Icons.credit_card_rounded;
+      case AccountType.cash:
+        return Icons.payments_rounded;
+      case AccountType.other:
+        return Icons.account_balance_wallet_rounded;
+    }
   }
 }
 
