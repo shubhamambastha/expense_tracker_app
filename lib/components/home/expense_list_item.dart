@@ -60,7 +60,7 @@ class _ExpenseListItemState extends State<ExpenseListItem>
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        expense.category,
+                        expense.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleSmall?.copyWith(
@@ -83,6 +83,7 @@ class _ExpenseListItemState extends State<ExpenseListItem>
                     expense: expense,
                     account: widget.account,
                     categoryColor: widget.categoryColor,
+                    iconForCategory: _iconForCategory,
                     iconForType: _iconForType,
                     iconForAccount: _iconForAccount,
                   ),
@@ -143,6 +144,7 @@ class _ExpenseDetails extends StatelessWidget {
     required this.expense,
     required this.account,
     required this.categoryColor,
+    required this.iconForCategory,
     required this.iconForType,
     required this.iconForAccount,
   });
@@ -150,6 +152,7 @@ class _ExpenseDetails extends StatelessWidget {
   final Expense expense;
   final Account? account;
   final Color categoryColor;
+  final IconData Function(String category) iconForCategory;
   final IconData Function(ExpenseType type) iconForType;
   final IconData Function(AccountType? type) iconForAccount;
 
@@ -157,7 +160,6 @@ class _ExpenseDetails extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final endDate = expense.endDate;
 
     return Container(
       width: double.infinity,
@@ -186,17 +188,16 @@ class _ExpenseDetails extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      expense.name,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                      expense.category,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: categoryColor,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 3),
                     Text(
                       DateFormat.yMMMd().format(expense.date),
-                      style: theme.textTheme.labelMedium?.copyWith(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -205,29 +206,22 @@ class _ExpenseDetails extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _DetailPill(
-                icon: iconForAccount(account?.type),
-                label: account?.name ?? 'Unknown account',
-                color: colorScheme.primary,
-              ),
-              _DetailPill(
-                icon: iconForType(expense.type),
-                label: expense.type.label,
-                color: expense.isRecurring
-                    ? colorScheme.tertiary
-                    : colorScheme.primary,
-              ),
-              if (endDate != null)
-                _DetailPill(
-                  icon: Icons.event_busy_rounded,
-                  label: 'Ends ${DateFormat.MMMd().format(endDate)}',
-                  color: colorScheme.tertiary,
-                ),
-            ],
+          _DetailRow(
+            icon: iconForType(expense.type),
+            label: expense.type.label,
+            color: expense.isRecurring
+                ? colorScheme.tertiary
+                : colorScheme.primary,
+          ),
+          _DetailRow(
+            icon: iconForAccount(account?.type),
+            label: account?.type.label ?? 'Other',
+            color: colorScheme.primary,
+          ),
+          _DetailRow(
+            icon: Icons.account_balance_wallet_rounded,
+            label: account?.name ?? 'Unknown account',
+            color: colorScheme.secondary,
           ),
         ],
       ),
@@ -235,8 +229,8 @@ class _ExpenseDetails extends StatelessWidget {
   }
 }
 
-class _DetailPill extends StatelessWidget {
-  const _DetailPill({
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
     required this.icon,
     required this.label,
     required this.color,
@@ -248,27 +242,25 @@ class _DetailPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(999),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(width: 5),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 170),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-              ),
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: color.withAlpha(24),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: Icon(icon, color: color, size: 15),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
