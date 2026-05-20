@@ -42,7 +42,4 @@ class AppConstants {
   /// UI text
   static const String noExpensesMessage = 'No expenses yet. Tap + to add one.';
   static const String signedInAsLabel = 'Signed in as';
-  static const String totalExpensesLabel = 'Total expenses';
-  static const String entriesLabel = 'entries';
-  static const String recurringLabel = 'recurring';
 }
