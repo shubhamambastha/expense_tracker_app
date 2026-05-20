@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/account.dart';
+import '../../services/currency_settings.dart';
 import '../../models/expense.dart';
 import '../../utils/constants.dart';
 import 'expense_list_item.dart';
@@ -415,7 +416,7 @@ class _ExpenseOverviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final currency = NumberFormat.simpleCurrency();
+    final currency = CurrencySettings.instance;
 
     return Card(
       elevation: 1,

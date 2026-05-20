@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/account.dart';
+import '../../services/currency_settings.dart';
 import '../../models/expense.dart';
 
 /// Compact accordion-style expense ledger row.
@@ -211,7 +212,7 @@ class _ExpenseListItemState extends State<ExpenseListItem>
                                   child: Container(
                                     alignment: Alignment.centerRight,
                                     child: Text(
-                                      NumberFormat.simpleCurrency()
+                                      CurrencySettings.instance
                                           .format(expense.amount),
                                       style: theme.textTheme.titleSmall
                                           ?.copyWith(

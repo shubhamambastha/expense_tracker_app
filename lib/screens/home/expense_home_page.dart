@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../components/common/compact_header.dart';
 import '../../components/dialogs/expense_form_dialog.dart';
 // Home content composed via components
@@ -7,6 +6,7 @@ import '../../components/home/home_content.dart';
 import '../../components/home/expenses_content.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
+import '../../services/currency_settings.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/snackbar_helper.dart';
@@ -347,12 +347,138 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
   }
 
-  Widget _buildProfileContent(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final currency = NumberFormat.simpleCurrency();
+  void _openCurrencyPicker() {
+    final settings = CurrencySettings.instance;
 
-    return SingleChildScrollView(
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final maxSheetHeight = MediaQuery.sizeOf(sheetContext).height * 0.72;
+
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            final currentCode = settings.currencyCode;
+
+            return SafeArea(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxSheetHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+                      child: Text(
+                        'Default currency',
+                        style: Theme.of(sheetContext)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'All amounts are entered and shown in this currency.',
+                        style: Theme.of(sheetContext)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(
+                          color: Theme.of(sheetContext)
+                              .colorScheme
+                              .onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Flexible(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        itemCount: CurrencySettings.supported.length,
+                        itemBuilder: (context, index) {
+                          final option = CurrencySettings.supported[index];
+                          final selected = option.code == currentCode;
+
+                          return ListTile(
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            leading: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: selected
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest,
+                              child: Text(
+                                option.symbol,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13,
+                                  color: selected
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              option.name,
+                              style: TextStyle(
+                                fontWeight: selected
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(option.code),
+                            trailing: selected
+                                ? Icon(
+                                    Icons.check_circle_rounded,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  )
+                                : null,
+                            onTap: () async {
+                              await settings.setCurrency(option.code);
+                              setSheetState(() {});
+                              if (!sheetContext.mounted) return;
+                              Navigator.of(sheetContext).pop();
+                              if (!mounted) return;
+                              setState(() {});
+                              SnackbarHelper.showSuccess(
+                                context,
+                                'Currency set to ${option.name}',
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileContent(BuildContext context) {
+    return ListenableBuilder(
+      listenable: CurrencySettings.instance,
+      builder: (context, _) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        final currencySettings = CurrencySettings.instance;
+
+        return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
       child: Column(
@@ -419,7 +545,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                     children: [
                       Expanded(
                         child: _ProfileMetric(
-                          value: currency.format(_totalAmount),
+                          value: currencySettings.format(_totalAmount),
                           label: 'tracked',
                         ),
                       ),
@@ -456,9 +582,17 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 children: [
+                  _ProfileActionTile(
+                    icon: Icons.payments_rounded,
+                    title: 'Default currency',
+                    subtitle:
+                        '${currencySettings.current.name} (${currencySettings.currencyCode})',
+                    onTap: _openCurrencyPicker,
+                  ),
+                  Divider(height: 1, color: colorScheme.outlineVariant),
                   _ProfileActionTile(
                     icon: Icons.lock_outline_rounded,
                     title: 'Change password',
@@ -479,6 +613,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -717,7 +853,9 @@ class _ProfileActionTile extends StatelessWidget {
     final foreground = isDestructive ? colorScheme.error : colorScheme.primary;
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+      visualDensity: VisualDensity.compact,
+      minVerticalPadding: 0,
       leading: Container(
         width: 40,
         height: 40,

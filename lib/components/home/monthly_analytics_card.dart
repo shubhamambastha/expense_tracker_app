@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
 import '../../models/expense.dart';
+import '../../services/currency_settings.dart';
 import '../../utils/constants.dart';
 
 /// Shared palette for category charts (matches expense list accents).
@@ -91,7 +92,7 @@ class MonthlyAnalyticsCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final categoryTotals = _categoryTotals;
     final sortedCategories = _sortedCategoryTotals;
-    final currency = intl.NumberFormat.simpleCurrency();
+    final currency = CurrencySettings.instance;
     final topCategory = sortedCategories.isEmpty ? null : sortedCategories.first;
 
     return Card(
@@ -394,7 +395,7 @@ class _CategoryLegend extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final currency = intl.NumberFormat.compactCurrency();
+    final currency = CurrencySettings.instance;
     final visibleEntries = entries.take(4).toList();
 
     return Column(
@@ -456,7 +457,7 @@ class _CategoryLegend extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                currency.format(entry.value),
+                currency.formatCompact(entry.value),
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
@@ -647,7 +648,7 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${intl.NumberFormat.simpleCurrency().format(amount)} · ${share.round()}%',
+                            '${CurrencySettings.instance.format(amount)} · ${share.round()}%',
                             style: TextStyle(
                               color: colorScheme.onInverseSurface.withAlpha(200),
                               fontSize: 11,
@@ -802,7 +803,7 @@ class _DailySpendingChartState extends State<DailySpendingChart> {
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
-              'Day ${selectedIndex! + 1}: ${intl.NumberFormat.simpleCurrency().format(selectedAmount)}',
+              'Day ${selectedIndex! + 1}: ${CurrencySettings.instance.format(selectedAmount)}',
               style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: colorScheme.primary,

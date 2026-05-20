@@ -12,7 +12,13 @@ The workflow passes these as `--dart-define=KEY=VALUE` to `flutter build`.
 
 ## Database schema
 
-See `sql/expenses_table.sql` for a migration that creates an `expenses` table and example Row Level Security (RLS) policies.
+Run these SQL files in the Supabase SQL editor (in order if setting up fresh):
+
+- `sql/expenses_table.sql` — expenses table and RLS
+- `sql/20260517_add_named_accounts.sql` — accounts table
+- `sql/user_settings_table.sql` — per-user default currency (`default_currency_code`)
+
+The app stores amounts as numbers; `user_settings.default_currency_code` controls display and input formatting per account.
 
 Notes:
 - The migration includes a `user_id uuid` column. Use `auth.uid()` in policies to scope rows to the authenticated user.

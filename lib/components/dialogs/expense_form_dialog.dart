@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
+import '../../services/currency_settings.dart';
 import '../../utils/validators.dart';
 
 /// Dialog for adding a new expense or editing an existing one.
@@ -119,8 +120,12 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final currency = CurrencySettings.instance;
 
-    return AlertDialog(
+    return ListenableBuilder(
+      listenable: currency,
+      builder: (context, _) {
+        return AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
       titlePadding: const EdgeInsets.fromLTRB(22, 20, 14, 0),
       contentPadding: const EdgeInsets.fromLTRB(22, 18, 22, 8),
@@ -181,10 +186,10 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                         style: theme.textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.w900,
                         ),
-                        decoration: const InputDecoration(
-                          prefixText: '\$ ',
-                          hintText: '0.00',
-                          labelText: 'Amount',
+                        decoration: InputDecoration(
+                          prefixText: currency.inputPrefix,
+                          hintText: currency.decimalDigits == 0 ? '0' : '0.00',
+                          labelText: 'Amount (${currency.currencyCode})',
                           border: InputBorder.none,
                         ),
                         validator: validateAmount,
@@ -316,6 +321,8 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
           ],
         ),
       ],
+    );
+      },
     );
   }
 }

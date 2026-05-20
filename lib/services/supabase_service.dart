@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/account.dart';
 import '../models/expense.dart';
+import '../models/user_settings.dart';
 
 class SupabaseService {
   SupabaseService._();
@@ -148,5 +149,43 @@ class SupabaseService {
         .delete()
         .eq('id', expenseId)
         .eq('user_id', user.id);
+  }
+
+  static Future<UserSettings?> fetchUserSettings() async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to load settings.');
+    }
+
+    final data = await Supabase.instance.client
+        .from('user_settings')
+        .select()
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (data == null) return null;
+    return UserSettings.fromMap(data);
+  }
+
+  static Future<UserSettings> upsertUserSettings(
+    String defaultCurrencyCode,
+  ) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to save settings.');
+    }
+
+    final payload = UserSettings(
+      userId: user.id,
+      defaultCurrencyCode: defaultCurrencyCode,
+    ).toMap();
+
+    final data = await Supabase.instance.client
+        .from('user_settings')
+        .upsert(payload)
+        .select()
+        .single();
+
+    return UserSettings.fromMap(data);
   }
 }
