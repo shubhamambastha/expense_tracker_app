@@ -1,9 +1,29 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
 import '../../models/expense.dart';
 import '../../utils/constants.dart';
+
+/// Shared palette for category charts (matches expense list accents).
+const kAnalyticsChartColors = <Color>[
+  Color(0xFF4F8EF7),
+  Color(0xFF47B881),
+  Color(0xFFF8B229),
+  Color(0xFF8E5AF7),
+  Color(0xFFF15C5C),
+  Color(0xFF3FB0AC),
+  Color(0xFFF88D42),
+];
+
+Color analyticsColorForCategory(String category) {
+  final index = AppConstants.expenseCategories.indexOf(category);
+  if (index >= 0 && index < kAnalyticsChartColors.length) {
+    return kAnalyticsChartColors[index];
+  }
+  return kAnalyticsChartColors[category.hashCode.abs() % kAnalyticsChartColors.length];
+}
 
 class MonthlyAnalyticsCard extends StatelessWidget {
   const MonthlyAnalyticsCard({super.key, required this.expenses});
@@ -64,24 +84,6 @@ class MonthlyAnalyticsCard extends StatelessWidget {
     return intl.DateFormat('MMMM yyyy').format(_now);
   }
 
-  static const _chartColors = <Color>[
-    Color(0xFF4F8EF7),
-    Color(0xFF47B881),
-    Color(0xFFF8B229),
-    Color(0xFF8E5AF7),
-    Color(0xFFF15C5C),
-    Color(0xFF3FB0AC),
-    Color(0xFFF88D42),
-  ];
-
-  Color _colorForCategory(String category) {
-    final index = AppConstants.expenseCategories.indexOf(category);
-    if (index >= 0 && index < _chartColors.length) {
-      return _chartColors[index];
-    }
-    return _chartColors[category.hashCode.abs() % _chartColors.length];
-  }
-
   @override
   Widget build(BuildContext context) {
     final currentExpenses = _currentMonthExpenses;
@@ -90,27 +92,23 @@ class MonthlyAnalyticsCard extends StatelessWidget {
     final categoryTotals = _categoryTotals;
     final sortedCategories = _sortedCategoryTotals;
     final currency = intl.NumberFormat.simpleCurrency();
+    final topCategory = sortedCategories.isEmpty ? null : sortedCategories.first;
 
     return Card(
-      elevation: 1,
+      elevation: 0,
       color: colorScheme.surface,
       surfaceTintColor: colorScheme.surfaceTint,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: colorScheme.outlineVariant.withAlpha(90)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (currentExpenses.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Text(
-                    'Add expenses to see your current month analytics here.',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              )
+              _EmptyAnalyticsState(colorScheme: colorScheme)
             else ...[
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,35 +122,45 @@ class MonthlyAnalyticsCard extends StatelessWidget {
                           style: theme.textTheme.labelLarge?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           currency.format(_currentMonthTotal),
-                          style: theme.textTheme.displaySmall?.copyWith(
+                          style: theme.textTheme.headlineMedium?.copyWith(
                             color: colorScheme.onSurface,
                             fontWeight: FontWeight.w800,
-                            height: 1,
+                            height: 1.05,
+                            letterSpacing: -0.5,
                           ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: colorScheme.primary.withAlpha(20),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          colorScheme.primary.withAlpha(28),
+                          colorScheme.tertiary.withAlpha(18),
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
-                      Icons.auto_graph_rounded,
+                      Icons.insights_rounded,
                       color: colorScheme.primary,
+                      size: 22,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
@@ -172,50 +180,150 @@ class MonthlyAnalyticsCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
+              _ChartSectionHeader(
+                title: 'Spending mix',
+                subtitle: topCategory == null
+                    ? null
+                    : 'Top: ${topCategory.key}',
+              ),
+              const SizedBox(height: 14),
               SizedBox(
-                height: 160,
+                height: 172,
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
-                      flex: 5,
+                      flex: 11,
                       child: CategoryPieChart(
                         categoryTotals: categoryTotals,
-                        colorForCategory: _colorForCategory,
+                        sortedEntries: sortedCategories,
+                        total: _currentMonthTotal,
+                        colorForCategory: analyticsColorForCategory,
+                        trackColor: colorScheme.surfaceContainerHighest,
                       ),
                     ),
-                    const SizedBox(width: 18),
+                    const SizedBox(width: 14),
                     Expanded(
-                      flex: 4,
+                      flex: 10,
                       child: _CategoryLegend(
                         entries: sortedCategories,
                         total: _currentMonthTotal,
-                        colorForCategory: _colorForCategory,
+                        colorForCategory: analyticsColorForCategory,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 22),
-              Text(
-                'Daily rhythm',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
+              const SizedBox(height: 24),
+              _ChartSectionHeader(
+                title: 'Daily rhythm',
+                subtitle: 'Tap a point for details',
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               SizedBox(
-                height: 104,
+                height: 128,
                 child: DailySpendingChart(
                   dailyTotals: _dailyTotals,
-                  chartColor: colorScheme.tertiary,
+                  todayDay: _now.day,
+                  lineColor: colorScheme.primary,
+                  fillColor: colorScheme.primary,
+                  gridColor: colorScheme.outlineVariant,
                 ),
               ),
             ],
           ],
         ),
       ),
+    );
+  }
+}
+
+class _EmptyAnalyticsState extends StatelessWidget {
+  const _EmptyAnalyticsState({required this.colorScheme});
+
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withAlpha(18),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(
+              Icons.pie_chart_outline_rounded,
+              color: colorScheme.primary.withAlpha(180),
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'No spending this month yet',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Add expenses to unlock your category breakdown and daily trend.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChartSectionHeader extends StatelessWidget {
+  const _ChartSectionHeader({required this.title, this.subtitle});
+
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.1,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -239,16 +347,17 @@ class _AnalyticsStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withAlpha(115),
+        color: colorScheme.surfaceContainerHighest.withAlpha(90),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colorScheme.outlineVariant.withAlpha(50)),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 17, color: colorScheme.primary),
+          Icon(icon, size: 16, color: colorScheme.primary),
           const SizedBox(width: 8),
           Text(
             value,
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w800,
               height: 1,
             ),
@@ -258,7 +367,7 @@ class _AnalyticsStat extends StatelessWidget {
             child: Text(
               label,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelMedium?.copyWith(
+              style: theme.textTheme.labelSmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
@@ -285,42 +394,72 @@ class _CategoryLegend extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final currency = intl.NumberFormat.compactCurrency();
     final visibleEntries = entries.take(4).toList();
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: visibleEntries.map((entry) {
-        final share = total <= 0.0 ? 0.0 : (entry.value / total) * 100;
+        final share = total <= 0.0 ? 0.0 : entry.value / total;
+        final color = colorForCategory(entry.key);
+
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
-          child: Row(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: colorForCategory(entry.key),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  entry.key,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withAlpha(80),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      entry.key,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${(share * 100).round()}%',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  value: share,
+                  minHeight: 4,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                  color: color,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(height: 2),
               Text(
-                '${share.round()}%',
-                style: theme.textTheme.labelMedium?.copyWith(
+                currency.format(entry.value),
+                style: theme.textTheme.labelSmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -335,11 +474,17 @@ class CategoryPieChart extends StatefulWidget {
   const CategoryPieChart({
     super.key,
     required this.categoryTotals,
+    required this.sortedEntries,
+    required this.total,
     required this.colorForCategory,
+    required this.trackColor,
   });
 
   final Map<String, double> categoryTotals;
+  final List<MapEntry<String, double>> sortedEntries;
+  final double total;
   final Color Function(String category) colorForCategory;
+  final Color trackColor;
 
   @override
   State<CategoryPieChart> createState() => _CategoryPieChartState();
@@ -347,6 +492,11 @@ class CategoryPieChart extends StatefulWidget {
 
 class _CategoryPieChartState extends State<CategoryPieChart> {
   OverlayEntry? _tooltipEntry;
+  String? _selectedCategory;
+
+  int get _animationKey => Object.hashAll(
+    widget.sortedEntries.map((e) => '${e.key}:${e.value}'),
+  );
 
   @override
   void dispose() {
@@ -357,39 +507,53 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (details) {
-        final renderBox = context.findRenderObject() as RenderBox;
-        final localPosition = renderBox.globalToLocal(details.globalPosition);
-        final category = _categoryAtPosition(localPosition, renderBox.size);
-        if (category == null) {
-          _hideTooltip();
-          return;
-        }
-        _showTooltip(context, details.globalPosition, category);
-      },
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return CustomPaint(
-            size: Size(constraints.maxWidth, constraints.maxHeight),
-            painter: _CategoryPiePainter(
-              categoryTotals: widget.categoryTotals,
-              colorForCategory: widget.colorForCategory,
-            ),
+      onTapDown: _onTapDown,
+      onTapUp: (_) => Future.delayed(const Duration(seconds: 2), _hideTooltip),
+      child: TweenAnimationBuilder<double>(
+        key: ValueKey(_animationKey),
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeOutCubic,
+        builder: (context, progress, _) {
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return CustomPaint(
+                size: Size(constraints.maxWidth, constraints.maxHeight),
+                painter: _CategoryPiePainter(
+                  sortedEntries: widget.sortedEntries,
+                  colorForCategory: widget.colorForCategory,
+                  trackColor: widget.trackColor,
+                  progress: progress,
+                  selectedCategory: _selectedCategory,
+                ),
+              );
+            },
           );
         },
       ),
     );
   }
 
-  String? _categoryAtPosition(Offset position, Size size) {
-    final total = widget.categoryTotals.values.fold<double>(
-      0.0,
-      (sum, value) => sum + value,
-    );
-    if (total <= 0.0) return null;
+  void _onTapDown(TapDownDetails details) {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
 
-    final radius = size.shortestSide * 0.46;
-    final innerRadius = radius * 0.58;
+    final localPosition = renderBox.globalToLocal(details.globalPosition);
+    final category = _categoryAtPosition(localPosition, renderBox.size);
+    setState(() => _selectedCategory = category);
+
+    if (category == null) {
+      _hideTooltip();
+      return;
+    }
+    _showTooltip(context, details.globalPosition, category);
+  }
+
+  String? _categoryAtPosition(Offset position, Size size) {
+    if (widget.sortedEntries.isEmpty || widget.total <= 0) return null;
+
+    final radius = size.shortestSide * 0.44;
+    final innerRadius = radius * 0.62;
     final center = Offset(size.width / 2, size.height / 2);
     final tapOffset = position - center;
     if (tapOffset.distance > radius || tapOffset.distance < innerRadius) {
@@ -397,19 +561,20 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
     }
 
     var tapAngle = math.atan2(tapOffset.dy, tapOffset.dx);
-    tapAngle = (tapAngle + math.pi / 2) % (2.0 * math.pi);
+    tapAngle = (tapAngle + math.pi / 2 + 2 * math.pi) % (2.0 * math.pi);
 
+    const gap = _CategoryPiePainter.segmentGapRadians;
     var startAngle = 0.0;
-    for (final entry in widget.categoryTotals.entries) {
-      final sweepAngle = (entry.value / total) * 2.0 * math.pi;
+    for (final entry in widget.sortedEntries) {
+      final sweepAngle = (entry.value / widget.total) * 2.0 * math.pi - gap;
       final endAngle = startAngle + sweepAngle;
       if (tapAngle >= startAngle && tapAngle < endAngle) {
         return entry.key;
       }
-      startAngle = endAngle;
+      startAngle = endAngle + gap;
     }
 
-    return widget.categoryTotals.entries.lastOrNull?.key;
+    return widget.sortedEntries.lastOrNull?.key;
   }
 
   void _showTooltip(
@@ -423,61 +588,75 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
     final amount = widget.categoryTotals[category];
     if (amount == null) return;
 
+    final share = widget.total <= 0 ? 0 : (amount / widget.total) * 100;
+    final colorScheme = Theme.of(context).colorScheme;
+
     _tooltipEntry = OverlayEntry(
       builder: (context) {
         final screenWidth = MediaQuery.sizeOf(context).width;
-        final left = math.min(globalPosition.dx + 12, screenWidth - 178);
+        final left = math.min(globalPosition.dx + 8, screenWidth - 190);
+
         return Positioned(
           left: math.max(12, left),
-          top: globalPosition.dy - 44,
+          top: globalPosition.dy - 52,
           child: IgnorePointer(
             child: Material(
               color: Colors.transparent,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: screenWidth - 24),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF111827),
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
+              elevation: 6,
+              borderRadius: BorderRadius.circular(12),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colorScheme.inverseSurface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.shadow.withAlpha(60),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: widget.colorForCategory(category),
-                            shape: BoxShape.circle,
-                          ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: widget.colorForCategory(category),
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            '$category: ${intl.NumberFormat.simpleCurrency().format(amount)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            category,
+                            style: TextStyle(
+                              color: colorScheme.onInverseSurface,
                               fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${intl.NumberFormat.simpleCurrency().format(amount)} · ${share.round()}%',
+                            style: TextStyle(
+                              color: colorScheme.onInverseSurface.withAlpha(200),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -488,9 +667,6 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
     );
 
     overlay.insert(_tooltipEntry!);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) _hideTooltip();
-    });
   }
 
   void _hideTooltip() {
@@ -501,168 +677,337 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
 
 class _CategoryPiePainter extends CustomPainter {
   _CategoryPiePainter({
-    required this.categoryTotals,
+    required this.sortedEntries,
     required this.colorForCategory,
+    required this.trackColor,
+    required this.progress,
+    this.selectedCategory,
   });
 
-  final Map<String, double> categoryTotals;
+  final List<MapEntry<String, double>> sortedEntries;
   final Color Function(String category) colorForCategory;
+  final Color trackColor;
+  final double progress;
+  final String? selectedCategory;
+
+  static const segmentGapRadians = 0.035;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final total = categoryTotals.values.fold<double>(
+    final total = sortedEntries.fold<double>(
       0.0,
-      (double sum, value) => sum + value,
+      (sum, entry) => sum + entry.value,
     );
-    final outerRadius = size.shortestSide * 0.46;
-    final innerRadius = outerRadius * 0.58;
+    if (total <= 0) return;
+
+    final outerRadius = size.shortestSide * 0.44;
+    final innerRadius = outerRadius * 0.62;
     final strokeWidth = outerRadius - innerRadius;
     final radius = innerRadius + strokeWidth / 2;
     final center = Offset(size.width / 2, size.height / 2);
+    final rect = Rect.fromCircle(center: center, radius: radius);
 
-    var startAngle = -math.pi / 2;
     final trackPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = const Color(0xFFE6ECE9)
+      ..color = trackColor.withAlpha(200)
       ..isAntiAlias = true;
     canvas.drawCircle(center, radius, trackPaint);
 
-    final paint = Paint()
+    final segmentPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt
+      ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
 
-    for (final entry in categoryTotals.entries) {
-      final sweepAngle = total <= 0.0
-          ? 0.0
-          : (entry.value / total) * 2.0 * math.pi;
-      paint.color = colorForCategory(entry.key);
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        sweepAngle,
-        false,
-        paint,
-      );
-      startAngle += sweepAngle;
+    var startAngle = -math.pi / 2;
+    for (final entry in sortedEntries) {
+      final fullSweep = (entry.value / total) * 2.0 * math.pi - segmentGapRadians;
+      final sweep = fullSweep * progress;
+      final isSelected = entry.key == selectedCategory;
+      final color = colorForCategory(entry.key);
+
+      segmentPaint
+        ..color = color
+        ..strokeWidth = isSelected ? strokeWidth + 3 : strokeWidth
+        ..maskFilter = isSelected
+            ? MaskFilter.blur(BlurStyle.normal, 2)
+            : null;
+
+      if (isSelected) {
+        segmentPaint.color = Color.lerp(color, Colors.white, 0.12)!;
+      }
+
+      canvas.drawArc(rect, startAngle, sweep, false, segmentPaint);
+      startAngle += fullSweep + segmentGapRadians;
     }
   }
 
   @override
   bool shouldRepaint(covariant _CategoryPiePainter oldDelegate) {
-    return oldDelegate.categoryTotals != categoryTotals;
+    return oldDelegate.sortedEntries != sortedEntries ||
+        oldDelegate.progress != progress ||
+        oldDelegate.selectedCategory != selectedCategory ||
+        oldDelegate.trackColor != trackColor;
   }
 }
 
-class DailySpendingChart extends StatelessWidget {
+class DailySpendingChart extends StatefulWidget {
   const DailySpendingChart({
     super.key,
     required this.dailyTotals,
-    required this.chartColor,
+    required this.todayDay,
+    required this.lineColor,
+    required this.fillColor,
+    required this.gridColor,
   });
 
   final List<double> dailyTotals;
-  final Color chartColor;
+  final int todayDay;
+  final Color lineColor;
+  final Color fillColor;
+  final Color gridColor;
+
+  @override
+  State<DailySpendingChart> createState() => _DailySpendingChartState();
+}
+
+class _DailySpendingChartState extends State<DailySpendingChart> {
+  int? _selectedDayIndex;
+
+  int get _animationKey => Object.hashAll(widget.dailyTotals);
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final labelStyle = theme.textTheme.labelSmall?.copyWith(
+      color: colorScheme.onSurfaceVariant,
+      fontWeight: FontWeight.w600,
+      fontSize: 10,
+    );
+    final totalDays = widget.dailyTotals.length;
+    final midpoint = (totalDays / 2).ceil();
+    final selectedIndex = _selectedDayIndex;
+    final selectedAmount = selectedIndex != null &&
+            selectedIndex >= 0 &&
+            selectedIndex < widget.dailyTotals.length
+        ? widget.dailyTotals[selectedIndex]
+        : null;
 
-    return CustomPaint(
-      painter: _DailySpendingPainter(
-        dailyTotals: dailyTotals,
-        chartColor: chartColor,
-        guideColor: colorScheme.outlineVariant,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 4, bottom: 2),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Expanded(child: SizedBox()),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: _buildDateLabels(context),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (selectedAmount != null && selectedAmount > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              'Day ${selectedIndex! + 1}: ${intl.NumberFormat.simpleCurrency().format(selectedAmount)}',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.primary,
+              ),
             ),
+          ),
+        Expanded(
+          child: GestureDetector(
+            onTapDown: (details) {
+              final box = context.findRenderObject() as RenderBox?;
+              if (box == null) return;
+              final local = box.globalToLocal(details.globalPosition);
+              final chartWidth = box.size.width;
+              final index = ((local.dx / chartWidth) * widget.dailyTotals.length)
+                  .floor()
+                  .clamp(0, widget.dailyTotals.length - 1);
+              setState(() => _selectedDayIndex = index);
+            },
+            onTapUp: (_) {
+              Future.delayed(
+                const Duration(milliseconds: 2200),
+                () {
+                  if (mounted) setState(() => _selectedDayIndex = null);
+                },
+              );
+            },
+            child: TweenAnimationBuilder<double>(
+              key: ValueKey(_animationKey),
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (context, progress, _) {
+                return CustomPaint(
+                  painter: _DailySpendingPainter(
+                    dailyTotals: widget.dailyTotals,
+                    todayDay: widget.todayDay,
+                    lineColor: widget.lineColor,
+                    fillColor: widget.fillColor,
+                    gridColor: widget.gridColor,
+                    progress: progress,
+                    selectedDayIndex: _selectedDayIndex,
+                  ),
+                  child: const SizedBox.expand(),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('1', style: labelStyle),
+            Text('$midpoint', style: labelStyle),
+            Text('$totalDays', style: labelStyle),
           ],
         ),
-      ),
+      ],
     );
-  }
-
-  List<Widget> _buildDateLabels(BuildContext context) {
-    final totalDays = dailyTotals.length;
-    final midpoint = (totalDays / 2).ceil();
-    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
-      fontWeight: FontWeight.w600,
-    );
-
-    return [
-      Text('1', style: labelStyle),
-      Text('$midpoint', style: labelStyle),
-      Text('$totalDays', style: labelStyle),
-    ];
   }
 }
 
 class _DailySpendingPainter extends CustomPainter {
   _DailySpendingPainter({
     required this.dailyTotals,
-    required this.chartColor,
-    required this.guideColor,
+    required this.todayDay,
+    required this.lineColor,
+    required this.fillColor,
+    required this.gridColor,
+    required this.progress,
+    this.selectedDayIndex,
   });
 
   final List<double> dailyTotals;
-  final Color chartColor;
-  final Color guideColor;
+  final int todayDay;
+  final Color lineColor;
+  final Color fillColor;
+  final Color gridColor;
+  final double progress;
+  final int? selectedDayIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final chartHeight = size.height - 20;
-    final baselineY = chartHeight + 1;
-    final guidePaint = Paint()
-      ..color = guideColor.withAlpha(150)
+    const bottomPad = 4.0;
+    final chartHeight = size.height - bottomPad;
+    final baselineY = chartHeight;
+
+    final gridPaint = Paint()
+      ..color = gridColor.withAlpha(90)
       ..strokeWidth = 1;
-    canvas.drawLine(
-      Offset(0, baselineY),
-      Offset(size.width, baselineY),
-      guidePaint,
-    );
+    for (var i = 1; i <= 3; i++) {
+      final y = baselineY - (chartHeight / 4) * i;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+    canvas.drawLine(Offset(0, baselineY), Offset(size.width, baselineY), gridPaint);
 
     if (dailyTotals.isEmpty) return;
 
-    final maxTotal = dailyTotals.reduce((double a, double b) => a > b ? a : b);
-    if (maxTotal <= 0.0) return;
+    final maxTotal = dailyTotals.reduce(math.max);
+    if (maxTotal <= 0) return;
 
-    final paint = Paint()
-      ..color = chartColor.withAlpha((0.82 * 255).round())
-      ..isAntiAlias = true;
-    final barWidth = math.max(4.0, size.width / (dailyTotals.length * 3.2));
-    final spacing =
-        (size.width - dailyTotals.length * barWidth) / (dailyTotals.length + 1);
+    final points = <Offset>[];
+    for (var i = 0; i < dailyTotals.length; i++) {
+      final x = dailyTotals.length == 1
+          ? size.width / 2
+          : (i / (dailyTotals.length - 1)) * size.width;
+      final normalized = dailyTotals[i] / maxTotal;
+      final y = baselineY - normalized * (chartHeight - 12) * progress;
+      points.add(Offset(x, y));
+    }
 
-    for (var index = 0; index < dailyTotals.length; index++) {
-      final value = dailyTotals[index];
-      if (value <= 0.0) continue;
+    final visibleCount = math.max(2, (points.length * progress).round());
+    final visiblePoints = points.take(visibleCount).toList();
+    if (visiblePoints.length < 2) return;
 
-      final left = spacing + index * (barWidth + spacing);
-      final barHeight = math.max(8.0, (value / maxTotal) * (chartHeight - 4));
-      final top = baselineY - barHeight;
-      final rect = Rect.fromLTWH(left, top, barWidth, barHeight);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, Radius.circular(barWidth / 2)),
-        paint,
+    final smoothPath = _buildSmoothPath(visiblePoints);
+    final fillPath = Path.from(smoothPath)
+      ..lineTo(visiblePoints.last.dx, baselineY)
+      ..lineTo(visiblePoints.first.dx, baselineY)
+      ..close();
+
+    final fillShader = ui.Gradient.linear(
+      Offset(0, 0),
+      Offset(0, chartHeight),
+      [fillColor.withAlpha(55), fillColor.withAlpha(8)],
+      [0.0, 1.0],
+    );
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..shader = fillShader
+        ..isAntiAlias = true,
+    );
+
+    canvas.drawPath(
+      smoothPath,
+      Paint()
+        ..color = lineColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..isAntiAlias = true,
+    );
+
+    final todayIndex = todayDay - 1;
+    if (todayIndex >= 0 && todayIndex < points.length) {
+      final todayPoint = points[todayIndex];
+      canvas.drawLine(
+        Offset(todayPoint.dx, baselineY - 2),
+        Offset(todayPoint.dx, todayPoint.dy - 6),
+        Paint()
+          ..color = lineColor.withAlpha(70)
+          ..strokeWidth = 1,
       );
     }
+
+    final highlightIndex = selectedDayIndex ?? todayIndex;
+    if (highlightIndex >= 0 && highlightIndex < points.length) {
+      final p = points[highlightIndex];
+      if (dailyTotals[highlightIndex] > 0) {
+        canvas.drawCircle(
+          p,
+          5,
+          Paint()
+            ..color = lineColor.withAlpha(40)
+            ..style = PaintingStyle.fill,
+        );
+        canvas.drawCircle(
+          p,
+          3.5,
+          Paint()
+            ..color = lineColor
+            ..style = PaintingStyle.fill,
+        );
+        canvas.drawCircle(
+          p,
+          3.5,
+          Paint()
+            ..color = Colors.white
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5,
+        );
+      }
+    }
+  }
+
+  Path _buildSmoothPath(List<Offset> points) {
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var i = 0; i < points.length - 1; i++) {
+      final p0 = points[i];
+      final p1 = points[i + 1];
+      final mid = Offset((p0.dx + p1.dx) / 2, (p0.dy + p1.dy) / 2);
+      path.quadraticBezierTo(p0.dx, p0.dy, mid.dx, mid.dy);
+    }
+    path.lineTo(points.last.dx, points.last.dy);
+    return path;
   }
 
   @override
   bool shouldRepaint(covariant _DailySpendingPainter oldDelegate) {
     return oldDelegate.dailyTotals != dailyTotals ||
-        oldDelegate.chartColor != chartColor ||
-        oldDelegate.guideColor != guideColor;
+        oldDelegate.progress != progress ||
+        oldDelegate.lineColor != lineColor ||
+        oldDelegate.selectedDayIndex != selectedDayIndex ||
+        oldDelegate.todayDay != todayDay;
   }
 }
