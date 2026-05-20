@@ -12,11 +12,15 @@ class ExpenseList extends StatefulWidget {
     required this.expenses,
     required this.accounts,
     required this.isLoading,
+    this.onEdit,
+    this.onDelete,
   });
 
   final List<Expense> expenses;
   final List<Account> accounts;
   final bool isLoading;
+  final void Function(Expense expense)? onEdit;
+  final void Function(Expense expense)? onDelete;
 
   @override
   State<ExpenseList> createState() => _ExpenseListState();
@@ -363,6 +367,8 @@ class _ExpenseListState extends State<ExpenseList> {
                 expense: expense,
                 categoryColor: _colorForCategory(expense.category),
                 account: account,
+                onEdit: () => widget.onEdit?.call(expense),
+                onDelete: () => widget.onDelete?.call(expense),
               );
             },
           ),

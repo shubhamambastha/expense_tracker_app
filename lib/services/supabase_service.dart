@@ -117,4 +117,36 @@ class SupabaseService {
 
     return Expense.fromMap(data);
   }
+
+  static Future<Expense> updateExpense(Expense expense) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to update expenses.');
+    }
+
+    final payload = expense.toMap()
+      ..['user_id'] = user.id
+      ..remove('user_id');
+    final data = await Supabase.instance.client
+        .from('expenses')
+        .update(payload)
+        .eq('id', expense.id!)
+        .select()
+        .single();
+
+    return Expense.fromMap(data);
+  }
+
+  static Future<void> deleteExpense(int expenseId) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to delete expenses.');
+    }
+
+    await Supabase.instance.client
+        .from('expenses')
+        .delete()
+        .eq('id', expenseId)
+        .eq('user_id', user.id);
+  }
 }

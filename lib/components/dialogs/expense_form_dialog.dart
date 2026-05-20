@@ -4,24 +4,26 @@ import '../../models/account.dart';
 import '../../models/expense.dart';
 import '../../utils/validators.dart';
 
-/// Dialog for adding a new expense
-class AddExpenseDialog extends StatefulWidget {
-  const AddExpenseDialog({
+/// Dialog for adding a new expense or editing an existing one.
+class ExpenseFormDialog extends StatefulWidget {
+  const ExpenseFormDialog({
     super.key,
     required this.categories,
     required this.accounts,
     required this.onSave,
+    this.expense,
   });
 
   final List<String> categories;
   final List<Account> accounts;
   final void Function(Expense expense) onSave;
+  final Expense? expense;
 
   @override
-  State<AddExpenseDialog> createState() => _AddExpenseDialogState();
+  State<ExpenseFormDialog> createState() => _ExpenseFormDialogState();
 }
 
-class _AddExpenseDialogState extends State<AddExpenseDialog> {
+class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
@@ -31,11 +33,30 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
   DateTime _selectedDate = DateTime.now();
   DateTime? _selectedEndDate;
 
+  bool get _isEditing => widget.expense != null;
+
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.categories.first;
-    _selectedAccount = widget.accounts.isEmpty ? null : widget.accounts.first;
+    final existing = widget.expense;
+    if (existing != null) {
+      _nameController.text = existing.name;
+      _amountController.text = existing.amount.toStringAsFixed(2);
+      _selectedCategory = existing.category;
+      _selectedAccount = widget.accounts.isEmpty
+          ? null
+          : widget.accounts.firstWhere(
+              (a) => a.id == existing.accountId,
+              orElse: () => widget.accounts.first,
+            );
+      _selectedType = existing.type;
+      _selectedDate = existing.date;
+      _selectedEndDate = existing.endDate;
+    } else {
+      _selectedCategory = widget.categories.first;
+      _selectedAccount =
+          widget.accounts.isEmpty ? null : widget.accounts.first;
+    }
   }
 
   @override
@@ -44,6 +65,8 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
     _amountController.dispose();
     super.dispose();
   }
+
+  String get _title => _isEditing ? 'Edit expense' : 'New expense';
 
   Future<void> _pickDate(BuildContext context, bool isEndDate) async {
     final newDate = await showDatePicker(
@@ -76,12 +99,14 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
 
     widget.onSave(
       Expense(
+        id: widget.expense?.id,
+        userId: widget.expense?.userId,
         name: _nameController.text.trim(),
         category: _selectedCategory,
         amount: amount,
         date: _selectedDate,
         type: _selectedType,
-        accountId: _selectedAccount!.id,
+        accountId: _selectedAccount!.id!,
         endDate: _selectedType == ExpenseType.recurring
             ? _selectedEndDate
             : null,
@@ -108,7 +133,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'New expense',
+                  _title,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -211,7 +236,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                         (account) => DropdownMenuItem<Account?>(
                           value: account,
                           child: Text(
-                            '${account.name} • ${account.type.label}',
+                            '${account.name} \u2022 ${account.type.label}',
                           ),
                         ),
                       )
@@ -284,8 +309,8 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
             Expanded(
               child: FilledButton.icon(
                 onPressed: _submit,
-                icon: const Icon(Icons.check_rounded),
-                label: const Text('Save'),
+                icon: Icon(_isEditing ? Icons.check_rounded : Icons.add_rounded),
+                label: Text(_isEditing ? 'Update' : 'Save'),
               ),
             ),
           ],

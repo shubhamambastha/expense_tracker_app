@@ -21,6 +21,11 @@ class AppConstants {
   static const String errorNotSignedIn = 'Not signed in. Please sign in to continue.';
   static const String errorFailedToLoadExpenses = 'Could not load expenses';
   static const String errorFailedToSaveExpense = 'Could not save expense';
+  static const String errorFailedToUpdateExpense = 'Could not update expense';
+  static const String errorFailedToDeleteExpense = 'Could not delete expense';
+  static const String confirmDeleteExpense = 'Are you sure you want to delete this expense?';
+  static const String expenseDeleted = 'Expense deleted successfully';
+  static const String expenseUpdated = 'Expense updated successfully';
   static const String errorSupabaseInitFailed = 'Unable to initialize Supabase.';
   static const String errorSupabaseInstructions =
       'Run with --dart-define=SUPABASE_URL=your_url --dart-define=SUPABASE_ANON_KEY=your_key';

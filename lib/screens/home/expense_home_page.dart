@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../components/common/compact_header.dart';
-import '../../components/dialogs/add_expense_dialog.dart';
+import '../../components/dialogs/expense_form_dialog.dart';
 // Home content composed via components
 import '../../components/home/home_content.dart';
 import '../../components/home/expenses_content.dart';
@@ -143,12 +143,82 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   void _openAddExpenseDialog() {
     showDialog<void>(
       context: context,
-      builder: (context) => AddExpenseDialog(
+      builder: (context) => ExpenseFormDialog(
         categories: AppConstants.expenseCategories,
         accounts: _accounts,
         onSave: _saveExpense,
       ),
     );
+  }
+
+  void _openEditExpenseDialog(Expense expense) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => ExpenseFormDialog(
+        categories: AppConstants.expenseCategories,
+        accounts: _accounts,
+        onSave: _updateExpense,
+        expense: expense,
+      ),
+    );
+  }
+
+  Future<void> _confirmAndDeleteExpense(Expense expense) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete expense'),
+        content: Text(
+          'Are you sure you want to delete "${expense.name}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    try {
+      await SupabaseService.deleteExpense(expense.id!);
+      if (!mounted) return;
+      setState(() => _expenses.removeWhere((e) => e.id == expense.id));
+      SnackbarHelper.showSuccess(context, AppConstants.expenseDeleted);
+    } catch (error) {
+      if (!mounted) return;
+      SnackbarHelper.showMessage(
+        context,
+        '${AppConstants.errorFailedToDeleteExpense}: $error',
+      );
+    }
+  }
+
+  Future<void> _updateExpense(Expense expense) async {
+    try {
+      final updated = await SupabaseService.updateExpense(expense);
+      if (!mounted) return;
+      setState(() {
+        final idx = _expenses.indexWhere((e) => e.id == expense.id);
+        if (idx >= 0) _expenses[idx] = updated;
+      });
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context, AppConstants.expenseUpdated);
+    } catch (error) {
+      if (!mounted) return;
+      SnackbarHelper.showMessage(
+        context,
+        '${AppConstants.errorFailedToUpdateExpense}: $error',
+      );
+    }
   }
 
   void _openAddAccountDialog() {
@@ -250,6 +320,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       expenses: _expenses,
       accounts: _accounts,
       isLoading: _isLoading,
+      onEdit: _openEditExpenseDialog,
+      onDelete: _confirmAndDeleteExpense,
     );
   }
 
@@ -559,25 +631,12 @@ class _AccountChip extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Chip(
-      avatar: Icon(_iconForAccount(account.type), size: 16),
+      avatar: const Icon(Icons.account_balance_wallet_rounded, size: 16),
       label: Text(account.name),
       side: BorderSide.none,
       backgroundColor: colorScheme.surfaceContainerHighest.withAlpha(115),
       visualDensity: VisualDensity.compact,
     );
-  }
-
-  IconData _iconForAccount(AccountType type) {
-    switch (type) {
-      case AccountType.bank:
-        return Icons.account_balance_rounded;
-      case AccountType.creditCard:
-        return Icons.credit_card_rounded;
-      case AccountType.cash:
-        return Icons.payments_rounded;
-      case AccountType.other:
-        return Icons.account_balance_wallet_rounded;
-    }
   }
 }
 
