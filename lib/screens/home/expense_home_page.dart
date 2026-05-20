@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../components/common/compact_header.dart';
 import '../../components/dialogs/expense_form_dialog.dart';
+import '../../components/profile/accounts_settings_section.dart';
+import '../../components/profile/categories_settings_section.dart';
 // Home content composed via components
 import '../../components/home/home_content.dart';
 import '../../components/home/expenses_content.dart';
@@ -144,7 +146,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     showDialog<void>(
       context: context,
       builder: (context) => ExpenseFormDialog(
-        categories: AppConstants.expenseCategories,
         accounts: _accounts,
         onSave: _saveExpense,
       ),
@@ -155,7 +156,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     showDialog<void>(
       context: context,
       builder: (context) => ExpenseFormDialog(
-        categories: AppConstants.expenseCategories,
         accounts: _accounts,
         onSave: _updateExpense,
         expense: expense,
@@ -480,7 +480,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
         return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -492,18 +492,18 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Container(
-                        width: 56,
-                        height: 56,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: colorScheme.primary.withAlpha(24),
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         alignment: Alignment.center,
                         child: Text(
@@ -540,7 +540,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 14),
                   Row(
                     children: [
                       Expanded(
@@ -558,7 +558,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   _ProfileMetric(
                     value: _recurringCount.toString(),
                     label: 'recurring expenses',
@@ -568,12 +568,14 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
               ),
             ),
           ),
-          const SizedBox(height: 18),
-          _ProfileAccountsSection(
+          const SizedBox(height: 10),
+          AccountsSettingsSection(
             accounts: _accounts,
             onAddAccount: _openAddAccountDialog,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 10),
+          const CategoriesSettingsSection(),
+          const SizedBox(height: 10),
           Card(
             elevation: 0,
             color: colorScheme.surface,
@@ -581,9 +583,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Column(
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _ProfileActionTile(
                     icon: Icons.payments_rounded,
@@ -608,7 +609,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                     onTap: widget.onSignOut,
                   ),
                 ],
-              ),
             ),
           ),
         ],
@@ -693,89 +693,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 }
 
-class _ProfileAccountsSection extends StatelessWidget {
-  const _ProfileAccountsSection({
-    required this.accounts,
-    required this.onAddAccount,
-  });
-
-  final List<Account> accounts;
-  final VoidCallback onAddAccount;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Card(
-      elevation: 0,
-      color: colorScheme.surface,
-      surfaceTintColor: colorScheme.surfaceTint,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Accounts',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                IconButton.filledTonal(
-                  tooltip: 'Add account',
-                  onPressed: onAddAccount,
-                  icon: const Icon(Icons.add_rounded),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (accounts.isEmpty)
-              Text(
-                'Add bank accounts, credit cards, cash wallets, or other sources.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              )
-            else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: accounts.map((account) {
-                  return _AccountChip(account: account);
-                }).toList(),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AccountChip extends StatelessWidget {
-  const _AccountChip({required this.account});
-
-  final Account account;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Chip(
-      avatar: const Icon(Icons.account_balance_wallet_rounded, size: 16),
-      label: Text(account.name),
-      side: BorderSide.none,
-      backgroundColor: colorScheme.surfaceContainerHighest.withAlpha(115),
-      visualDensity: VisualDensity.compact,
-    );
-  }
-}
-
 class _ProfileMetric extends StatelessWidget {
   const _ProfileMetric({required this.value, required this.label, this.icon});
 
@@ -789,7 +706,7 @@ class _ProfileMetric extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withAlpha(115),
         borderRadius: BorderRadius.circular(14),
@@ -813,7 +730,7 @@ class _ProfileMetric extends StatelessWidget {
                     height: 1,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 2),
                 Text(
                   label,
                   maxLines: 1,
@@ -853,20 +770,30 @@ class _ProfileActionTile extends StatelessWidget {
     final foreground = isDestructive ? colorScheme.error : colorScheme.primary;
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       visualDensity: VisualDensity.compact,
       minVerticalPadding: 0,
+      dense: true,
       leading: Container(
-        width: 40,
-        height: 40,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
           color: foreground.withAlpha(22),
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: foreground, size: 21),
+        child: Icon(icon, color: foreground, size: 18),
       ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-      subtitle: Text(subtitle),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          fontSize: 12,
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
       trailing: Icon(Icons.chevron_right_rounded, color: foreground),
       onTap: onTap,
     );

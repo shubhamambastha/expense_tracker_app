@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/account.dart';
+import '../../services/category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../models/expense.dart';
 
@@ -54,18 +55,6 @@ class _ExpenseListItemState extends State<ExpenseListItem>
 
   void _handleEdit() => widget.onEdit?.call();
   void _handleDelete() => widget.onDelete?.call();
-
-  IconData _iconForCategory(String category) {
-    switch (category) {
-      case 'Food':            return Icons.restaurant_rounded;
-      case 'Shopping':        return Icons.shopping_bag_rounded;
-      case 'Travel':          return Icons.flight_takeoff_rounded;
-      case 'Bills':           return Icons.receipt_rounded;
-      case 'Health':          return Icons.favorite_rounded;
-      case 'Entertainment':   return Icons.movie_rounded;
-      default:                return Icons.more_horiz_rounded;
-    }
-  }
 
   IconData _iconForType(ExpenseType type) {
     switch (type) {
@@ -191,7 +180,8 @@ class _ExpenseListItemState extends State<ExpenseListItem>
                                     borderRadius: BorderRadius.circular(9),
                                   ),
                                   child: Icon(
-                                    _iconForCategory(expense.category),
+                                    CategoryCatalog.instance
+                                    .iconForName(expense.category),
                                     color: widget.categoryColor,
                                     size: 16,
                                   ),

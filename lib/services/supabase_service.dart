@@ -1,7 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/account.dart';
 import '../models/expense.dart';
+import '../models/expense_category.dart';
 import '../models/user_settings.dart';
+import '../utils/category_style.dart';
 
 class SupabaseService {
   SupabaseService._();
@@ -187,5 +189,95 @@ class SupabaseService {
         .single();
 
     return UserSettings.fromMap(data);
+  }
+
+  static Future<List<ExpenseCategory>> fetchCategories() async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to load categories.');
+    }
+
+    final data = await Supabase.instance.client
+        .from('expense_categories')
+        .select()
+        .eq('user_id', user.id)
+        .order('sort_order')
+        .order('name');
+
+    return (data as List<dynamic>)
+        .map((item) => ExpenseCategory.fromMap(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Inserts only default categories the user does not already have.
+  static Future<List<ExpenseCategory>> ensureDefaultCategories() async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to seed categories.');
+    }
+
+    var existing = await fetchCategories();
+    final existingNames = existing
+        .map((c) => c.name.trim().toLowerCase())
+        .toSet();
+
+    final missing = <Map<String, dynamic>>[];
+    for (final entry in DefaultCategories.seeds.asMap().entries) {
+      final seed = entry.value;
+      if (existingNames.contains(seed.name.toLowerCase())) continue;
+      missing.add({
+        'user_id': user.id,
+        'name': seed.name,
+        'icon': seed.iconKey,
+        'sort_order': entry.key,
+        'is_default': true,
+      });
+    }
+
+    if (missing.isNotEmpty) {
+      await Supabase.instance.client.from('expense_categories').insert(missing);
+      existing = await fetchCategories();
+    }
+
+    return existing;
+  }
+
+  static Future<ExpenseCategory> insertCategory({
+    required String name,
+    required String iconKey,
+    required int sortOrder,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to save categories.');
+    }
+
+    final data = await Supabase.instance.client
+        .from('expense_categories')
+        .insert({
+          'user_id': user.id,
+          'name': name,
+          'icon': iconKey,
+          'sort_order': sortOrder,
+          'is_default': false,
+        })
+        .select()
+        .single();
+
+    return ExpenseCategory.fromMap(data);
+  }
+
+  static Future<void> deleteCategory(int categoryId) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to delete categories.');
+    }
+
+    await Supabase.instance.client
+        .from('expense_categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('user_id', user.id)
+        .eq('is_default', false);
   }
 }

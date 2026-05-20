@@ -2,17 +2,6 @@
 class AppConstants {
   AppConstants._();
 
-  /// Expense categories for the app
-  static const List<String> expenseCategories = [
-    'Food',
-    'Shopping',
-    'Travel',
-    'Bills',
-    'Health',
-    'Entertainment',
-    'Other',
-  ];
-
   /// Supabase configuration
   static const String supabaseUrl = 'https://axabbtuvufmahbgzmczk.supabase.co';
   static const String supabaseAnonKey = 'sb_publishable_M1CWmWJTonBVm9JMcIaF8w_RYskfFKS';

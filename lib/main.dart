@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'config/theme.dart';
 import 'components/common/error_app.dart';
 import 'components/common/auth_gate.dart';
+import 'services/category_catalog.dart';
 import 'services/currency_settings.dart';
 import 'services/supabase_service.dart';
 
@@ -25,7 +26,10 @@ class ExpenseTrackerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: CurrencySettings.instance,
+      listenable: Listenable.merge([
+        CurrencySettings.instance,
+        CategoryCatalog.instance,
+      ]),
       builder: (context, _) {
         return MaterialApp(
           title: 'Expense Tracker',

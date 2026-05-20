@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
 import '../../models/expense.dart';
 import '../../services/currency_settings.dart';
-import '../../utils/constants.dart';
+import '../../services/category_catalog.dart';
 
 /// Shared palette for category charts (matches expense list accents).
 const kAnalyticsChartColors = <Color>[
@@ -18,13 +18,8 @@ const kAnalyticsChartColors = <Color>[
   Color(0xFFF88D42),
 ];
 
-Color analyticsColorForCategory(String category) {
-  final index = AppConstants.expenseCategories.indexOf(category);
-  if (index >= 0 && index < kAnalyticsChartColors.length) {
-    return kAnalyticsChartColors[index];
-  }
-  return kAnalyticsChartColors[category.hashCode.abs() % kAnalyticsChartColors.length];
-}
+Color analyticsColorForCategory(String category) =>
+    CategoryCatalog.instance.colorForName(category);
 
 class MonthlyAnalyticsCard extends StatelessWidget {
   const MonthlyAnalyticsCard({super.key, required this.expenses});

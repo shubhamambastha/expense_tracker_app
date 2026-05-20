@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../models/account.dart';
 import '../../services/currency_settings.dart';
 import '../../models/expense.dart';
+import '../../services/category_catalog.dart';
 import '../../utils/constants.dart';
 import 'expense_list_item.dart';
 
@@ -35,15 +36,6 @@ class _ExpenseListState extends State<ExpenseList> {
   DateTime? _startDate;
   DateTime? _endDate;
 
-  static const _categoryColors = <Color>[
-    Color(0xFF4F8EF7),
-    Color(0xFF47B881),
-    Color(0xFFF8B229),
-    Color(0xFF8E5AF7),
-    Color(0xFFF15C5C),
-    Color(0xFF3FB0AC),
-    Color(0xFFF88D42),
-  ];
 
   List<Expense> get _filteredExpenses {
     final query = _searchController.text.toLowerCase().trim();
@@ -91,13 +83,8 @@ class _ExpenseListState extends State<ExpenseList> {
     return _filteredExpenses.where((expense) => expense.isRecurring).length;
   }
 
-  Color _colorForCategory(String category) {
-    final index = AppConstants.expenseCategories.indexOf(category);
-    if (index >= 0 && index < _categoryColors.length) {
-      return _categoryColors[index];
-    }
-    return _categoryColors[category.hashCode.abs() % _categoryColors.length];
-  }
+  Color _colorForCategory(String category) =>
+      CategoryCatalog.instance.colorForName(category);
 
   Account? _accountForExpense(Expense expense) {
     final accountId = expense.accountId;
@@ -199,7 +186,7 @@ class _ExpenseListState extends State<ExpenseList> {
                       labelText: 'Category',
                       prefixIcon: Icon(Icons.label_outline_rounded),
                     ),
-                    items: [null, ...AppConstants.expenseCategories]
+                    items: [null, ...CategoryCatalog.instance.names]
                         .map(
                           (category) => DropdownMenuItem<String?>(
                             value: category,

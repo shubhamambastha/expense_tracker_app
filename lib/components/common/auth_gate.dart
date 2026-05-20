@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../screens/auth/login_page.dart';
 import '../../screens/home/expense_home_page.dart';
+import '../../services/category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../services/supabase_service.dart';
 
@@ -31,9 +32,10 @@ class _AuthGateState extends State<AuthGate> {
   void _onAuthStateChange(dynamic _) {
     final user = SupabaseService.currentUser;
     if (user != null) {
-      unawaited(CurrencySettings.instance.syncForUser(user.id));
+      unawaited(_syncUserPreferences(user.id));
     } else {
       CurrencySettings.instance.onSignedOut();
+      CategoryCatalog.instance.onSignedOut();
     }
     setState(() => _user = user);
   }
@@ -41,7 +43,7 @@ class _AuthGateState extends State<AuthGate> {
   Future<void> _finishInitialization() async {
     final user = SupabaseService.currentUser;
     if (user != null) {
-      await CurrencySettings.instance.syncForUser(user.id);
+      await _syncUserPreferences(user.id);
     }
     if (!mounted) return;
     setState(() {
@@ -56,9 +58,17 @@ class _AuthGateState extends State<AuthGate> {
     super.dispose();
   }
 
+  Future<void> _syncUserPreferences(String userId) async {
+    await Future.wait([
+      CurrencySettings.instance.syncForUser(userId),
+      CategoryCatalog.instance.syncForUser(userId),
+    ]);
+  }
+
   Future<void> _signOut() async {
     await SupabaseService.signOut();
     CurrencySettings.instance.onSignedOut();
+    CategoryCatalog.instance.onSignedOut();
     if (!mounted) return;
     setState(() {
       _user = null;
@@ -78,7 +88,7 @@ class _AuthGateState extends State<AuthGate> {
         onSignedIn: () async {
           final user = SupabaseService.currentUser;
           if (user != null) {
-            await CurrencySettings.instance.syncForUser(user.id);
+            await _syncUserPreferences(user.id);
           }
           if (!mounted) return;
           setState(() => _user = user);

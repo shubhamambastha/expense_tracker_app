@@ -17,6 +17,7 @@ Run these SQL files in the Supabase SQL editor (in order if setting up fresh):
 - `sql/expenses_table.sql` — expenses table and RLS
 - `sql/20260517_add_named_accounts.sql` — accounts table
 - `sql/user_settings_table.sql` — per-user default currency (`default_currency_code`)
+- `sql/expense_categories_table.sql` — per-user categories (`name`, `icon`, `is_default`)
 
 The app stores amounts as numbers; `user_settings.default_currency_code` controls display and input formatting per account.
 
