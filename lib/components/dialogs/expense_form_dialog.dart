@@ -2,8 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
+import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
 import '../../services/category_catalog.dart';
@@ -147,11 +149,12 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      backgroundColor: AppColors.surface,
       builder: (sheetContext) {
         return SafeArea(
           child: ListView.builder(
             shrinkWrap: true,
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             itemCount: categories.length,
             itemBuilder: (context, index) {
               final category = categories[index];
@@ -159,9 +162,13 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
               final isSelected = category.name == _selectedCategory;
 
               return ListTile(
-                leading: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: color.withAlpha(36),
+                leading: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(40),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
                   child: Icon(
                     CategoryIcons.iconForKey(category.iconKey),
                     color: color,
@@ -170,8 +177,9 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                 ),
                 title: Text(
                   category.name,
-                  style: TextStyle(
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    fontWeight:
+                        isSelected ? FontWeight.w800 : FontWeight.w600,
                   ),
                 ),
                 trailing: isSelected
@@ -200,29 +208,51 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      backgroundColor: AppColors.surface,
       builder: (sheetContext) {
         return SafeArea(
           child: ListView.builder(
             shrinkWrap: true,
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             itemCount: widget.accounts.length,
             itemBuilder: (context, index) {
               final account = widget.accounts[index];
               final isSelected = account.id == _selectedAccount?.id;
 
               return ListTile(
-                leading: Icon(
-                  Icons.account_balance_wallet_rounded,
-                  color: isSelected
-                      ? Theme.of(sheetContext).colorScheme.primary
-                      : null,
+                leading: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: (isSelected
+                            ? AppColors.primary
+                            : AppColors.textSecondary)
+                        .withAlpha(28),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.textSecondary,
+                    size: 18,
+                  ),
                 ),
-                title: Text(account.name),
-                subtitle: Text(account.type.label),
+                title: Text(
+                  account.name,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    fontWeight:
+                        isSelected ? FontWeight.w800 : FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  account.type.label,
+                  style: AppTextStyles.caption,
+                ),
                 trailing: isSelected
-                    ? Icon(
+                    ? const Icon(
                         Icons.check_circle_rounded,
-                        color: Theme.of(sheetContext).colorScheme.primary,
+                        color: AppColors.primary,
                       )
                     : null,
                 onTap: () {
@@ -241,8 +271,6 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
   Widget build(BuildContext context) {
     if (!mounted) return const SizedBox.shrink();
 
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final catalog = CategoryCatalog.instance;
     final currency = CurrencySettings.instance;
     final categoryColor = catalog.colorForName(_selectedCategory);
@@ -257,152 +285,156 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
         height: maxHeight,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withAlpha(80),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.shadow.withAlpha(35),
-                blurRadius: 28,
-                offset: const Offset(0, 12),
-              ),
-            ],
+            color: AppColors.surface,
+            borderRadius: AppRadii.cardRadius,
+            border: Border.all(color: AppColors.border),
+            boxShadow: AppShadows.elevated,
           ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                _DialogHeader(
-                  title: _title,
-                  subtitle: DateFormat.MMMMEEEEd().format(_selectedDate),
-                  isEditing: _isEditing,
-                  accent: categoryColor,
-                  onClose: () => Navigator.of(context).pop(),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _AmountCard(
-                          controller: _amountController,
-                          focusNode: _amountFocus,
-                          currencyCode: currency.currencyCode,
-                          prefix: currency.inputPrefix,
-                          hint: currency.decimalDigits == 0 ? '0' : '0.00',
-                          accent: categoryColor,
-                        ),
-                        const SizedBox(height: 14),
-                        TextFormField(
-                          controller: _nameController,
-                          textCapitalization: TextCapitalization.sentences,
-                          textInputAction: TextInputAction.done,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
+          child: ClipRRect(
+            borderRadius: AppRadii.cardRadius,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  _DialogHeader(
+                    title: _title,
+                    subtitle: DateFormat.MMMMEEEEd().format(_selectedDate),
+                    isEditing: _isEditing,
+                    accent: categoryColor,
+                    onClose: () => Navigator.of(context).pop(),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        AppSpacing.xs,
+                        AppSpacing.xl,
+                        AppSpacing.sm,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _AmountCard(
+                            controller: _amountController,
+                            focusNode: _amountFocus,
+                            currencyCode: currency.currencyCode,
+                            prefix: currency.inputPrefix,
+                            hint: currency.decimalDigits == 0 ? '0' : '0.00',
+                            accent: categoryColor,
                           ),
-                          decoration: InputDecoration(
-                            labelText: 'Description',
-                            hintText: 'Coffee, groceries, rent…',
-                            prefixIcon: Icon(
-                              Icons.notes_rounded,
-                              color: colorScheme.primary,
+                          const SizedBox(height: AppSpacing.lg),
+                          TextFormField(
+                            controller: _nameController,
+                            textCapitalization:
+                                TextCapitalization.sentences,
+                            textInputAction: TextInputAction.done,
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
-                            filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest
-                                .withAlpha(90),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          validator: validateExpenseName,
-                        ),
-                        const SizedBox(height: 14),
-                        _PickerField(
-                          label: 'Category',
-                          value: _selectedCategory,
-                          helperText: catalog.isEmpty
-                              ? 'Add categories from Profile'
-                              : null,
-                          leading: _CategoryIcon(
-                            iconKey: catalog
-                                    .findByName(_selectedCategory)
-                                    ?.iconKey ??
-                                CategoryIcons.defaultKey,
-                            color: categoryColor,
-                          ),
-                          onTap: _openCategoryPicker,
-                        ),
-                        const SizedBox(height: 12),
-                        _PickerField(
-                          label: 'Account',
-                          value: _selectedAccount == null
-                              ? 'Select account'
-                              : '${_selectedAccount!.name} · ${_selectedAccount!.type.label}',
-                          helperText: widget.accounts.isEmpty
-                              ? 'Add accounts from Profile'
-                              : null,
-                          leading: Icon(
-                            Icons.account_balance_wallet_rounded,
-                            color: colorScheme.primary,
-                            size: 20,
-                          ),
-                          onTap: _openAccountPicker,
-                        ),
-                        const SizedBox(height: 14),
-                        _ExpenseTypeSelector(
-                          selectedType: _selectedType,
-                          onChanged: (value) {
-                            setState(() => _selectedType = value);
-                          },
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _DateTile(
-                                label: 'Date',
-                                value:
-                                    DateFormat.MMMd().format(_selectedDate),
-                                icon: Icons.calendar_today_rounded,
-                                onTap: () => _pickDate(context, false),
+                            decoration: const InputDecoration(
+                              labelText: 'Description',
+                              hintText: 'Coffee, groceries, rent…',
+                              prefixIcon: Icon(
+                                Icons.notes_rounded,
+                                color: AppColors.primary,
+                                size: 20,
                               ),
                             ),
-                            if (_selectedType == ExpenseType.recurring) ...[
-                              const SizedBox(width: 10),
+                            validator: validateExpenseName,
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          _PickerField(
+                            label: 'Category',
+                            value: _selectedCategory,
+                            helperText: catalog.isEmpty
+                                ? 'Add categories from Profile'
+                                : null,
+                            leading: _CategoryIcon(
+                              iconKey: catalog
+                                      .findByName(_selectedCategory)
+                                      ?.iconKey ??
+                                  CategoryIcons.defaultKey,
+                              color: categoryColor,
+                            ),
+                            onTap: _openCategoryPicker,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          _PickerField(
+                            label: 'Account',
+                            value: _selectedAccount == null
+                                ? 'Select account'
+                                : '${_selectedAccount!.name} · ${_selectedAccount!.type.label}',
+                            helperText: widget.accounts.isEmpty
+                                ? 'Add accounts from Profile'
+                                : null,
+                            leading: const Icon(
+                              Icons.account_balance_wallet_rounded,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                            onTap: _openAccountPicker,
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          _ExpenseTypeSelector(
+                            selectedType: _selectedType,
+                            onChanged: (value) {
+                              setState(() => _selectedType = value);
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          Row(
+                            children: [
                               Expanded(
                                 child: _DateTile(
-                                  label: 'Ends',
-                                  value: _selectedEndDate == null
-                                      ? 'Optional'
-                                      : DateFormat.MMMd()
-                                          .format(_selectedEndDate!),
-                                  icon: Icons.event_busy_rounded,
-                                  onTap: () => _pickDate(context, true),
+                                  label: 'Date',
+                                  value: DateFormat.MMMd()
+                                      .format(_selectedDate),
+                                  icon: Icons.calendar_today_rounded,
+                                  onTap: () => _pickDate(context, false),
                                 ),
                               ),
+                              if (_selectedType ==
+                                  ExpenseType.recurring) ...[
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: _DateTile(
+                                    label: 'Ends',
+                                    value: _selectedEndDate == null
+                                        ? 'Optional'
+                                        : DateFormat.MMMd()
+                                            .format(_selectedEndDate!),
+                                    icon: Icons.event_busy_rounded,
+                                    onTap: () => _pickDate(context, true),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                _DialogActions(
-                  isEditing: _isEditing,
-                  onCancel: () => Navigator.of(context).pop(),
-                  onSave: _submit,
-                ),
-              ],
+                  _DialogActions(
+                    isEditing: _isEditing,
+                    onCancel: () => Navigator.of(context).pop(),
+                    onSave: _submit,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    );
+    )
+        .animate()
+        .fadeIn(duration: AppDurations.short)
+        .scaleXY(
+          begin: 0.96,
+          end: 1.0,
+          duration: AppDurations.page,
+          curve: AppCurves.spring,
+        );
   }
 }
 
@@ -423,30 +455,35 @@ class _DialogHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 18, 12, 16),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.lg,
+      ),
       decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            accent.withAlpha(28),
-            colorScheme.primary.withAlpha(14),
+            accent.withAlpha(36),
+            AppColors.secondary.withAlpha(14),
           ],
+        ),
+        border: const Border(
+          bottom: BorderSide(color: AppColors.border),
         ),
       ),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: accent.withAlpha(40),
+              color: accent.withAlpha(48),
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: accent.withAlpha(80)),
             ),
             child: Icon(
               isEditing ? Icons.edit_rounded : Icons.add_card_rounded,
@@ -454,26 +491,14 @@ class _DialogHeader extends StatelessWidget {
               size: 22,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                  ),
-                ),
+                Text(title, style: AppTextStyles.headingSmall),
                 const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(subtitle, style: AppTextStyles.caption),
               ],
             ),
           ),
@@ -481,6 +506,7 @@ class _DialogHeader extends StatelessWidget {
             tooltip: 'Close',
             onPressed: onClose,
             icon: const Icon(Icons.close_rounded),
+            color: AppColors.textSecondary,
           ),
         ],
       ),
@@ -507,47 +533,67 @@ class _AmountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.md,
+      ),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withAlpha(95),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent.withAlpha(50)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.background,
+            AppColors.surfaceSecondary,
+          ],
+        ),
+        borderRadius: AppRadii.inputRadius,
+        border: Border.all(color: accent.withAlpha(60)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Amount · $currencyCode',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
+            style: AppTextStyles.label,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           TextFormField(
             controller: controller,
             focusNode: focusNode,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
             ],
             textInputAction: TextInputAction.next,
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontWeight: FontWeight.w900,
+            style: AppTextStyles.displaySmall.copyWith(
+              fontWeight: FontWeight.w800,
               height: 1.1,
               letterSpacing: -0.5,
             ),
             decoration: InputDecoration(
               prefixText: prefix,
               hintText: hint,
+              prefixStyle: AppTextStyles.displaySmall.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+              hintStyle: AppTextStyles.displaySmall.copyWith(
+                color: AppColors.textSecondary.withAlpha(140),
+                fontWeight: FontWeight.w700,
+              ),
               border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: false,
               contentPadding: EdgeInsets.zero,
               isDense: true,
+              errorStyle: AppTextStyles.caption.copyWith(
+                color: AppColors.danger,
+              ),
             ),
             validator: validateAmount,
           ),
@@ -575,53 +621,50 @@ class _PickerField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final fill = colorScheme.surfaceContainerHighest.withAlpha(90);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Material(
-          color: fill,
-          borderRadius: BorderRadius.circular(14),
+          color: AppColors.surfaceSecondary,
+          borderRadius: AppRadii.inputRadius,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: AppRadii.inputRadius,
+                border: Border.all(color: AppColors.border),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md + 2,
+              ),
               child: Row(
                 children: [
                   if (leading != null) ...[
                     leading!,
-                    const SizedBox(width: 10),
+                    const SizedBox(width: AppSpacing.md),
                   ],
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          label,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                        Text(label, style: AppTextStyles.label),
                         const SizedBox(height: 2),
                         Text(
                           value,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyLarge?.copyWith(
+                          style: AppTextStyles.bodyLarge.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(
+                  const Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: colorScheme.onSurfaceVariant,
+                    color: AppColors.textSecondary,
                   ),
                 ],
               ),
@@ -629,15 +672,10 @@ class _PickerField extends StatelessWidget {
           ),
         ),
         if (helperText != null) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              helperText!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Text(helperText!, style: AppTextStyles.caption),
           ),
         ],
       ],
@@ -675,35 +713,83 @@ class _ExpenseTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return SegmentedButton<ExpenseType>(
-      segments: const [
-        ButtonSegment(
-          value: ExpenseType.oneTime,
-          icon: Icon(Icons.event_available_rounded, size: 18),
-          label: Text('One-time'),
-        ),
-        ButtonSegment(
-          value: ExpenseType.recurring,
-          icon: Icon(Icons.autorenew_rounded, size: 18),
-          label: Text('Recurring'),
-        ),
-      ],
-      selected: {selectedType},
-      onSelectionChanged: (selection) => onChanged(selection.first),
-      showSelectedIcon: false,
-      style: ButtonStyle(
-        visualDensity: VisualDensity.compact,
-        padding: WidgetStateProperty.all(
-          const EdgeInsets.symmetric(vertical: 10),
-        ),
-        side: WidgetStateProperty.resolveWith(
-          (states) => BorderSide(
-            color: states.contains(WidgetState.selected)
-                ? colorScheme.primary.withAlpha(120)
-                : colorScheme.outlineVariant.withAlpha(80),
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: AppRadii.buttonRadius,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SegmentTile(
+              icon: Icons.event_available_rounded,
+              label: 'One-time',
+              selected: selectedType == ExpenseType.oneTime,
+              onTap: () => onChanged(ExpenseType.oneTime),
+            ),
           ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _SegmentTile(
+              icon: Icons.autorenew_rounded,
+              label: 'Recurring',
+              selected: selectedType == ExpenseType.recurring,
+              onTap: () => onChanged(ExpenseType.recurring),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SegmentTile extends StatelessWidget {
+  const _SegmentTile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = selected ? AppColors.primary : AppColors.textSecondary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: AppDurations.micro,
+        curve: AppCurves.spring,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color:
+              selected ? AppColors.primary.withAlpha(32) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: fg),
+            const SizedBox(width: AppSpacing.sm),
+            Flexible(
+              child: Text(
+                label,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: fg,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -725,48 +811,46 @@ class _DateTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Material(
-      color: colorScheme.surfaceContainerHighest.withAlpha(90),
-      borderRadius: BorderRadius.circular(14),
+      color: AppColors.surfaceSecondary,
+      borderRadius: AppRadii.inputRadius,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: AppRadii.inputRadius,
+            border: Border.all(color: AppColors.border),
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.md,
+          ),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: colorScheme.primary),
-              const SizedBox(width: 10),
+              Icon(icon, size: 18, color: AppColors.primary),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      label,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    Text(label, style: AppTextStyles.label),
                     const SizedBox(height: 2),
                     Text(
                       value,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(
+              const Icon(
                 Icons.chevron_right_rounded,
                 size: 20,
-                color: colorScheme.onSurfaceVariant,
+                color: AppColors.textSecondary,
               ),
             ],
           ),
@@ -789,13 +873,17 @@ class _DialogActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
         border: Border(
-          top: BorderSide(color: colorScheme.outlineVariant.withAlpha(70)),
+          top: BorderSide(color: AppColors.border),
         ),
       ),
       child: Column(
@@ -803,16 +891,13 @@ class _DialogActions extends StatelessWidget {
         children: [
           FilledButton.icon(
             onPressed: onSave,
-            icon: Icon(isEditing ? Icons.check_rounded : Icons.add_rounded),
-            label: Text(isEditing ? 'Save changes' : 'Add expense'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
+            icon: Icon(
+              isEditing ? Icons.check_rounded : Icons.add_rounded,
+              size: 20,
             ),
+            label: Text(isEditing ? 'Save changes' : 'Add expense'),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           TextButton(
             onPressed: onCancel,
             child: const Text('Cancel'),

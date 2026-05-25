@@ -2,19 +2,22 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart' as intl;
+
+import '../../config/design_tokens.dart';
 import '../../models/expense.dart';
 import '../../services/currency_settings.dart';
 import '../../services/category_catalog.dart';
 
-/// Shared palette for category charts (matches expense list accents).
+/// Shared palette for category charts (premium dark accents).
 const kAnalyticsChartColors = <Color>[
-  Color(0xFF4F8EF7),
-  Color(0xFF47B881),
-  Color(0xFFF8B229),
+  Color(0xFF00C896),
+  Color(0xFF00B8D9),
+  Color(0xFFFFB547),
+  Color(0xFFFF5C7A),
   Color(0xFF8E5AF7),
-  Color(0xFFF15C5C),
-  Color(0xFF3FB0AC),
+  Color(0xFF4F8EF7),
   Color(0xFFF88D42),
 ];
 
@@ -83,188 +86,191 @@ class MonthlyAnalyticsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentExpenses = _currentMonthExpenses;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final categoryTotals = _categoryTotals;
     final sortedCategories = _sortedCategoryTotals;
     final currency = CurrencySettings.instance;
     final topCategory = sortedCategories.isEmpty ? null : sortedCategories.first;
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surface,
-      surfaceTintColor: colorScheme.surfaceTint,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: colorScheme.outlineVariant.withAlpha(90)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (currentExpenses.isEmpty)
-              _EmptyAnalyticsState(colorScheme: colorScheme)
-            else ...[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _monthLabel,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          currency.format(_currentMonthTotal),
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            color: colorScheme.onSurface,
-                            fontWeight: FontWeight.w800,
-                            height: 1.05,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          colorScheme.primary.withAlpha(28),
-                          colorScheme.tertiary.withAlpha(18),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      Icons.insights_rounded,
-                      color: colorScheme.primary,
-                      size: 22,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _AnalyticsStat(
-                      icon: Icons.grid_view_rounded,
-                      value: categoryTotals.length.toString(),
-                      label: 'categories',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _AnalyticsStat(
-                      icon: Icons.calendar_today_rounded,
-                      value: _activeDays.toString(),
-                      label: 'active days',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-              _ChartSectionHeader(
-                title: 'Spending mix',
-                subtitle: topCategory == null
-                    ? null
-                    : 'Top: ${topCategory.key}',
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 172,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      flex: 11,
-                      child: CategoryPieChart(
-                        categoryTotals: categoryTotals,
-                        sortedEntries: sortedCategories,
-                        total: _currentMonthTotal,
-                        colorForCategory: analyticsColorForCategory,
-                        trackColor: colorScheme.surfaceContainerHighest,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      flex: 10,
-                      child: _CategoryLegend(
-                        entries: sortedCategories,
-                        total: _currentMonthTotal,
-                        colorForCategory: analyticsColorForCategory,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              _ChartSectionHeader(
-                title: 'Daily rhythm',
-                subtitle: 'Tap a point for details',
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 128,
-                child: DailySpendingChart(
-                  dailyTotals: _dailyTotals,
-                  todayDay: _now.day,
-                  lineColor: colorScheme.primary,
-                  fillColor: colorScheme.primary,
-                  gridColor: colorScheme.outlineVariant,
-                ),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.surface,
+            AppColors.surfaceSecondary,
           ],
         ),
+        borderRadius: AppRadii.cardRadius,
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.xl,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (currentExpenses.isEmpty)
+            const _EmptyAnalyticsState()
+          else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_monthLabel, style: AppTextStyles.label),
+                      const SizedBox(height: 6),
+                      Text(
+                        currency.format(_currentMonthTotal),
+                        style: AppTextStyles.displaySmall.copyWith(
+                          height: 1.05,
+                        ),
+                      )
+                          .animate()
+                          .fadeIn(duration: AppDurations.reveal)
+                          .slideY(
+                            begin: 0.1,
+                            end: 0,
+                            duration: AppDurations.reveal,
+                            curve: AppCurves.spring,
+                          ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primary.withAlpha(48),
+                        AppColors.secondary.withAlpha(28),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.primary.withAlpha(60),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.insights_rounded,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: _AnalyticsStat(
+                    icon: Icons.grid_view_rounded,
+                    value: categoryTotals.length.toString(),
+                    label: 'categories',
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _AnalyticsStat(
+                    icon: Icons.calendar_today_rounded,
+                    value: _activeDays.toString(),
+                    label: 'active days',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            _ChartSectionHeader(
+              title: 'Spending mix',
+              subtitle:
+                  topCategory == null ? null : 'Top: ${topCategory.key}',
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              height: 172,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    flex: 11,
+                    child: CategoryPieChart(
+                      categoryTotals: categoryTotals,
+                      sortedEntries: sortedCategories,
+                      total: _currentMonthTotal,
+                      colorForCategory: analyticsColorForCategory,
+                      trackColor: AppColors.background,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.lg),
+                  Expanded(
+                    flex: 10,
+                    child: _CategoryLegend(
+                      entries: sortedCategories,
+                      total: _currentMonthTotal,
+                      colorForCategory: analyticsColorForCategory,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            _ChartSectionHeader(
+              title: 'Daily rhythm',
+              subtitle: 'Tap a point for details',
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              height: 128,
+              child: DailySpendingChart(
+                dailyTotals: _dailyTotals,
+                todayDay: _now.day,
+                lineColor: AppColors.primary,
+                fillColor: AppColors.primary,
+                gridColor: AppColors.border,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
 class _EmptyAnalyticsState extends StatelessWidget {
-  const _EmptyAnalyticsState({required this.colorScheme});
-
-  final ColorScheme colorScheme;
+  const _EmptyAnalyticsState();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 28),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
       child: Column(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
-              color: colorScheme.primary.withAlpha(18),
-              borderRadius: BorderRadius.circular(18),
+              color: AppColors.primary.withAlpha(24),
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.pie_chart_outline_rounded,
-              color: colorScheme.primary.withAlpha(180),
-              size: 28,
+              color: AppColors.primary,
+              size: 30,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md),
           Text(
             'No spending this month yet',
-            style: theme.textTheme.titleSmall?.copyWith(
+            style: AppTextStyles.bodyLarge.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -272,9 +278,7 @@ class _EmptyAnalyticsState extends StatelessWidget {
           Text(
             'Add expenses to unlock your category breakdown and daily trend.',
             textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
+            style: AppTextStyles.bodySmall,
           ),
         ],
       ),
@@ -290,9 +294,6 @@ class _ChartSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Row(
       children: [
         Expanded(
@@ -301,20 +302,13 @@ class _ChartSectionHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.1,
+                style: AppTextStyles.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 2),
-                Text(
-                  subtitle!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text(subtitle!, style: AppTextStyles.caption),
               ],
             ],
           ),
@@ -337,25 +331,25 @@ class _AnalyticsStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withAlpha(90),
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colorScheme.outlineVariant.withAlpha(50)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: colorScheme.primary),
-          const SizedBox(width: 8),
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(width: AppSpacing.sm),
           Text(
             value,
-            style: theme.textTheme.titleSmall?.copyWith(
+            style: AppTextStyles.bodyLarge.copyWith(
               fontWeight: FontWeight.w800,
-              height: 1,
+              height: 1.1,
             ),
           ),
           const SizedBox(width: 5),
@@ -363,10 +357,7 @@ class _AnalyticsStat extends StatelessWidget {
             child: Text(
               label,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppTextStyles.caption,
             ),
           ),
         ],
@@ -388,8 +379,6 @@ class _CategoryLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final currency = CurrencySettings.instance;
     final visibleEntries = entries.take(4).toList();
 
@@ -420,21 +409,22 @@ class _CategoryLegend extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       entry.key,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelMedium?.copyWith(
+                      style: AppTextStyles.label.copyWith(
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                   Text(
                     '${(share * 100).round()}%',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                    style: AppTextStyles.label.copyWith(
+                      fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -446,15 +436,15 @@ class _CategoryLegend extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: share,
                   minHeight: 4,
-                  backgroundColor: colorScheme.surfaceContainerHighest,
+                  backgroundColor: AppColors.surfaceSecondary,
                   color: color,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 currency.formatCompact(entry.value),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                style: AppTextStyles.label.copyWith(
+                  fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -585,7 +575,6 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
     if (amount == null) return;
 
     final share = widget.total <= 0 ? 0 : (amount / widget.total) * 100;
-    final colorScheme = Theme.of(context).colorScheme;
 
     _tooltipEntry = OverlayEntry(
       builder: (context) {
@@ -598,24 +587,19 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
           child: IgnorePointer(
             child: Material(
               color: Colors.transparent,
-              elevation: 6,
-              borderRadius: BorderRadius.circular(12),
+              elevation: 0,
+              borderRadius: AppRadii.chipRadius,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: colorScheme.inverseSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.shadow.withAlpha(60),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+                  color: AppColors.surfaceSecondary,
+                  borderRadius: AppRadii.chipRadius,
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppShadows.elevated,
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -628,26 +612,23 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: AppSpacing.sm),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             category,
-                            style: TextStyle(
-                              color: colorScheme.onInverseSurface,
-                              fontSize: 12,
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textPrimary,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             '${CurrencySettings.instance.format(amount)} · ${share.round()}%',
-                            style: TextStyle(
-                              color: colorScheme.onInverseSurface.withAlpha(200),
+                            style: AppTextStyles.caption.copyWith(
                               fontSize: 11,
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -775,13 +756,7 @@ class _DailySpendingChartState extends State<DailySpendingChart> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final labelStyle = theme.textTheme.labelSmall?.copyWith(
-      color: colorScheme.onSurfaceVariant,
-      fontWeight: FontWeight.w600,
-      fontSize: 10,
-    );
+    final labelStyle = AppTextStyles.label.copyWith(fontSize: 10);
     final totalDays = widget.dailyTotals.length;
     final midpoint = (totalDays / 2).ceil();
     final selectedIndex = _selectedDayIndex;
@@ -799,9 +774,9 @@ class _DailySpendingChartState extends State<DailySpendingChart> {
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               'Day ${selectedIndex! + 1}: ${CurrencySettings.instance.format(selectedAmount)}',
-              style: theme.textTheme.labelMedium?.copyWith(
+              style: AppTextStyles.label.copyWith(
+                color: AppColors.primary,
                 fontWeight: FontWeight.w700,
-                color: colorScheme.primary,
               ),
             ),
           ),
@@ -978,7 +953,7 @@ class _DailySpendingPainter extends CustomPainter {
           p,
           3.5,
           Paint()
-            ..color = Colors.white
+            ..color = AppColors.background
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.5,
         );

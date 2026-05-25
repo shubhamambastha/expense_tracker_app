@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../config/design_tokens.dart';
 import '../../models/expense_category.dart';
 import '../../services/category_catalog.dart';
 import '../../utils/category_style.dart';
@@ -40,6 +41,7 @@ class CategoriesSettingsSection extends StatelessWidget {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
+      backgroundColor: AppColors.surface,
       builder: (sheetContext) => const _AddCategorySheet(),
     );
 
@@ -53,6 +55,7 @@ class CategoriesSettingsSection extends StatelessWidget {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
+      backgroundColor: AppColors.surface,
       builder: (sheetContext) {
         final maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.72;
 
@@ -68,42 +71,45 @@ class CategoriesSettingsSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        AppSpacing.xs,
+                        AppSpacing.xl,
+                        AppSpacing.xs,
+                      ),
                       child: Text(
                         'All categories',
-                        style: Theme.of(sheetContext)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                        style: AppTextStyles.headingSmall,
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl,
+                      ),
                       child: Text(
                         'Default categories cannot be removed.',
-                        style: Theme.of(sheetContext)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(
-                          color: Theme.of(sheetContext)
-                              .colorScheme
-                              .onSurfaceVariant,
-                        ),
+                        style: AppTextStyles.caption,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Expanded(
                       child: categories.isEmpty
                           ? Center(
                               child: Text(
                                 'No categories yet. Tap Add on Profile.',
-                                style:
-                                    Theme.of(sheetContext).textTheme.bodyMedium,
+                                style: AppTextStyles.bodyMedium,
                               ),
                             )
-                          : ListView.builder(
-                              padding: const EdgeInsets.only(bottom: 8),
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.lg,
+                                0,
+                                AppSpacing.lg,
+                                AppSpacing.md,
+                              ),
                               itemCount: categories.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: AppSpacing.sm),
                               itemBuilder: (context, index) {
                                 final category = categories[index];
                                 return _CategoryRow(
@@ -152,6 +158,10 @@ class CategoriesSettingsSection extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: AppColors.textPrimary,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -225,22 +235,27 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
       child: Padding(
         padding: EdgeInsets.only(bottom: bottomInset),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.xs,
+                  AppSpacing.xl,
+                  AppSpacing.sm,
+                ),
                 child: Text(
                   'New category',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: AppTextStyles.headingSmall,
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                ),
                 child: TextField(
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
@@ -250,61 +265,79 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                ),
                 child: Text(
                   'Icon',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  style: AppTextStyles.label.copyWith(
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                ),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 5,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
+                  mainAxisSpacing: AppSpacing.sm,
+                  crossAxisSpacing: AppSpacing.sm,
                 ),
                 itemCount: CategoryIcons.pickerOptions.length,
                 itemBuilder: (context, index) {
                   final option = CategoryIcons.pickerOptions[index];
                   final selected = option.key == _selectedIconKey;
-                  final colorScheme = Theme.of(context).colorScheme;
 
                   return Material(
                     color: selected
-                        ? colorScheme.primaryContainer
-                        : colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(12),
+                        ? AppColors.primary.withAlpha(40)
+                        : AppColors.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(14),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                       onTap: () {
                         setState(() => _selectedIconKey = option.key);
                       },
-                      child: Icon(
-                        option.icon,
-                        color: selected
-                            ? colorScheme.onPrimaryContainer
-                            : colorScheme.onSurface,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: selected
+                                ? AppColors.primary.withAlpha(110)
+                                : AppColors.border,
+                          ),
+                        ),
+                        child: Icon(
+                          option.icon,
+                          color: selected
+                              ? AppColors.primary
+                              : AppColors.textPrimary,
+                        ),
                       ),
                     ),
                   );
                 },
               ),
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(AppSpacing.xl),
                 child: FilledButton(
                   onPressed: _isSaving ? null : _save,
                   child: _isSaving
                       ? const SizedBox(
                           width: 22,
                           height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF003328),
+                          ),
                         )
                       : const Text('Save category'),
                 ),
@@ -332,39 +365,42 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return ListTile(
-      leading: CircleAvatar(
-        radius: 18,
-        backgroundColor: color.withAlpha(36),
-        child: Icon(icon, color: color, size: 18),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSecondary,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
       ),
-      title: Text(
-        category.name,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          fontWeight: FontWeight.w700,
+      child: ListTile(
+        leading: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: color.withAlpha(40),
+            borderRadius: BorderRadius.circular(11),
+          ),
+          child: Icon(icon, color: color, size: 18),
         ),
+        title: Text(
+          category.name,
+          style: AppTextStyles.bodyLarge.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: category.isDefault
+            ? Text('Default', style: AppTextStyles.caption)
+            : null,
+        trailing: onDelete != null
+            ? IconButton(
+                tooltip: 'Delete',
+                onPressed: onDelete,
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppColors.danger,
+                ),
+              )
+            : null,
       ),
-      subtitle: category.isDefault
-          ? Text(
-              'Default',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            )
-          : null,
-      trailing: onDelete != null
-          ? IconButton(
-              tooltip: 'Delete',
-              onPressed: onDelete,
-              icon: Icon(
-                Icons.delete_outline_rounded,
-                color: colorScheme.error,
-              ),
-            )
-          : null,
     );
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
 import 'expense_list.dart';
@@ -22,11 +24,15 @@ class ExpensesContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        0,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16),
           Expanded(
             child: ExpenseList(
               expenses: expenses,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../config/design_tokens.dart';
+
 typedef SubmitCallback = Future<void> Function();
 
 class LoginForm extends StatelessWidget {
@@ -32,39 +34,63 @@ class LoginForm extends StatelessWidget {
             controller: emailController,
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
+            style: AppTextStyles.bodyLarge,
             decoration: const InputDecoration(
               labelText: 'Email',
-              border: OutlineInputBorder(),
+              hintText: 'you@domain.com',
+              prefixIcon: Icon(Icons.alternate_email_rounded),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) return 'Please enter email';
               return null;
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           TextFormField(
             controller: passwordController,
             obscureText: true,
+            style: AppTextStyles.bodyLarge,
             decoration: const InputDecoration(
               labelText: 'Password',
-              border: OutlineInputBorder(),
+              hintText: 'At least 6 characters',
+              prefixIcon: Icon(Icons.lock_outline_rounded),
             ),
             validator: (value) {
-              if (value == null || value.length < 6) return 'Password must be at least 6 characters';
+              if (value == null || value.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
               return null;
             },
           ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: isLoading ? null : onSubmit,
-            child: isLoading
-                ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : Text(isRegistering ? 'Register' : 'Sign in'),
+          const SizedBox(height: AppSpacing.xl),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: isLoading ? null : onSubmit,
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF003328),
+                      ),
+                    )
+                  : Text(isRegistering ? 'Create account' : 'Sign in'),
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
           TextButton(
             onPressed: isLoading ? null : onToggleRegister,
-            child: Text(isRegistering ? 'Already have an account? Sign in' : 'Create a new account'),
+            child: Text(
+              isRegistering
+                  ? 'Already have an account? Sign in'
+                  : 'Create a new account',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),

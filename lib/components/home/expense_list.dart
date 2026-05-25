@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+
+import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../services/currency_settings.dart';
 import '../../models/expense.dart';
@@ -344,9 +347,10 @@ class _ExpenseListState extends State<ExpenseList> {
         else
           SliverList.separated(
             itemCount: rows.length,
-            separatorBuilder: (context, index) => Divider(
+            separatorBuilder: (context, index) => const Divider(
               height: 1,
-              color: Theme.of(context).colorScheme.outlineVariant,
+              thickness: 1,
+              color: AppColors.border,
             ),
             itemBuilder: (context, index) {
               final expense = rows[index];
@@ -401,54 +405,73 @@ class _ExpenseOverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final currency = CurrencySettings.instance;
 
-    return Card(
-      elevation: 1,
-      color: colorScheme.surface,
-      surfaceTintColor: colorScheme.surfaceTint,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    isFiltered ? 'Filtered spend' : 'Expense ledger',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Icon(Icons.receipt_long_rounded, color: colorScheme.primary),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              currency.format(total),
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                height: 1,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _MiniStat(label: 'entries', value: count.toString()),
-                const SizedBox(width: 10),
-                _MiniStat(label: 'recurring', value: recurringCount.toString()),
-              ],
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.surface,
+            AppColors.surfaceSecondary,
           ],
         ),
+        borderRadius: AppRadii.cardRadius,
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.card,
       ),
-    );
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  isFiltered ? 'Filtered spend' : 'Expense ledger',
+                  style: AppTextStyles.label,
+                ),
+              ),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(28),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.receipt_long_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            currency.format(total),
+            style: AppTextStyles.displaySmall,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              _MiniStat(label: 'entries', value: count.toString()),
+              const SizedBox(width: AppSpacing.sm),
+              _MiniStat(label: 'recurring', value: recurringCount.toString()),
+            ],
+          ),
+        ],
+      ),
+    )
+        .animate()
+        .fadeIn(duration: AppDurations.page)
+        .slideY(
+          begin: 0.04,
+          end: 0,
+          duration: AppDurations.page,
+          curve: AppCurves.spring,
+        );
   }
 }
 
@@ -460,23 +483,24 @@ class _MiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withAlpha(115),
+          color: AppColors.background,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [
             Text(
               value,
-              style: theme.textTheme.titleMedium?.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 fontWeight: FontWeight.w800,
-                height: 1,
+                height: 1.1,
               ),
             ),
             const SizedBox(width: 6),
@@ -484,10 +508,7 @@ class _MiniStat extends StatelessWidget {
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppTextStyles.caption,
               ),
             ),
           ],
@@ -514,42 +535,100 @@ class _ExpenseSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Row(
       children: [
         Expanded(
           child: TextField(
             controller: controller,
+            style: AppTextStyles.bodyMedium,
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search_rounded),
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
               hintText: 'Search expenses',
               filled: true,
-              fillColor: colorScheme.surfaceContainerHighest.withAlpha(95),
+              fillColor: AppColors.surface,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(AppRadii.input),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadii.input),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadii.input),
+                borderSide: const BorderSide(
+                  color: AppColors.primary,
+                  width: 1.4,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
               ),
               isDense: true,
             ),
             onChanged: onChanged,
           ),
         ),
-        const SizedBox(width: 10),
-        IconButton.filledTonal(
+        const SizedBox(width: AppSpacing.sm),
+        _SquareIconButton(
           tooltip: 'Filters',
+          icon: Icons.tune_rounded,
           onPressed: onFilterPressed,
-          icon: const Icon(Icons.tune_rounded),
+          accent: hasActiveFilters,
         ),
         if (hasActiveFilters) ...[
-          const SizedBox(width: 6),
-          IconButton(
+          const SizedBox(width: AppSpacing.xs),
+          _SquareIconButton(
             tooltip: 'Reset',
+            icon: Icons.close_rounded,
             onPressed: onResetPressed,
-            icon: const Icon(Icons.close_rounded),
           ),
         ],
       ],
+    );
+  }
+}
+
+class _SquareIconButton extends StatelessWidget {
+  const _SquareIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.accent = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final bool accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: AppRadii.buttonRadius,
+        child: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: accent
+                ? AppColors.primary.withAlpha(28)
+                : AppColors.surface,
+            borderRadius: AppRadii.buttonRadius,
+            border: Border.all(
+              color: accent ? AppColors.primary.withAlpha(80) : AppColors.border,
+            ),
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: accent ? AppColors.primary : AppColors.textPrimary,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -561,17 +640,27 @@ class _ActiveFilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
       children: filters.map((filter) {
-        return Chip(
-          visualDensity: VisualDensity.compact,
-          side: BorderSide.none,
-          backgroundColor: colorScheme.primary.withAlpha(20),
-          label: Text(filter),
+        return Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withAlpha(28),
+            borderRadius: AppRadii.pillRadius,
+            border: Border.all(color: AppColors.primary.withAlpha(70)),
+          ),
+          child: Text(
+            filter,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         );
       }).toList(),
     );
@@ -610,33 +699,40 @@ class _EmptyExpensesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Center(
-      child: Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.xxl),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadii.cardRadius,
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.card,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withAlpha(28),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
                 Icons.receipt_long_rounded,
-                size: 44,
-                color: colorScheme.primary,
+                size: 30,
+                color: AppColors.primary,
               ),
-              const SizedBox(height: 12),
-              Text(
-                AppConstants.noExpensesMessage,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              AppConstants.noExpensesMessage,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -648,27 +744,29 @@ class _NoMatchingExpensesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.search_off_rounded, size: 38, color: colorScheme.primary),
-          const SizedBox(height: 10),
-          Text(
-            'No matching expenses',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceSecondary,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.search_off_rounded,
+              size: 28,
+              color: AppColors.textSecondary,
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          Text('No matching expenses', style: AppTextStyles.bodyLarge),
           const SizedBox(height: 4),
           Text(
             'Try a lighter search or filter.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
+            style: AppTextStyles.bodySmall,
           ),
         ],
       ),

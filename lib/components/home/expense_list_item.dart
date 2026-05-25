@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
+import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../services/category_catalog.dart';
 import '../../services/currency_settings.dart';
@@ -104,8 +106,6 @@ class _ExpenseListItemState extends State<ExpenseListItem>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
     final expense = widget.expense;
 
     return AnimatedBuilder(
@@ -115,7 +115,7 @@ class _ExpenseListItemState extends State<ExpenseListItem>
         final slideLeft = _revealWidth * progress;
 
         return Material(
-          color: cs.surface,
+          color: AppColors.surface,
           elevation: 0,
           child: Stack(
             clipBehavior: Clip.hardEdge,
@@ -134,15 +134,15 @@ class _ExpenseListItemState extends State<ExpenseListItem>
                       children: [
                         _ActionButton(
                           icon: Icons.edit_rounded,
-                          bg: cs.secondaryContainer,
-                          fg: cs.onSecondaryContainer,
+                          bg: AppColors.secondary.withAlpha(40),
+                          fg: AppColors.secondary,
                           onTap: _handleEdit,
                         ),
                         const SizedBox(width: 4),
                         _ActionButton(
                           icon: Icons.delete_rounded,
-                          bg: cs.errorContainer,
-                          fg: cs.onErrorContainer,
+                          bg: AppColors.danger.withAlpha(40),
+                          fg: AppColors.danger,
                           onTap: _handleDelete,
                         ),
                       ],
@@ -158,13 +158,13 @@ class _ExpenseListItemState extends State<ExpenseListItem>
                   onHorizontalDragEnd: _onHorizontalDragEnd,
                   onTap: _onRowTap,
                   child: Material(
-                    color: cs.surface,
+                    color: AppColors.surface,
                     child: InkWell(
                       onTap: _onRowTap,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 9,
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.md,
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -173,40 +173,40 @@ class _ExpenseListItemState extends State<ExpenseListItem>
                             Row(
                               children: [
                                 Container(
-                                  width: 28,
-                                  height: 28,
+                                  width: 36,
+                                  height: 36,
                                   decoration: BoxDecoration(
-                                    color: widget.categoryColor.withAlpha(28),
-                                    borderRadius: BorderRadius.circular(9),
+                                    color: widget.categoryColor.withAlpha(32),
+                                    borderRadius: BorderRadius.circular(11),
                                   ),
                                   child: Icon(
                                     CategoryCatalog.instance
-                                    .iconForName(expense.category),
+                                        .iconForName(expense.category),
                                     color: widget.categoryColor,
-                                    size: 16,
+                                    size: 18,
                                   ),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: AppSpacing.md),
                                 Expanded(
                                   child: Text(
                                     expense.name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w800,
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: AppSpacing.md),
                                 Flexible(
                                   child: Container(
                                     alignment: Alignment.centerRight,
                                     child: Text(
                                       CurrencySettings.instance
                                           .format(expense.amount),
-                                      style: theme.textTheme.titleSmall
-                                          ?.copyWith(
-                                        fontWeight: FontWeight.w900,
+                                      style: AppTextStyles.bodyLarge.copyWith(
+                                        fontWeight: FontWeight.w800,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -215,16 +215,24 @@ class _ExpenseListItemState extends State<ExpenseListItem>
                                 ),
                               ],
                             ),
-                            if (_isExpanded) ...[
-                              const SizedBox(height: 10),
-                              _ExpenseDetails(
-                                expense: expense,
-                                account: widget.account,
-                                categoryColor: widget.categoryColor,
-                                iconForType: _iconForType,
-                                iconForAccount: _iconForAccount,
-                              ),
-                            ],
+                            AnimatedSize(
+                              duration: AppDurations.short,
+                              curve: AppCurves.spring,
+                              child: _isExpanded
+                                  ? Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: AppSpacing.md,
+                                      ),
+                                      child: _ExpenseDetails(
+                                        expense: expense,
+                                        account: widget.account,
+                                        categoryColor: widget.categoryColor,
+                                        iconForType: _iconForType,
+                                        iconForAccount: _iconForAccount,
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
                           ],
                         ),
                       ),
@@ -294,15 +302,13 @@ class _ExpenseDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withAlpha(75),
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,14 +324,14 @@ class _ExpenseDetails extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       expense.category,
-                      style: theme.textTheme.labelLarge?.copyWith(
+                      style: AppTextStyles.label.copyWith(
                         color: categoryColor,
                         fontWeight: FontWeight.w700,
                       ),
@@ -333,30 +339,30 @@ class _ExpenseDetails extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       DateFormat.yMMMd().format(expense.date),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                      style: AppTextStyles.caption,
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           _DetailRow(
             icon: iconForType(expense.type),
             label: expense.type.label,
-            color: expense.isRecurring ? cs.tertiary : cs.primary,
+            color: expense.isRecurring
+                ? AppColors.secondary
+                : AppColors.primary,
           ),
           _DetailRow(
             icon: iconForAccount(account?.type),
             label: account?.type.label ?? 'Other',
-            color: cs.primary,
+            color: AppColors.primary,
           ),
           _DetailRow(
             icon: Icons.account_balance_wallet_rounded,
             label: account?.name ?? 'Unknown account',
-            color: cs.secondary,
+            color: AppColors.secondary,
           ),
         ],
       ),
@@ -378,24 +384,25 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
           Container(
-            width: 24,
-            height: 24,
+            width: 26,
+            height: 26,
             decoration: BoxDecoration(
-              color: color.withAlpha(24),
-              borderRadius: BorderRadius.circular(7),
+              color: color.withAlpha(28),
+              borderRadius: BorderRadius.circular(8),
             ),
             padding: const EdgeInsets.all(3),
             child: Icon(icon, color: color, size: 15),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.md),
           Flexible(
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.w500,
               ),
               overflow: TextOverflow.ellipsis,

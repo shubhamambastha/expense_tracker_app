@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
 import 'profile_manage_card.dart';
@@ -39,6 +40,7 @@ class AccountsSettingsSection extends StatelessWidget {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
+      backgroundColor: AppColors.surface,
       builder: (sheetContext) {
         final maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.72;
 
@@ -49,42 +51,75 @@ class AccountsSettingsSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.xs,
+                    AppSpacing.xl,
+                    AppSpacing.sm,
+                  ),
                   child: Text(
                     'All accounts',
-                    style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: AppTextStyles.headingSmall,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Expanded(
                   child: accounts.isEmpty
                       ? Center(
                           child: Padding(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(AppSpacing.xl),
                             child: Text(
                               'No accounts yet. Tap Add to create bank, card, or cash accounts.',
                               textAlign: TextAlign.center,
-                              style: Theme.of(sheetContext).textTheme.bodyMedium,
+                              style: AppTextStyles.bodyMedium,
                             ),
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 8),
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            0,
+                            AppSpacing.lg,
+                            AppSpacing.md,
+                          ),
                           itemCount: accounts.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: AppSpacing.sm),
                           itemBuilder: (context, index) {
                             final account = accounts[index];
-                            return ListTile(
-                              leading: Icon(
-                                Icons.account_balance_wallet_rounded,
-                                color: Theme.of(sheetContext).colorScheme.primary,
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceSecondary,
+                                borderRadius: BorderRadius.circular(14),
+                                border:
+                                    Border.all(color: AppColors.border),
                               ),
-                              title: Text(
-                                account.name,
-                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              child: ListTile(
+                                leading: Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withAlpha(28),
+                                    borderRadius: BorderRadius.circular(11),
+                                  ),
+                                  child: const Icon(
+                                    Icons
+                                        .account_balance_wallet_rounded,
+                                    color: AppColors.primary,
+                                    size: 18,
+                                  ),
+                                ),
+                                title: Text(
+                                  account.name,
+                                  style: AppTextStyles.bodyLarge.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  account.type.label,
+                                  style: AppTextStyles.caption,
+                                ),
                               ),
-                              subtitle: Text(account.type.label),
                             );
                           },
                         ),

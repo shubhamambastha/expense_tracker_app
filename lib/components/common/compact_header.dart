@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../config/design_tokens.dart';
+
 /// A compact header that preserves status bar spacing without a full AppBar.
 class CompactHeader extends StatelessWidget {
   const CompactHeader({
@@ -15,7 +17,7 @@ class CompactHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = backgroundColor ?? Theme.of(context).scaffoldBackgroundColor;
+    final color = backgroundColor ?? AppColors.background;
     return Material(
       color: color,
       elevation: elevation,
@@ -23,7 +25,7 @@ class CompactHeader extends StatelessWidget {
         bottom: false,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: child ?? const SizedBox.shrink(),
         ),
       ),

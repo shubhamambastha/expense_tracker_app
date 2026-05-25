@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'config/theme.dart';
 import 'components/common/error_app.dart';
 import 'components/common/auth_gate.dart';
@@ -8,6 +9,7 @@ import 'services/supabase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(AppTheme.systemOverlay);
 
   try {
     await Future.wait([
@@ -34,7 +36,9 @@ class ExpenseTrackerApp extends StatelessWidget {
         return MaterialApp(
           title: 'Expense Tracker',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.darkTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.dark,
           home: const AuthGate(),
         );
       },

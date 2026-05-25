@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Chart / list accent colors (aligned across the app).
+/// Chart / list accent colors (premium dark palette).
+/// Designed to harmonise with [AppColors.primary] (#00C896) and
+/// [AppColors.secondary] (#00B8D9) on dark surfaces.
 const kCategoryColors = <Color>[
-  Color(0xFF4F8EF7),
-  Color(0xFF47B881),
-  Color(0xFFF8B229),
+  Color(0xFF00C896),
+  Color(0xFF00B8D9),
+  Color(0xFFFFB547),
+  Color(0xFFFF5C7A),
   Color(0xFF8E5AF7),
-  Color(0xFFF15C5C),
-  Color(0xFF3FB0AC),
+  Color(0xFF4F8EF7),
   Color(0xFFF88D42),
-  Color(0xFF6B7A8F),
+  Color(0xFF6BD4B0),
 ];
 
 /// Material icon keys stored in Supabase (`icon` column).
