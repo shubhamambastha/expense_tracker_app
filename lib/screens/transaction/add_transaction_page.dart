@@ -36,7 +36,7 @@ import '../../utils/snackbar_helper.dart';
 ///
 /// * Persistence is intentionally decoupled. The screen takes [onSave] —
 ///   the caller maps the draft into whatever storage model is appropriate
-///   (today: [Expense]). Income / transfer / EMI / subscription land here
+///   (today: [Expense]). Income / EMI / subscription land here
 ///   too once the persistence model grows.
 ///
 /// * Layout is `Scaffold` with a sticky bottom action bar. The body
@@ -179,10 +179,8 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           categoryName: _draft.categoryName,
           current: _draft.recurring,
         );
-      } else if (kind == TransactionKind.expense) {
-        _draft.categoryName ??= _defaultCategory();
-        _detailsExpanded = true;
       } else {
+        _draft.categoryName ??= _defaultCategory();
         _detailsExpanded = true;
       }
     });
@@ -575,7 +573,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     ];
   }
 
-  List<Widget> _buildExpenseOrTransferSections() {
+  List<Widget> _buildExpenseSections() {
     return [
       AmountSection(
         controller: _amountController,
@@ -591,9 +589,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         ),
       ),
       const SizedBox(height: AppSpacing.lg),
-      _SectionHeading(
-        title: _draft.isTransfer ? 'Transfer purpose' : 'Category',
-      ),
+      const _SectionHeading(title: 'Category'),
       const SizedBox(height: AppSpacing.sm),
       CategoryPillsSelector(
         selectedName: _draft.categoryName,
@@ -601,9 +597,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         onChanged: _onCategoryChanged,
       ),
       const SizedBox(height: AppSpacing.lg),
-      _SectionHeading(
-        title: _draft.isTransfer ? 'From account' : 'Account',
-      ),
+      const _SectionHeading(title: 'Account'),
       const SizedBox(height: AppSpacing.sm),
       AccountChipsSelector(
         accounts: widget.accounts,
@@ -611,24 +605,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         onChanged: _onAccountChanged,
         onAddAccount: widget.onAddAccount,
       ),
-      if (_draft.isTransfer) ...[
-        const SizedBox(height: AppSpacing.md),
-        const _SectionHeading(title: 'To account'),
-        const SizedBox(height: AppSpacing.sm),
-        AccountChipsSelector(
-          accounts: widget.accounts
-              .where((a) => a.id != _draft.accountId)
-              .toList(),
-          selectedAccountId: _draft.transferToAccountId,
-          onChanged: (account) {
-            setState(() {
-              _draft.transferToAccountId = account.id;
-            });
-          },
-          onAddAccount: widget.onAddAccount,
-        ),
-      ],
-      if (!_draft.isTransfer && widget.recentSuggestions.isNotEmpty) ...[
+      if (widget.recentSuggestions.isNotEmpty) ...[
         const SizedBox(height: AppSpacing.lg),
         RecentSuggestionsSection(
           suggestions: widget.recentSuggestions,
@@ -662,20 +639,18 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           contextualCategory: _draft.categoryName,
         ),
       ),
-      if (!_draft.isTransfer) ...[
-        const SizedBox(height: AppSpacing.md),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: QuickAiInput(onParse: _handleQuickParse),
-        ),
-      ],
+      const SizedBox(height: AppSpacing.md),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: QuickAiInput(onParse: _handleQuickParse),
+      ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
     final sections =
-        _draft.isIncome ? _buildIncomeSections() : _buildExpenseOrTransferSections();
+        _draft.isIncome ? _buildIncomeSections() : _buildExpenseSections();
 
     return Scaffold(
       backgroundColor: AppColors.background,

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../config/design_tokens.dart';
 import '../../models/transaction_draft.dart';
 
-/// Three-way segmented control: Expense · Income · Transfer.
+/// Two-way segmented control: Expense · Income.
 ///
 /// The selected segment is the *only* coloured element so the eye is pulled
 /// to it instantly — important because category suggestions reshuffle off
@@ -52,8 +52,6 @@ class TransactionTypeSelector extends StatelessWidget {
         return Icons.south_west_rounded;
       case TransactionKind.income:
         return Icons.north_east_rounded;
-      case TransactionKind.transfer:
-        return Icons.swap_horiz_rounded;
     }
   }
 }

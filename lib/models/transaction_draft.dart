@@ -3,9 +3,9 @@ import 'expense.dart';
 
 /// What the user is recording. UI-only enum — the persistence layer still
 /// reduces this to an [Expense] for now, but the screen is built so the
-/// concept can be extended (income, transfer, EMI, subscription) without
-/// rewriting the form.
-enum TransactionKind { expense, income, transfer }
+/// concept can be extended (income, EMI, subscription) without rewriting the
+/// form.
+enum TransactionKind { expense, income }
 
 extension TransactionKindX on TransactionKind {
   String get label {
@@ -14,8 +14,6 @@ extension TransactionKindX on TransactionKind {
         return 'Expense';
       case TransactionKind.income:
         return 'Income';
-      case TransactionKind.transfer:
-        return 'Transfer';
     }
   }
 }
@@ -127,7 +125,6 @@ class TransactionDraft {
     this.currencyCode,
     this.categoryName,
     this.accountId,
-    this.transferToAccountId,
     this.merchant = '',
     DateTime? date,
     this.note = '',
@@ -141,9 +138,6 @@ class TransactionDraft {
   String? categoryName;
   int? accountId;
 
-  /// Destination account when [kind] is [TransactionKind.transfer].
-  int? transferToAccountId;
-
   String merchant;
   DateTime date;
   String note;
@@ -152,7 +146,6 @@ class TransactionDraft {
   bool get isRecurring => recurring.enabled;
   bool get isExpense => kind == TransactionKind.expense;
   bool get isIncome => kind == TransactionKind.income;
-  bool get isTransfer => kind == TransactionKind.transfer;
 
   /// True when the contextual fields panel (linked card, next due, etc.)
   /// should be revealed inside the recurring section.
@@ -162,9 +155,8 @@ class TransactionDraft {
     return c.contains('emi') || c.contains('subscription');
   }
 
-  /// Map the draft into the existing [Expense] persistence model. The non
-  /// expense variants are intentionally folded in for now — when income /
-  /// transfer support lands they can branch here.
+  /// Map the draft into the existing [Expense] persistence model. Income
+  /// support can branch here when the persistence layer grows.
   Expense toExpense({required Account account}) {
     return Expense(
       name: merchant.trim().isEmpty ? (categoryName ?? 'Untitled') : merchant.trim(),
