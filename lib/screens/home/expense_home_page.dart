@@ -10,10 +10,12 @@ import '../../components/home/expenses_content.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
+import '../../models/transaction_draft.dart';
 import '../../services/currency_settings.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/snackbar_helper.dart';
+import '../transaction/add_transaction_page.dart';
 
 /// Home page for viewing and managing expenses
 class ExpenseHomePage extends StatefulWidget {
@@ -165,13 +167,103 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _openAddExpenseDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (context) => ExpenseFormDialog(
-        accounts: _accounts,
-        onSave: _saveExpense,
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (context) => AddTransactionPage(
+          accounts: _accounts,
+          recentSuggestions: _buildRecentSuggestions(),
+          recentCategoryNames: _buildRecentCategoryNames(),
+          recentIncomeSuggestions: _buildRecentIncomeSuggestions(),
+          recentIncomeCategoryNames: _buildRecentIncomeCategoryNames(),
+          recentPayers: _buildRecentPayers(),
+          onAddAccount: _openAddAccountDialog,
+          onSave: _saveTransactionDraft,
+        ),
       ),
     );
+  }
+
+  Future<void> _saveTransactionDraft(TransactionDraft draft) async {
+    final account = _accounts.firstWhere(
+      (a) => a.id == draft.accountId,
+      orElse: () => _accounts.first,
+    );
+    await _saveExpense(draft.toExpense(account: account));
+  }
+
+  /// Build "Recent" merchant suggestions from the local expense cache.
+  /// Returns the 5 most-recent unique merchants for fast autofill.
+  List<RecentSuggestion> _buildRecentSuggestions() {
+    final seen = <String>{};
+    final out = <RecentSuggestion>[];
+    for (final e in _expenses) {
+      final key = e.name.toLowerCase();
+      if (key.isEmpty || !seen.add(key)) continue;
+      out.add(RecentSuggestion(
+        merchant: e.name,
+        category: e.category,
+        accountId: e.accountId,
+        amount: e.amount,
+      ));
+      if (out.length >= 5) break;
+    }
+    return out;
+  }
+
+  /// Prioritise the 6 most-used categories so they land first in the pills.
+  List<String> _buildRecentCategoryNames() {
+    final counts = <String, int>{};
+    for (final e in _expenses) {
+      counts[e.category] = (counts[e.category] ?? 0) + 1;
+    }
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.take(6).map((e) => e.key).toList();
+  }
+
+  /// Sample income autofill rows until income is persisted separately.
+  List<RecentSuggestion> _buildRecentIncomeSuggestions() {
+    return [
+      RecentSuggestion(
+        merchant: 'Company XYZ',
+        category: 'Salary',
+        amount: 85000,
+        kind: TransactionKind.income,
+        recurring: RecurringConfig(
+          enabled: true,
+          frequency: RecurrenceFrequency.monthly,
+        ),
+      ),
+      const RecentSuggestion(
+        merchant: 'Amazon',
+        category: 'Refund',
+        kind: TransactionKind.income,
+      ),
+      const RecentSuggestion(
+        merchant: 'Acme Corp',
+        category: 'Freelance',
+        kind: TransactionKind.income,
+      ),
+      const RecentSuggestion(
+        merchant: 'Axis Ace',
+        category: 'Cashback',
+        kind: TransactionKind.income,
+      ),
+    ];
+  }
+
+  List<String> _buildRecentIncomeCategoryNames() {
+    return const ['Salary', 'Freelance', 'Refund', 'Cashback'];
+  }
+
+  List<String> _buildRecentPayers() {
+    return const [
+      'Company XYZ',
+      'Acme Corp',
+      'Amazon',
+      'Rahul',
+      'Axis Ace',
+    ];
   }
 
   void _openEditExpenseDialog(Expense expense) {
