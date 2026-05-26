@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../components/dialogs/add_account_dialog.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
@@ -25,7 +26,7 @@ class AccountChipsSelector extends StatelessWidget {
   final int? selectedAccountId;
   final ValueChanged<Account> onChanged;
   final String? Function(Account account)? balancePreview;
-  final VoidCallback? onAddAccount;
+  final OnAddAccount? onAddAccount;
   final String heading;
 
   @override
@@ -44,7 +45,7 @@ class AccountChipsSelector extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
         itemBuilder: (context, index) {
           if (index == accounts.length) {
-            return _AddAccountChip(onTap: onAddAccount!);
+            return _AddAccountChip(onTap: () => onAddAccount!());
           }
           final account = accounts[index];
           final isSelected = account.id == selectedAccountId;
@@ -218,7 +219,7 @@ class _AddAccountChip extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   const _EmptyState({this.onAddAccount});
 
-  final VoidCallback? onAddAccount;
+  final OnAddAccount? onAddAccount;
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +248,7 @@ class _EmptyState extends StatelessWidget {
             ),
             if (onAddAccount != null)
               TextButton(
-                onPressed: onAddAccount,
+                onPressed: () => onAddAccount!(),
                 child: const Text('Add'),
               ),
           ],

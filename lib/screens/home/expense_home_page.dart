@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../components/common/compact_header.dart';
+import '../../components/dialogs/add_account_dialog.dart';
 import '../../components/dialogs/expense_form_dialog.dart';
 import '../../components/home/home_content.dart';
 import '../../components/home/expenses_content.dart';
@@ -9,6 +10,7 @@ import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
 import '../../models/transaction_draft.dart';
+import '../../services/income_category_catalog.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/snackbar_helper.dart';
@@ -251,7 +253,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   List<String> _buildRecentIncomeCategoryNames() {
-    return const ['Salary', 'Freelance', 'Refund', 'Cashback'];
+    return IncomeCategoryCatalog.instance.names.take(6).toList();
   }
 
   List<String> _buildRecentPayers() {
@@ -334,77 +336,12 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     }
   }
 
-  void _openAddAccountDialog() {
-    final nameController = TextEditingController();
-    var selectedType = AccountType.bank;
-
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Add account'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'Account name',
-                      hintText: 'HDFC Credit Card',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<AccountType>(
-                    initialValue: selectedType,
-                    decoration: const InputDecoration(
-                      labelText: 'Account type',
-                    ),
-                    items: AccountType.values
-                        .map(
-                          (type) => DropdownMenuItem(
-                            value: type,
-                            child: Text(type.label),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setDialogState(() {
-                        selectedType = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) {
-                      SnackbarHelper.showMessage(
-                        context,
-                        'Enter an account name',
-                      );
-                      return;
-                    }
-                    Navigator.of(context).pop();
-                    _saveAccount(Account(name: name, type: selectedType));
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    ).whenComplete(nameController.dispose);
+  void _openAddAccountDialog({AccountType initialType = AccountType.bank}) {
+    showAddAccountDialog(
+      context,
+      initialType: initialType,
+      onSave: _saveAccount,
+    );
   }
 
   Widget _buildHomeContent(BuildContext context) {

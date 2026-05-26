@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../components/dialogs/add_account_dialog.dart';
 import '../../components/transaction/account_chips_selector.dart';
 import '../../components/transaction/amount_section.dart';
 import '../../components/transaction/category_pills_selector.dart';
@@ -81,7 +82,7 @@ class AddTransactionPage extends StatefulWidget {
 
   /// Surfaced when the account list is empty so the user can jump to
   /// add-account flow without leaving the screen.
-  final VoidCallback? onAddAccount;
+  final OnAddAccount? onAddAccount;
 
   @override
   State<AddTransactionPage> createState() => _AddTransactionPageState();

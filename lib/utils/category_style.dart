@@ -54,6 +54,22 @@ class CategoryIcons {
       kCategoryColors[index.abs() % kCategoryColors.length];
 }
 
+/// Built-in income categories seeded for new users.
+class DefaultIncomeCategories {
+  DefaultIncomeCategories._();
+
+  static const seeds = <({String name, String iconKey})>[
+    (name: 'Salary', iconKey: 'work_rounded'),
+    (name: 'Freelance', iconKey: 'work_rounded'),
+    (name: 'Refund', iconKey: 'receipt_rounded'),
+    (name: 'Bonus', iconKey: 'savings_rounded'),
+    (name: 'Gift', iconKey: 'card_giftcard_rounded'),
+    (name: 'Cashback', iconKey: 'savings_rounded'),
+    (name: 'Investment', iconKey: 'savings_rounded'),
+    (name: 'Rental', iconKey: 'home_rounded'),
+  ];
+}
+
 /// Built-in categories seeded for new users.
 class DefaultCategories {
   DefaultCategories._();

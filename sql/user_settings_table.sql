@@ -3,6 +3,7 @@
 CREATE TABLE IF NOT EXISTS public.user_settings (
   user_id uuid PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
   default_currency_code text NOT NULL DEFAULT 'USD',
+  preferences jsonb NOT NULL DEFAULT '{}'::jsonb,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 

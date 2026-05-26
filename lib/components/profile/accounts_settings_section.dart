@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../components/dialogs/add_account_dialog.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
@@ -14,7 +15,7 @@ class AccountsSettingsSection extends StatelessWidget {
   });
 
   final List<Account> accounts;
-  final VoidCallback onAddAccount;
+  final OnAddAccount onAddAccount;
 
   @override
   Widget build(BuildContext context) {

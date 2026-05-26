@@ -112,7 +112,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedAccount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add an account from Profile first.')),
+        const SnackBar(content: Text('Add an account in Settings first.')),
       );
       return;
     }
@@ -141,7 +141,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
     final categories = catalog.categories;
     if (categories.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add categories from Profile first.')),
+        const SnackBar(content: Text('Add categories in Settings first.')),
       );
       return;
     }
@@ -200,7 +200,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
   void _openAccountPicker() {
     if (widget.accounts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add an account from Profile first.')),
+        const SnackBar(content: Text('Add an account in Settings first.')),
       );
       return;
     }
@@ -348,7 +348,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                             label: 'Category',
                             value: _selectedCategory,
                             helperText: catalog.isEmpty
-                                ? 'Add categories from Profile'
+                                ? 'Add categories in Settings'
                                 : null,
                             leading: _CategoryIcon(
                               iconKey: catalog
@@ -366,7 +366,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                                 ? 'Select account'
                                 : '${_selectedAccount!.name} · ${_selectedAccount!.type.label}',
                             helperText: widget.accounts.isEmpty
-                                ? 'Add accounts from Profile'
+                                ? 'Add accounts in Settings'
                                 : null,
                             leading: const Icon(
                               Icons.account_balance_wallet_rounded,

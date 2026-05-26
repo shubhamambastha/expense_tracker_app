@@ -23,28 +23,43 @@ class IncomeCategoryPillsSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final catalog = IncomeCategoryCatalog.instance;
-    final categories = _ordered(IncomeCategoryCatalog.categories);
+    return ListenableBuilder(
+      listenable: IncomeCategoryCatalog.instance,
+      builder: (context, _) {
+        final catalog = IncomeCategoryCatalog.instance;
+        final categories = _ordered(catalog.categories);
 
-    return SizedBox(
-      height: 84,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        itemCount: categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          final color = catalog.colorForName(category.name);
-          return _IncomeCategoryPill(
-            category: category,
-            color: color,
-            selected: category.name == selectedName,
-            onTap: () => onChanged(category.name),
+        if (categories.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Text(
+              'Add income categories in Settings to organise entries.',
+              style: AppTextStyles.caption,
+            ),
           );
-        },
-      ),
+        }
+
+        return SizedBox(
+          height: 84,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            itemCount: categories.length,
+            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              final color = catalog.colorForName(category.name);
+              return _IncomeCategoryPill(
+                category: category,
+                color: color,
+                selected: category.name == selectedName,
+                onTap: () => onChanged(category.name),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 

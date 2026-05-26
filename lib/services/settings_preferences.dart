@@ -1,5 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'currency_settings.dart';
+import 'supabase_service.dart';
 
 /// Fiscal year boundary used for analytics & budgeting roll-ups.
 enum FinancialYear { janDec, aprMar }
@@ -86,16 +91,18 @@ extension ExportFormatLabel on ExportFormat {
 
 /// App-wide preferences singleton.
 ///
-/// Mirrors the shape of [CurrencySettings] (`ChangeNotifier`, lazy `load()`,
-/// `SharedPreferences`-backed cache). Toggles & enum pickers persist across
-/// launches; Supabase sync can be layered on later by extending [load] and
-/// each setter.
+/// [load] hydrates from [SharedPreferences] for fast cold start. After
+/// sign-in, [syncForUser] merges `user_settings.preferences` from Supabase
+/// and re-writes local cache. Each change persists locally immediately and
+/// schedules a debounced remote upsert when a user session is active.
 class SettingsPreferences extends ChangeNotifier {
   SettingsPreferences._();
 
   static final SettingsPreferences instance = SettingsPreferences._();
 
-  // --- Preference keys ---
+  static const _remoteSyncDebounce = Duration(milliseconds: 500);
+
+  // --- Preference keys (also JSON keys in user_settings.preferences) ---
   static const _kMultiCurrencyEnabled = 'pref.multi_currency_enabled';
   static const _kFinancialYear = 'pref.financial_year';
   static const _kDefaultExpenseAccountId = 'pref.default_expense_account_id';
@@ -142,6 +149,8 @@ class SettingsPreferences extends ChangeNotifier {
   bool _compactModeEnabled = false;
 
   bool _loaded = false;
+  Timer? _remoteSyncTimer;
+
   bool get isLoaded => _loaded;
 
   // --- Public getters ---
@@ -165,6 +174,35 @@ class SettingsPreferences extends ChangeNotifier {
   bool get hapticEnabled => _hapticEnabled;
   bool get animationsEnabled => _animationsEnabled;
   bool get compactModeEnabled => _compactModeEnabled;
+
+  /// Pulls remote `preferences` after sign-in (must run after
+  /// [CurrencySettings.syncForUser] so `user_settings` exists). Keeps
+  /// [SharedPreferences] as the local cache.
+  Future<void> syncForUser(String _) async {
+    if (!_loaded) {
+      await load();
+    }
+
+    try {
+      final remote = await SupabaseService.fetchUserSettings();
+      if (remote == null) {
+        await _pushFullRemote();
+      } else if (remote.preferences.isEmpty) {
+        await _pushFullRemote();
+      } else {
+        _applyPreferencesJson(remote.preferences);
+      }
+      await _persistAllToSharedPrefs();
+      notifyListeners();
+    } catch (error) {
+      debugPrint('SettingsPreferences.syncForUser failed: $error');
+    }
+  }
+
+  void onSignedOut() {
+    _remoteSyncTimer?.cancel();
+    _remoteSyncTimer = null;
+  }
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -239,6 +277,7 @@ class SettingsPreferences extends ChangeNotifier {
       await prefs.setInt(_kDefaultExpenseAccountId, value);
     }
     notifyListeners();
+    _scheduleRemoteSync();
   }
 
   Future<void> setDefaultIncomeAccountId(int? value) async {
@@ -251,6 +290,7 @@ class SettingsPreferences extends ChangeNotifier {
       await prefs.setInt(_kDefaultIncomeAccountId, value);
     }
     notifyListeners();
+    _scheduleRemoteSync();
   }
 
   Future<void> setDefaultTransactionType(DefaultTransactionType value) =>
@@ -267,6 +307,7 @@ class SettingsPreferences extends ChangeNotifier {
       await prefs.setDouble(_kMonthlySpendingLimit, value);
     }
     notifyListeners();
+    _scheduleRemoteSync();
   }
 
   Future<void> setSafeDailySpendEnabled(bool value) => _writeBool(
@@ -323,6 +364,207 @@ class SettingsPreferences extends ChangeNotifier {
   Future<void> setCompactModeEnabled(bool value) =>
       _writeBool(_kCompactModeEnabled, value, (v) => _compactModeEnabled = v);
 
+  // --- Remote sync ---
+
+  Map<String, dynamic> preferencesToJson() {
+    final m = <String, dynamic>{
+      _kMultiCurrencyEnabled: _multiCurrencyEnabled,
+      _kFinancialYear: _financialYear.name,
+      _kDefaultExpenseAccountId: _defaultExpenseAccountId,
+      _kDefaultIncomeAccountId: _defaultIncomeAccountId,
+      _kDefaultTransactionType: _defaultTransactionType.name,
+      _kMonthlySpendingLimit: _monthlySpendingLimit,
+      _kSafeDailySpendEnabled: _safeDailySpendEnabled,
+      _kOverspendingAlertsEnabled: _overspendingAlertsEnabled,
+      _kNotifRecurringEnabled: _notifRecurringEnabled,
+      _kNotifSalaryEnabled: _notifSalaryEnabled,
+      _kNotifBudgetEnabled: _notifBudgetEnabled,
+      _kNotifInsightsEnabled: _notifInsightsEnabled,
+      _kNotifTiming: _notifTiming.name,
+      _kAiAssistantEnabled: _aiAssistantEnabled,
+      _kAiInsightsEnabled: _aiInsightsEnabled,
+      _kThemeModePref: _themeModePref.name,
+      _kAppLockEnabled: _appLockEnabled,
+      _kHapticEnabled: _hapticEnabled,
+      _kAnimationsEnabled: _animationsEnabled,
+      _kCompactModeEnabled: _compactModeEnabled,
+    };
+    return m;
+  }
+
+  void _applyPreferencesJson(Map<String, dynamic> json) {
+    if (json.containsKey(_kMultiCurrencyEnabled)) {
+      final v = json[_kMultiCurrencyEnabled];
+      if (v is bool) _multiCurrencyEnabled = v;
+    }
+    if (json.containsKey(_kFinancialYear)) {
+      _financialYear = _readEnum(
+        json[_kFinancialYear]?.toString(),
+        FinancialYear.values,
+        _financialYear,
+      );
+    }
+    if (json.containsKey(_kDefaultExpenseAccountId)) {
+      final v = json[_kDefaultExpenseAccountId];
+      if (v == null) {
+        _defaultExpenseAccountId = null;
+      } else if (v is int) {
+        _defaultExpenseAccountId = v;
+      } else if (v is num) {
+        _defaultExpenseAccountId = v.toInt();
+      }
+    }
+    if (json.containsKey(_kDefaultIncomeAccountId)) {
+      final v = json[_kDefaultIncomeAccountId];
+      if (v == null) {
+        _defaultIncomeAccountId = null;
+      } else if (v is int) {
+        _defaultIncomeAccountId = v;
+      } else if (v is num) {
+        _defaultIncomeAccountId = v.toInt();
+      }
+    }
+    if (json.containsKey(_kDefaultTransactionType)) {
+      _defaultTransactionType = _readEnum(
+        json[_kDefaultTransactionType]?.toString(),
+        DefaultTransactionType.values,
+        _defaultTransactionType,
+      );
+    }
+    if (json.containsKey(_kMonthlySpendingLimit)) {
+      final v = json[_kMonthlySpendingLimit];
+      if (v == null) {
+        _monthlySpendingLimit = null;
+      } else if (v is num) {
+        _monthlySpendingLimit = v.toDouble();
+      }
+    }
+    if (json.containsKey(_kSafeDailySpendEnabled)) {
+      final v = json[_kSafeDailySpendEnabled];
+      if (v is bool) _safeDailySpendEnabled = v;
+    }
+    if (json.containsKey(_kOverspendingAlertsEnabled)) {
+      final v = json[_kOverspendingAlertsEnabled];
+      if (v is bool) _overspendingAlertsEnabled = v;
+    }
+    if (json.containsKey(_kNotifRecurringEnabled)) {
+      final v = json[_kNotifRecurringEnabled];
+      if (v is bool) _notifRecurringEnabled = v;
+    }
+    if (json.containsKey(_kNotifSalaryEnabled)) {
+      final v = json[_kNotifSalaryEnabled];
+      if (v is bool) _notifSalaryEnabled = v;
+    }
+    if (json.containsKey(_kNotifBudgetEnabled)) {
+      final v = json[_kNotifBudgetEnabled];
+      if (v is bool) _notifBudgetEnabled = v;
+    }
+    if (json.containsKey(_kNotifInsightsEnabled)) {
+      final v = json[_kNotifInsightsEnabled];
+      if (v is bool) _notifInsightsEnabled = v;
+    }
+    if (json.containsKey(_kNotifTiming)) {
+      _notifTiming = _readEnum(
+        json[_kNotifTiming]?.toString(),
+        NotificationTiming.values,
+        _notifTiming,
+      );
+    }
+    if (json.containsKey(_kAiAssistantEnabled)) {
+      final v = json[_kAiAssistantEnabled];
+      if (v is bool) _aiAssistantEnabled = v;
+    }
+    if (json.containsKey(_kAiInsightsEnabled)) {
+      final v = json[_kAiInsightsEnabled];
+      if (v is bool) _aiInsightsEnabled = v;
+    }
+    if (json.containsKey(_kThemeModePref)) {
+      _themeModePref = _readEnum(
+        json[_kThemeModePref]?.toString(),
+        ThemeModePref.values,
+        _themeModePref,
+      );
+    }
+    if (json.containsKey(_kAppLockEnabled)) {
+      final v = json[_kAppLockEnabled];
+      if (v is bool) _appLockEnabled = v;
+    }
+    if (json.containsKey(_kHapticEnabled)) {
+      final v = json[_kHapticEnabled];
+      if (v is bool) _hapticEnabled = v;
+    }
+    if (json.containsKey(_kAnimationsEnabled)) {
+      final v = json[_kAnimationsEnabled];
+      if (v is bool) _animationsEnabled = v;
+    }
+    if (json.containsKey(_kCompactModeEnabled)) {
+      final v = json[_kCompactModeEnabled];
+      if (v is bool) _compactModeEnabled = v;
+    }
+  }
+
+  Future<void> _persistAllToSharedPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kMultiCurrencyEnabled, _multiCurrencyEnabled);
+    await prefs.setString(_kFinancialYear, _financialYear.name);
+    if (_defaultExpenseAccountId == null) {
+      await prefs.remove(_kDefaultExpenseAccountId);
+    } else {
+      await prefs.setInt(_kDefaultExpenseAccountId, _defaultExpenseAccountId!);
+    }
+    if (_defaultIncomeAccountId == null) {
+      await prefs.remove(_kDefaultIncomeAccountId);
+    } else {
+      await prefs.setInt(_kDefaultIncomeAccountId, _defaultIncomeAccountId!);
+    }
+    await prefs.setString(_kDefaultTransactionType, _defaultTransactionType.name);
+    if (_monthlySpendingLimit == null) {
+      await prefs.remove(_kMonthlySpendingLimit);
+    } else {
+      await prefs.setDouble(_kMonthlySpendingLimit, _monthlySpendingLimit!);
+    }
+    await prefs.setBool(_kSafeDailySpendEnabled, _safeDailySpendEnabled);
+    await prefs.setBool(_kOverspendingAlertsEnabled, _overspendingAlertsEnabled);
+    await prefs.setBool(_kNotifRecurringEnabled, _notifRecurringEnabled);
+    await prefs.setBool(_kNotifSalaryEnabled, _notifSalaryEnabled);
+    await prefs.setBool(_kNotifBudgetEnabled, _notifBudgetEnabled);
+    await prefs.setBool(_kNotifInsightsEnabled, _notifInsightsEnabled);
+    await prefs.setString(_kNotifTiming, _notifTiming.name);
+    await prefs.setBool(_kAiAssistantEnabled, _aiAssistantEnabled);
+    await prefs.setBool(_kAiInsightsEnabled, _aiInsightsEnabled);
+    await prefs.setString(_kThemeModePref, _themeModePref.name);
+    await prefs.setBool(_kAppLockEnabled, _appLockEnabled);
+    await prefs.setBool(_kHapticEnabled, _hapticEnabled);
+    await prefs.setBool(_kAnimationsEnabled, _animationsEnabled);
+    await prefs.setBool(_kCompactModeEnabled, _compactModeEnabled);
+  }
+
+  Future<void> _pushFullRemote() async {
+    if (SupabaseService.currentUser == null) return;
+    final code = CurrencySettings.instance.currencyCode;
+    await SupabaseService.upsertUserSettings(
+      code,
+      preferences: preferencesToJson(),
+    );
+  }
+
+  void _scheduleRemoteSync() {
+    if (SupabaseService.currentUser == null) return;
+    _remoteSyncTimer?.cancel();
+    _remoteSyncTimer = Timer(_remoteSyncDebounce, () async {
+      _remoteSyncTimer = null;
+      try {
+        final code = CurrencySettings.instance.currencyCode;
+        await SupabaseService.upsertUserSettings(
+          code,
+          preferences: preferencesToJson(),
+        );
+      } catch (error) {
+        debugPrint('SettingsPreferences remote sync failed: $error');
+      }
+    });
+  }
+
   // --- Private helpers ---
 
   Future<void> _writeBool(
@@ -334,6 +576,7 @@ class SettingsPreferences extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(key, value);
     notifyListeners();
+    _scheduleRemoteSync();
   }
 
   Future<void> _writeEnum<T extends Enum>(
@@ -345,6 +588,7 @@ class SettingsPreferences extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value.name);
     notifyListeners();
+    _scheduleRemoteSync();
   }
 
   T _readEnum<T extends Enum>(String? raw, List<T> values, T fallback) {

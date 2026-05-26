@@ -1,0 +1,189 @@
+import 'package:flutter/material.dart';
+
+import '../../config/design_tokens.dart';
+import '../../models/income_category.dart';
+import '../../services/income_category_catalog.dart';
+import '../../utils/snackbar_helper.dart';
+import '../dialogs/add_category_sheet.dart';
+import '../profile/profile_manage_card.dart';
+import 'category_list_row.dart';
+
+/// Settings section for managing income categories.
+class IncomeCategoriesSection extends StatelessWidget {
+  const IncomeCategoriesSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: IncomeCategoryCatalog.instance,
+      builder: (context, _) {
+        final catalog = IncomeCategoryCatalog.instance;
+        final count = catalog.categories.length;
+        final subtitle = count == 0
+            ? 'No categories yet'
+            : count == 1
+                ? '1 category'
+                : '$count categories';
+
+        return ProfileManageCard(
+          title: 'Income categories',
+          subtitle: subtitle,
+          seeAllLabel: 'See all',
+          addLabel: 'Add',
+          onSeeAll: () => _openAllCategoriesSheet(context),
+          onAdd: () => _openAddCategorySheet(context),
+        );
+      },
+    );
+  }
+
+  Future<void> _openAddCategorySheet(BuildContext context) async {
+    final added = await showAddCategorySheet(
+      context,
+      title: 'New income category',
+      onSave: (name, iconKey) => IncomeCategoryCatalog.instance.addCategory(
+        name: name,
+        iconKey: iconKey,
+      ),
+    );
+
+    if (added == true && context.mounted) {
+      SnackbarHelper.showSuccess(context, 'Income category added');
+    }
+  }
+
+  Future<void> _openAllCategoriesSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      builder: (sheetContext) {
+        final maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.72;
+
+        return ListenableBuilder(
+          listenable: IncomeCategoryCatalog.instance,
+          builder: (context, _) {
+            final categories = IncomeCategoryCatalog.instance.categories;
+
+            return SafeArea(
+              child: SizedBox(
+                height: maxHeight,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        AppSpacing.xs,
+                        AppSpacing.xl,
+                        AppSpacing.xs,
+                      ),
+                      child: Text(
+                        'Income categories',
+                        style: AppTextStyles.headingSmall,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl,
+                      ),
+                      child: Text(
+                        'Default categories cannot be removed.',
+                        style: AppTextStyles.caption,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Expanded(
+                      child: categories.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No categories yet. Tap Add above.',
+                                style: AppTextStyles.bodyMedium,
+                              ),
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.lg,
+                                0,
+                                AppSpacing.lg,
+                                AppSpacing.md,
+                              ),
+                              itemCount: categories.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: AppSpacing.sm),
+                              itemBuilder: (context, index) {
+                                final category = categories[index];
+                                final catalog = IncomeCategoryCatalog.instance;
+                                return CategoryListRow(
+                                  name: category.name,
+                                  color: catalog.colorForName(category.name),
+                                  icon: catalog.iconForName(category.name),
+                                  isDefault: category.isDefault,
+                                  onDelete: category.isDefault
+                                      ? null
+                                      : () => _confirmDelete(
+                                            context,
+                                            sheetContext,
+                                            category,
+                                          ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    BuildContext sheetContext,
+    IncomeCategory category,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete category'),
+        content: Text(
+          'Remove "${category.name}"? Transactions already using it will keep the label.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: AppColors.textPrimary,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    try {
+      await IncomeCategoryCatalog.instance.deleteCategory(category);
+      if (sheetContext.mounted &&
+          IncomeCategoryCatalog.instance.categories.isEmpty) {
+        Navigator.of(sheetContext).pop();
+      }
+      if (context.mounted) {
+        SnackbarHelper.showSuccess(context, 'Category removed');
+      }
+    } catch (error) {
+      if (context.mounted) {
+        SnackbarHelper.showMessage(context, error.toString());
+      }
+    }
+  }
+}

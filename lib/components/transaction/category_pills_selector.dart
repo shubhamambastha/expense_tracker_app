@@ -225,7 +225,7 @@ class _EmptyHint extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
-                'Add categories from Profile to organise your spending.',
+                'Add categories in Settings to organise your spending.',
                 style: AppTextStyles.caption,
               ),
             ),

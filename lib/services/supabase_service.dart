@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/account.dart';
 import '../models/expense.dart';
 import '../models/expense_category.dart';
+import '../models/income_category.dart';
 import '../models/user_settings.dart';
 import '../utils/category_style.dart';
 
@@ -176,22 +177,49 @@ class SupabaseService {
     return UserSettings.fromMap(data);
   }
 
+  /// Upserts `user_settings` for the current user.
+  ///
+  /// When [preferences] is null, existing `preferences` on the server are
+  /// preserved (used by currency-only updates). When non-null, replaces the
+  /// blob (used by [SettingsPreferences] debounced sync).
   static Future<UserSettings> upsertUserSettings(
-    String defaultCurrencyCode,
-  ) async {
+    String defaultCurrencyCode, {
+    Map<String, dynamic>? preferences,
+  }) async {
     final user = currentUser;
     if (user == null) {
       throw Exception('Not signed in. Please sign in to save settings.');
     }
 
-    final payload = UserSettings(
-      userId: user.id,
-      defaultCurrencyCode: defaultCurrencyCode,
-    ).toMap();
+    Map<String, dynamic> resolvedPrefs;
+    if (preferences != null) {
+      resolvedPrefs = Map<String, dynamic>.from(preferences);
+    } else {
+      final existing = await Supabase.instance.client
+          .from('user_settings')
+          .select()
+          .eq('user_id', user.id)
+          .maybeSingle();
+      if (existing == null) {
+        resolvedPrefs = {};
+      } else {
+        final raw = existing['preferences'];
+        if (raw is Map) {
+          resolvedPrefs = Map<String, dynamic>.from(raw);
+        } else {
+          resolvedPrefs = {};
+        }
+      }
+    }
 
     final data = await Supabase.instance.client
         .from('user_settings')
-        .upsert(payload)
+        .upsert({
+          'user_id': user.id,
+          'default_currency_code': defaultCurrencyCode,
+          'preferences': resolvedPrefs,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
         .select()
         .single();
 
@@ -282,6 +310,95 @@ class SupabaseService {
 
     await Supabase.instance.client
         .from('expense_categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('user_id', user.id)
+        .eq('is_default', false);
+  }
+
+  static Future<List<IncomeCategory>> fetchIncomeCategories() async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to load income categories.');
+    }
+
+    final data = await Supabase.instance.client
+        .from('income_categories')
+        .select()
+        .eq('user_id', user.id)
+        .order('sort_order')
+        .order('name');
+
+    return (data as List<dynamic>)
+        .map((item) => IncomeCategory.fromMap(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  static Future<List<IncomeCategory>> ensureDefaultIncomeCategories() async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to seed income categories.');
+    }
+
+    var existing = await fetchIncomeCategories();
+    final existingNames = existing
+        .map((c) => c.name.trim().toLowerCase())
+        .toSet();
+
+    final missing = <Map<String, dynamic>>[];
+    for (final entry in DefaultIncomeCategories.seeds.asMap().entries) {
+      final seed = entry.value;
+      if (existingNames.contains(seed.name.toLowerCase())) continue;
+      missing.add({
+        'user_id': user.id,
+        'name': seed.name,
+        'icon': seed.iconKey,
+        'sort_order': entry.key,
+        'is_default': true,
+      });
+    }
+
+    if (missing.isNotEmpty) {
+      await Supabase.instance.client.from('income_categories').insert(missing);
+      existing = await fetchIncomeCategories();
+    }
+
+    return existing;
+  }
+
+  static Future<IncomeCategory> insertIncomeCategory({
+    required String name,
+    required String iconKey,
+    required int sortOrder,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to save income categories.');
+    }
+
+    final data = await Supabase.instance.client
+        .from('income_categories')
+        .insert({
+          'user_id': user.id,
+          'name': name,
+          'icon': iconKey,
+          'sort_order': sortOrder,
+          'is_default': false,
+        })
+        .select()
+        .single();
+
+    return IncomeCategory.fromMap(data);
+  }
+
+  static Future<void> deleteIncomeCategory(int categoryId) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to delete income categories.');
+    }
+
+    await Supabase.instance.client
+        .from('income_categories')
         .delete()
         .eq('id', categoryId)
         .eq('user_id', user.id)

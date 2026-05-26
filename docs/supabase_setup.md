@@ -19,21 +19,22 @@ The workflow passes these as `--dart-define=KEY=VALUE` to `flutter build`.
 | 1 | `sql/expenses_table.sql` | `expenses` (legacy) + `accounts` + RLS |
 | 2 | `sql/20260517_add_named_accounts.sql` | `accounts` FK on `expenses` |
 | 3 | `sql/20260517_normalize_expense_accounts.sql` | Drops stale `account_name/type` columns |
-| 4 | `sql/user_settings_table.sql` | `user_settings` (default currency) |
+| 4 | `sql/user_settings_table.sql` | `user_settings` (default currency + `preferences` jsonb) |
+| 4b | `sql/20260527_user_settings_preferences.sql` | Adds `preferences` to existing `user_settings` (skip if table created from updated file 4) |
 | 5 | `sql/expense_categories_table.sql` | `expense_categories` + RLS |
 | 6 | `sql/20260526_create_transactions.sql` | `transactions` unified ledger + backfill from `expenses` |
-| 7 | `sql/20260526_income_categories.sql` | `income_categories` + seeds for all existing users |
+| 7 | `sql/20260526_income_categories.sql` | `income_categories` + seeds for all existing users (required for Settings → Categories income labels) |
 | 8 | `sql/20260526_counterparties.sql` | `counterparties` autofill history + backfill from `expenses.name` |
 
 ### Existing databases (apply only the new migrations)
 
-If you have an existing database with the first five files already applied, run only files 6–8.
+If you have an existing database with the first five files already applied, run migrations 4b (if `preferences` is missing), then 6–8 as needed.
 
 ### Table overview
 
 ```
 accounts                  — bank / wallet / cash / UPI accounts
-user_settings             — per-user default currency
+user_settings             — per-user default currency + `preferences` (jsonb app settings)
 expense_categories        — user-customisable expense category pills
 income_categories         — user-customisable income category pills
                             (Salary, Freelance, Refund, Bonus, Gift, …)
@@ -67,7 +68,7 @@ DROP TABLE public.expenses;
 
 Do **not** drop it before the app is reading from `transactions`.
 
-The app stores amounts as numbers; `user_settings.default_currency_code` controls display and input formatting per account.
+The app stores amounts as numbers; `user_settings.default_currency_code` controls display and input formatting per account. `user_settings.preferences` stores the same keys as local `SettingsPreferences` (multi-currency, budgets, notifications, theme, etc.) for cross-device sync when signed in.
 
 ### Notes
 - Every table has `user_id uuid NOT NULL REFERENCES auth.users(id)` and RLS enabled.
