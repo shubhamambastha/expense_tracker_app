@@ -12,6 +12,14 @@ enum TransactionDisplayType {
   refund,
 }
 
+/// Types shown in the Transactions screen Type filter.
+/// EMI, Subscription, and Refund are filtered via Category instead.
+const kTransactionTypeFilterOptions = [
+  TransactionDisplayType.expense,
+  TransactionDisplayType.income,
+  TransactionDisplayType.transfer,
+];
+
 extension TransactionDisplayTypeLabel on TransactionDisplayType {
   String get label {
     switch (this) {

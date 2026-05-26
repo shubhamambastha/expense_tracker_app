@@ -107,8 +107,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   double get _stickyHeaderHeight {
-    var height = 118.0;
-    if (_activeChips.isNotEmpty) height += 40;
+    var height = 72.0;
+    if (_activeChips.isNotEmpty) height += 44;
     if (_searchController.text.isEmpty && _recentSearches.isNotEmpty) {
       height += 72;
     }
@@ -332,7 +332,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     Wrap(
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
-                      children: TransactionDisplayType.values.map((type) {
+                      children: kTransactionTypeFilterOptions.map((type) {
                         final selected = local.contains(type);
                         return FilterChip(
                           label: Text(type.label),
@@ -490,6 +490,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.swap_vert_rounded),
+                title: const Text('Type'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _openTypeFilter();
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.category_outlined),
                 title: const Text('Category'),
                 onTap: () {
@@ -503,6 +511,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _openAccountFilter();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.payments_outlined),
+                title: const Text('Amount'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _openAmountFilter();
                 },
               ),
             ],
@@ -615,12 +631,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     _filters.searchQuery = '';
                     setState(() {});
                   },
-                  filters: _filters,
-                  onDate: _openDateFilter,
-                  onType: _openTypeFilter,
-                  onCategory: _openCategoryFilter,
-                  onAccount: _openAccountFilter,
-                  onAmount: _openAmountFilter,
                   activeChips: _activeChips,
                   onClearAll: () => _applyFilters(_filters.clear),
                 ),
@@ -782,12 +792,6 @@ class _StickySearchFilters extends StatelessWidget {
     required this.onRecentTap,
     required this.onClearRecent,
     required this.onSearchClear,
-    required this.filters,
-    required this.onDate,
-    required this.onType,
-    required this.onCategory,
-    required this.onAccount,
-    required this.onAmount,
     required this.activeChips,
     required this.onClearAll,
   });
@@ -798,12 +802,6 @@ class _StickySearchFilters extends StatelessWidget {
   final ValueChanged<String> onRecentTap;
   final VoidCallback onClearRecent;
   final VoidCallback onSearchClear;
-  final TransactionFilterState filters;
-  final VoidCallback onDate;
-  final VoidCallback onType;
-  final VoidCallback onCategory;
-  final VoidCallback onAccount;
-  final VoidCallback onAmount;
   final List<ActiveFilterChip> activeChips;
   final VoidCallback onClearAll;
 
@@ -877,40 +875,6 @@ class _StickySearchFilters extends StatelessWidget {
               }).toList(),
             ),
           ],
-          const SizedBox(height: AppSpacing.sm),
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _FilterChipButton(
-                  label: 'Date',
-                  active: filters.datePreset != null,
-                  onTap: onDate,
-                ),
-                _FilterChipButton(
-                  label: 'Type',
-                  active: filters.types.isNotEmpty,
-                  onTap: onType,
-                ),
-                _FilterChipButton(
-                  label: 'Category',
-                  active: filters.category != null,
-                  onTap: onCategory,
-                ),
-                _FilterChipButton(
-                  label: 'Account',
-                  active: filters.accountId != null,
-                  onTap: onAccount,
-                ),
-                _FilterChipButton(
-                  label: 'Amount',
-                  active: filters.minAmount != null || filters.maxAmount != null,
-                  onTap: onAmount,
-                ),
-              ],
-            ),
-          ),
           if (activeChips.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             SizedBox(
@@ -937,30 +901,6 @@ class _StickySearchFilters extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _FilterChipButton extends StatelessWidget {
-  const _FilterChipButton({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: AppSpacing.sm),
-      child: FilterChip(
-        label: Text(label),
-        selected: active,
-        onSelected: (_) => onTap(),
       ),
     );
   }
