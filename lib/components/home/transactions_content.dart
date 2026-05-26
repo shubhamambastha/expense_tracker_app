@@ -14,9 +14,6 @@ class TransactionsContent extends StatelessWidget {
     this.onDelete,
     this.onDuplicate,
     this.onAddTransaction,
-    this.onAddExpense,
-    this.onAddIncome,
-    this.onAddTransfer,
   });
 
   final List<Transaction> transactions;
@@ -26,9 +23,6 @@ class TransactionsContent extends StatelessWidget {
   final void Function(Transaction transaction)? onDelete;
   final void Function(Transaction transaction)? onDuplicate;
   final VoidCallback? onAddTransaction;
-  final VoidCallback? onAddExpense;
-  final VoidCallback? onAddIncome;
-  final VoidCallback? onAddTransfer;
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +34,6 @@ class TransactionsContent extends StatelessWidget {
       onDelete: onDelete,
       onDuplicate: onDuplicate,
       onAddTransaction: onAddTransaction,
-      onAddExpense: onAddExpense,
-      onAddIncome: onAddIncome,
-      onAddTransfer: onAddTransfer,
     );
   }
 }

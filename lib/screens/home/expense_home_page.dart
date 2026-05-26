@@ -403,9 +403,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       onDelete: _confirmAndDeleteTransaction,
       onDuplicate: _duplicateTransaction,
       onAddTransaction: () => _openAddTransactionPage(),
-      onAddExpense: () => _openAddTransactionPage(kind: TransactionKind.expense),
-      onAddIncome: () => _openAddTransactionPage(kind: TransactionKind.income),
-      onAddTransfer: () => _openAddTransactionPage(kind: TransactionKind.transfer),
     );
   }
 

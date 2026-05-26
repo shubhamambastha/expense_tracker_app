@@ -26,9 +26,6 @@ class TransactionsScreen extends StatefulWidget {
     this.onDelete,
     this.onDuplicate,
     this.onAddTransaction,
-    this.onAddExpense,
-    this.onAddIncome,
-    this.onAddTransfer,
   });
 
   final List<Transaction> transactions;
@@ -38,9 +35,6 @@ class TransactionsScreen extends StatefulWidget {
   final void Function(Transaction transaction)? onDelete;
   final void Function(Transaction transaction)? onDuplicate;
   final VoidCallback? onAddTransaction;
-  final VoidCallback? onAddExpense;
-  final VoidCallback? onAddIncome;
-  final VoidCallback? onAddTransfer;
 
   @override
   State<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -528,44 +522,24 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  void _showQuickAddMenu() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: AppColors.surface,
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.remove_circle_outline_rounded),
-                title: const Text('Add Expense'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  (widget.onAddExpense ?? widget.onAddTransaction)?.call();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.add_circle_outline_rounded),
-                title: const Text('Add Income'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  (widget.onAddIncome ?? widget.onAddTransaction)?.call();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.swap_horiz_rounded),
-                title: const Text('Add Transfer'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  (widget.onAddTransfer ?? widget.onAddTransaction)?.call();
-                },
-              ),
-            ],
+  Widget _wrapWithFilterFab(Widget child) {
+    return Stack(
+      children: [
+        child,
+        Positioned(
+          right: AppSpacing.lg,
+          bottom: AppSpacing.lg,
+          child: AnimatedSlide(
+            duration: AppDurations.micro,
+            offset: _fabVisible ? Offset.zero : const Offset(0, 2),
+            child: AnimatedOpacity(
+              duration: AppDurations.micro,
+              opacity: _fabVisible ? 1 : 0,
+              child: _TransactionsFilterFab(onTap: _openFilterShortcut),
+            ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
@@ -576,7 +550,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     }
 
     if (widget.transactions.isEmpty) {
-      return _EmptyTransactions(onAdd: widget.onAddTransaction);
+      return _wrapWithFilterFab(
+        _EmptyTransactions(onAdd: widget.onAddTransaction),
+      );
     }
 
     final filtered = _filtered;
@@ -592,90 +568,71 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         _searchController.text.isEmpty && _recentSearches.isNotEmpty;
     final itemCount = filtered.isEmpty ? 0 : _sliverItemCount(groups);
 
-    return Stack(
-      children: [
-        CustomScrollView(
-          controller: _scrollController,
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          slivers: [
-            SliverToBoxAdapter(
-              child: _TransactionsAppBar(
-                onFilterShortcut: _openFilterShortcut,
-                onCalendar: _openDateFilter,
-              ),
-            ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _StickyHeaderDelegate(
-                extent: _stickyHeaderHeight,
-                child: _StickySearchFilters(
-                  searchController: _searchController,
-                  recentSearches: _recentSearches,
-                  showRecent: showRecent,
-                  onRecentTap: (q) {
-                    _searchController.text = q;
-                    _debouncedQuery = q;
-                    _filters.searchQuery = q;
-                    setState(() {});
-                  },
-                  onClearRecent: () async {
-                    await TransactionListPreferences.instance
-                        .clearRecentSearches();
-                    setState(() => _recentSearches = []);
-                  },
-                  onSearchClear: () {
-                    _searchController.clear();
-                    _debouncedQuery = '';
-                    _filters.searchQuery = '';
-                    setState(() {});
-                  },
-                  activeChips: _activeChips,
-                  onClearAll: () => _applyFilters(_filters.clear),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: _SummaryStrip(
-                totalSpent: totalSpent,
-                count: summaryCount,
-                topCategory: topCategory,
-                isFiltered: hasFilters,
-              ),
-            ),
-            if (filtered.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _NoResults(query: _debouncedQuery),
-              )
-            else
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildGroupedItem(groups, index),
-                  childCount: itemCount,
-                ),
-              ),
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
-          ],
+    return _wrapWithFilterFab(
+      CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
         ),
-        Positioned(
-          right: AppSpacing.lg,
-          bottom: AppSpacing.lg,
-          child: AnimatedSlide(
-            duration: AppDurations.micro,
-            offset: _fabVisible ? Offset.zero : const Offset(0, 2),
-            child: AnimatedOpacity(
-              duration: AppDurations.micro,
-              opacity: _fabVisible ? 1 : 0,
-              child: _TransactionsFab(
-                onTap: widget.onAddTransaction,
-                onLongPress: _showQuickAddMenu,
+        slivers: [
+          SliverToBoxAdapter(
+            child: _TransactionsAppBar(
+              onCalendar: _openDateFilter,
+            ),
+          ),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _StickyHeaderDelegate(
+              extent: _stickyHeaderHeight,
+              child: _StickySearchFilters(
+                searchController: _searchController,
+                recentSearches: _recentSearches,
+                showRecent: showRecent,
+                onRecentTap: (q) {
+                  _searchController.text = q;
+                  _debouncedQuery = q;
+                  _filters.searchQuery = q;
+                  setState(() {});
+                },
+                onClearRecent: () async {
+                  await TransactionListPreferences.instance
+                      .clearRecentSearches();
+                  setState(() => _recentSearches = []);
+                },
+                onSearchClear: () {
+                  _searchController.clear();
+                  _debouncedQuery = '';
+                  _filters.searchQuery = '';
+                  setState(() {});
+                },
+                activeChips: _activeChips,
+                onClearAll: () => _applyFilters(_filters.clear),
               ),
             ),
           ),
-        ),
-      ],
+          SliverToBoxAdapter(
+            child: _SummaryStrip(
+              totalSpent: totalSpent,
+              count: summaryCount,
+              topCategory: topCategory,
+              isFiltered: hasFilters,
+            ),
+          ),
+          if (filtered.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _NoResults(query: _debouncedQuery),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _buildGroupedItem(groups, index),
+                childCount: itemCount,
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
     );
   }
 
@@ -741,12 +698,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 }
 
 class _TransactionsAppBar extends StatelessWidget {
-  const _TransactionsAppBar({
-    required this.onFilterShortcut,
-    required this.onCalendar,
-  });
+  const _TransactionsAppBar({required this.onCalendar});
 
-  final VoidCallback onFilterShortcut;
   final VoidCallback onCalendar;
 
   @override
@@ -762,11 +715,6 @@ class _TransactionsAppBar extends StatelessWidget {
         children: [
           Expanded(
             child: Text('Transactions', style: AppTextStyles.headingMedium),
-          ),
-          IconButton(
-            tooltip: 'Filters',
-            onPressed: onFilterShortcut,
-            icon: const Icon(Icons.tune_rounded),
           ),
           IconButton(
             tooltip: 'Export',
@@ -1100,22 +1048,38 @@ class _NoResults extends StatelessWidget {
   }
 }
 
-class _TransactionsFab extends StatelessWidget {
-  const _TransactionsFab({this.onTap, this.onLongPress});
+class _TransactionsFilterFab extends StatelessWidget {
+  const _TransactionsFilterFab({required this.onTap});
 
-  final VoidCallback? onTap;
-  final VoidCallback? onLongPress;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onLongPress: onLongPress,
-      child: FloatingActionButton(
-        onPressed: onTap,
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.primarySoft,
+    return Semantics(
+      button: true,
+      label: 'Filters',
+      child: Material(
+        key: const ValueKey('transactions-filter-fab'),
+        color: AppColors.surface,
         elevation: 4,
-        child: const Icon(Icons.add_rounded, size: 28),
+        shadowColor: Colors.black26,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: const SizedBox(
+            width: 56,
+            height: 56,
+            child: Icon(
+              Icons.tune_rounded,
+              color: AppColors.primary,
+              size: 26,
+            ),
+          ),
+        ),
       ),
     );
   }
