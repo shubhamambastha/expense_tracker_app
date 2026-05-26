@@ -391,70 +391,25 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Future<void> _openAmountFilter() async {
-    final minCtrl = TextEditingController(
-      text: _filters.minAmount?.toStringAsFixed(0) ?? '',
-    );
-    final maxCtrl = TextEditingController(
-      text: _filters.maxAmount?.toStringAsFixed(0) ?? '',
-    );
-
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: AppColors.surface,
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: AppSpacing.lg,
-            right: AppSpacing.lg,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.lg,
-            top: AppSpacing.xs,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Amount', style: AppTextStyles.headingSmall),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: minCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Minimum',
-                  prefixIcon: Icon(Icons.arrow_downward_rounded),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextField(
-                controller: maxCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Maximum',
-                  prefixIcon: Icon(Icons.arrow_upward_rounded),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              FilledButton(
-                onPressed: () {
-                  _applyFilters(() {
-                    _filters.minAmount = double.tryParse(minCtrl.text.trim());
-                    _filters.maxAmount = double.tryParse(maxCtrl.text.trim());
-                  });
-                  Navigator.of(ctx).pop();
-                },
-                child: const Text('Apply'),
-              ),
-            ],
-          ),
+        return _AmountFilterSheet(
+          initialMin: _filters.minAmount,
+          initialMax: _filters.maxAmount,
+          onApply: (min, max) {
+            _applyFilters(() {
+              _filters.minAmount = min;
+              _filters.maxAmount = max;
+            });
+            Navigator.of(ctx).pop();
+          },
         );
       },
     );
-
-    minCtrl.dispose();
-    maxCtrl.dispose();
   }
 
   void _openFilterShortcut() {
@@ -1041,6 +996,93 @@ class _NoResults extends StatelessWidget {
           Text(
             'Try a lighter search or adjust filters.',
             style: AppTextStyles.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AmountFilterSheet extends StatefulWidget {
+  const _AmountFilterSheet({
+    required this.initialMin,
+    required this.initialMax,
+    required this.onApply,
+  });
+
+  final double? initialMin;
+  final double? initialMax;
+  final void Function(double? min, double? max) onApply;
+
+  @override
+  State<_AmountFilterSheet> createState() => _AmountFilterSheetState();
+}
+
+class _AmountFilterSheetState extends State<_AmountFilterSheet> {
+  late final TextEditingController _minCtrl;
+  late final TextEditingController _maxCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _minCtrl = TextEditingController(
+      text: widget.initialMin?.toStringAsFixed(0) ?? '',
+    );
+    _maxCtrl = TextEditingController(
+      text: widget.initialMax?.toStringAsFixed(0) ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _minCtrl.dispose();
+    _maxCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
+        top: AppSpacing.xs,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Amount', style: AppTextStyles.headingSmall),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _minCtrl,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Minimum',
+              prefixIcon: Icon(Icons.arrow_downward_rounded),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: _maxCtrl,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Maximum',
+              prefixIcon: Icon(Icons.arrow_upward_rounded),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton(
+            onPressed: () {
+              widget.onApply(
+                double.tryParse(_minCtrl.text.trim()),
+                double.tryParse(_maxCtrl.text.trim()),
+              );
+            },
+            child: const Text('Apply'),
           ),
         ],
       ),
