@@ -1,11 +1,5 @@
-import 'account.dart';
-import 'expense.dart';
-
-/// What the user is recording. UI-only enum — the persistence layer still
-/// reduces this to an [Expense] for now, but the screen is built so the
-/// concept can be extended (income, EMI, subscription) without rewriting the
-/// form.
-enum TransactionKind { expense, income }
+/// What the user is recording — maps to `transactions.kind`.
+enum TransactionKind { expense, income, transfer }
 
 extension TransactionKindX on TransactionKind {
   String get label {
@@ -14,6 +8,8 @@ extension TransactionKindX on TransactionKind {
         return 'Expense';
       case TransactionKind.income:
         return 'Income';
+      case TransactionKind.transfer:
+        return 'Transfer';
     }
   }
 }
@@ -115,16 +111,16 @@ class RecentSuggestion {
 /// Mutable in-memory draft for the Add Transaction screen.
 ///
 /// The screen owns one of these and mutates it directly through callbacks.
-/// On save the page maps the draft into the persistence model (currently
-/// [Expense]). All fields are intentionally optional except [amount] — the
-/// CTA validates completeness before submit.
+/// On save the page maps the draft into [Transaction] for persistence.
 class TransactionDraft {
   TransactionDraft({
+    this.editingId,
     this.kind = TransactionKind.expense,
     this.amount,
     this.currencyCode,
     this.categoryName,
     this.accountId,
+    this.transferToAccountId,
     this.merchant = '',
     DateTime? date,
     this.note = '',
@@ -132,11 +128,14 @@ class TransactionDraft {
   })  : date = date ?? DateTime.now(),
         recurring = recurring ?? RecurringConfig();
 
+  /// When set, save updates an existing row instead of inserting.
+  int? editingId;
   TransactionKind kind;
   double? amount;
   String? currencyCode;
   String? categoryName;
   int? accountId;
+  int? transferToAccountId;
 
   String merchant;
   DateTime date;
@@ -146,26 +145,6 @@ class TransactionDraft {
   bool get isRecurring => recurring.enabled;
   bool get isExpense => kind == TransactionKind.expense;
   bool get isIncome => kind == TransactionKind.income;
-
-  /// True when the contextual fields panel (linked card, next due, etc.)
-  /// should be revealed inside the recurring section.
-  bool get needsContextualRecurringFields {
-    if (!isRecurring) return false;
-    final c = categoryName?.toLowerCase() ?? '';
-    return c.contains('emi') || c.contains('subscription');
-  }
-
-  /// Map the draft into the existing [Expense] persistence model. Income
-  /// support can branch here when the persistence layer grows.
-  Expense toExpense({required Account account}) {
-    return Expense(
-      name: merchant.trim().isEmpty ? (categoryName ?? 'Untitled') : merchant.trim(),
-      category: categoryName ?? 'Other',
-      amount: amount ?? 0,
-      date: date,
-      type: isRecurring ? ExpenseType.recurring : ExpenseType.oneTime,
-      accountId: account.id!,
-      endDate: isRecurring ? recurring.endDate : null,
-    );
-  }
+  bool get isTransfer => kind == TransactionKind.transfer;
+  bool get isEditing => editingId != null;
 }

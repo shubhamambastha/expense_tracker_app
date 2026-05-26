@@ -9,7 +9,7 @@ import '../../components/settings/settings_section.dart';
 import '../../components/settings/settings_tile.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
-import '../../models/expense.dart';
+import '../../models/transaction.dart';
 import '../../services/category_catalog.dart';
 import '../../services/income_category_catalog.dart';
 import '../../services/currency_settings.dart';
@@ -38,13 +38,13 @@ class SettingsPage extends StatelessWidget {
   const SettingsPage({
     super.key,
     required this.accounts,
-    required this.expenses,
+    required this.transactions,
     required this.onAddAccount,
     required this.onSignOut,
   });
 
   final List<Account> accounts;
-  final List<Expense> expenses;
+  final List<Transaction> transactions;
   final OnAddAccount onAddAccount;
   final VoidCallback onSignOut;
 
@@ -262,12 +262,14 @@ class SettingsPage extends StatelessWidget {
 
   double _monthSpent() {
     final now = DateTime.now();
-    return expenses
-        .where(
-          (e) => e.date.year == now.year && e.date.month == now.month,
-        )
-        .fold<double>(0, (sum, e) => sum + e.amount);
+    return transactions
+        .where((t) =>
+            t.isExpense &&
+            t.date.year == now.year &&
+            t.date.month == now.month)
+        .fold<double>(0, (sum, t) => sum + t.amount);
   }
 
-  int _recurringCount() => expenses.where((e) => e.isRecurring).length;
+  int _recurringCount() =>
+      transactions.where((t) => t.isRecurring).length;
 }

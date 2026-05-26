@@ -79,6 +79,8 @@ class DefaultCategories {
     (name: 'Shopping', iconKey: 'shopping_bag_rounded'),
     (name: 'Travel', iconKey: 'flight_takeoff_rounded'),
     (name: 'Bills', iconKey: 'receipt_rounded'),
+    (name: 'EMI', iconKey: 'receipt_rounded'),
+    (name: 'Subscription', iconKey: 'movie_rounded'),
     (name: 'Health', iconKey: 'favorite_rounded'),
     (name: 'Entertainment', iconKey: 'movie_rounded'),
     (name: 'Other', iconKey: 'more_horiz_rounded'),

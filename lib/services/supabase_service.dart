@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/account.dart';
 import '../models/expense.dart';
+import '../models/transaction.dart';
+import '../models/transaction_draft.dart';
 import '../models/expense_category.dart';
 import '../models/income_category.dart';
 import '../models/user_settings.dart';
@@ -56,25 +58,110 @@ class SupabaseService {
     await Supabase.instance.client.auth.signOut();
   }
 
-  static Future<List<Expense>> fetchExpenses() async {
+  static Future<List<Transaction>> fetchTransactions() async {
     final user = currentUser;
     if (user == null) {
-      throw Exception('Not signed in. Please sign in to load expenses.');
+      throw Exception('Not signed in. Please sign in to load transactions.');
     }
 
-    // Expenses now live in the unified `transactions` table; filter on
-    // kind = 'expense' so income / transfer rows don't bleed into the
-    // expense ledger (sql/20260526_create_transactions.sql).
     final data = await Supabase.instance.client
         .from('transactions')
         .select()
         .eq('user_id', user.id)
-        .eq('kind', 'expense')
         .order('date', ascending: false);
 
     return (data as List<dynamic>)
-        .map((item) => Expense.fromMap(item as Map<String, dynamic>))
+        .map((item) => Transaction.fromMap(item as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Expense-only fetch kept for callers not yet on [fetchTransactions].
+  static Future<List<Expense>> fetchExpenses() async {
+    final all = await fetchTransactions();
+    return all
+        .where((t) => t.kind == TransactionKind.expense)
+        .map(_expenseFromTransaction)
+        .toList();
+  }
+
+  static Expense _expenseFromTransaction(Transaction t) {
+    return Expense(
+      id: t.id,
+      userId: t.userId,
+      name: t.counterpartyName,
+      category: t.category ?? 'Other',
+      date: t.date,
+      type: t.isRecurring ? ExpenseType.recurring : ExpenseType.oneTime,
+      amount: t.amount,
+      accountId: t.accountId,
+      endDate: t.recurrenceEndDate,
+    );
+  }
+
+  static Future<Transaction> insertTransaction(Transaction transaction) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to save transactions.');
+    }
+
+    final payload = transaction.toMap()..['user_id'] = user.id;
+    payload.remove('id');
+    final data = await Supabase.instance.client
+        .from('transactions')
+        .insert(payload)
+        .select()
+        .single();
+
+    return Transaction.fromMap(data);
+  }
+
+  static Future<Transaction> updateTransaction(Transaction transaction) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to update transactions.');
+    }
+
+    final payload = transaction.toMap()
+      ..remove('user_id')
+      ..remove('id');
+    final data = await Supabase.instance.client
+        .from('transactions')
+        .update(payload)
+        .eq('id', transaction.id!)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+    return Transaction.fromMap(data);
+  }
+
+  static Future<void> deleteTransaction(int transactionId) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to delete transactions.');
+    }
+
+    await Supabase.instance.client
+        .from('transactions')
+        .delete()
+        .eq('id', transactionId)
+        .eq('user_id', user.id);
+  }
+
+  static Future<Expense> insertExpense(Expense expense) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to save expenses.');
+    }
+
+    final payload = expense.toMap()..['user_id'] = user.id;
+    final data = await Supabase.instance.client
+        .from('transactions')
+        .insert(payload)
+        .select()
+        .single();
+
+    return Expense.fromMap(data);
   }
 
   static Future<List<Account>> fetchAccounts() async {
@@ -110,22 +197,6 @@ class SupabaseService {
     return Account.fromMap(data);
   }
 
-  static Future<Expense> insertExpense(Expense expense) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to save expenses.');
-    }
-
-    final payload = expense.toMap()..['user_id'] = user.id;
-    final data = await Supabase.instance.client
-        .from('transactions')
-        .insert(payload)
-        .select()
-        .single();
-
-    return Expense.fromMap(data);
-  }
-
   static Future<Expense> updateExpense(Expense expense) async {
     final user = currentUser;
     if (user == null) {
@@ -149,16 +220,7 @@ class SupabaseService {
   }
 
   static Future<void> deleteExpense(int expenseId) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to delete expenses.');
-    }
-
-    await Supabase.instance.client
-        .from('transactions')
-        .delete()
-        .eq('id', expenseId)
-        .eq('user_id', user.id);
+    await deleteTransaction(expenseId);
   }
 
   static Future<UserSettings?> fetchUserSettings() async {

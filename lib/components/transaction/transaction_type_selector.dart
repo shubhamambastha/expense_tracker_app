@@ -52,6 +52,8 @@ class TransactionTypeSelector extends StatelessWidget {
         return Icons.south_west_rounded;
       case TransactionKind.income:
         return Icons.north_east_rounded;
+      case TransactionKind.transfer:
+        return Icons.swap_horiz_rounded;
     }
   }
 }

@@ -16,6 +16,7 @@ class StickyBottomCTA extends StatelessWidget {
     this.saveLabel = 'Save Transaction',
     this.secondaryLabel = 'Save & Add Another',
     this.isBusy = false,
+    this.showSaveAndAddAnother = true,
   });
 
   final VoidCallback onSave;
@@ -23,6 +24,7 @@ class StickyBottomCTA extends StatelessWidget {
   final String saveLabel;
   final String secondaryLabel;
   final bool isBusy;
+  final bool showSaveAndAddAnother;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +48,7 @@ class StickyBottomCTA extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              flex: 3,
+              flex: showSaveAndAddAnother ? 3 : 1,
               child: FilledButton.icon(
                 onPressed: isBusy ? null : onSave,
                 icon: isBusy
@@ -64,19 +66,21 @@ class StickyBottomCTA extends StatelessWidget {
                 label: Text(saveLabel),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              flex: 2,
-              child: OutlinedButton.icon(
-                onPressed: isBusy ? null : onSaveAndAddAnother,
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: Text(
-                  secondaryLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+            if (showSaveAndAddAnother) ...[
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                flex: 2,
+                child: OutlinedButton.icon(
+                  onPressed: isBusy ? null : onSaveAndAddAnother,
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: Text(
+                    secondaryLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

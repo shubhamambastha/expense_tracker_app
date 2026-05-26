@@ -3,12 +3,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../components/common/compact_header.dart';
 import '../../components/dialogs/add_account_dialog.dart';
-import '../../components/dialogs/expense_form_dialog.dart';
 import '../../components/home/home_content.dart';
-import '../../components/home/expenses_content.dart';
+import '../../components/home/transactions_content.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
+import '../../models/transaction.dart';
 import '../../models/transaction_draft.dart';
 import '../../services/income_category_catalog.dart';
 import '../../services/supabase_service.dart';
@@ -28,20 +28,23 @@ class ExpenseHomePage extends StatefulWidget {
 }
 
 class _ExpenseHomePageState extends State<ExpenseHomePage> {
-  final List<Expense> _expenses = [];
+  final List<Transaction> _transactions = [];
   final List<Account> _accounts = [];
   bool _isLoading = true;
   int _selectedIndex = 0;
 
+  List<Transaction> get _expenseTransactions =>
+      _transactions.where((t) => t.isExpense).toList();
+
   @override
   void initState() {
     super.initState();
-    _loadExpenses();
+    _loadTransactions();
   }
 
   void _onNavItemTapped(int index) {
     if (index == 2) {
-      _openAddExpenseDialog();
+      _openAddTransactionPage();
       return;
     }
 
@@ -95,13 +98,13 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
   }
 
-  Future<void> _loadExpenses() async {
+  Future<void> _loadTransactions() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final expenses = await SupabaseService.fetchExpenses();
+      final transactions = await SupabaseService.fetchTransactions();
       List<Account> accounts = [];
       try {
         accounts = await SupabaseService.fetchAccounts();
@@ -115,9 +118,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       }
       if (!mounted) return;
       setState(() {
-        _expenses
+        _transactions
           ..clear()
-          ..addAll(expenses);
+          ..addAll(transactions);
         _accounts
           ..clear()
           ..addAll(accounts);
@@ -133,20 +136,39 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     }
   }
 
-  Future<void> _saveExpense(Expense expense) async {
+  Future<void> _insertTransaction(Transaction transaction) async {
     try {
-      final savedExpense = await SupabaseService.insertExpense(expense);
+      final saved = await SupabaseService.insertTransaction(transaction);
       if (!mounted) return;
       setState(() {
-        _expenses.insert(0, savedExpense);
+        _transactions.insert(0, saved);
       });
       if (!mounted) return;
-      SnackbarHelper.showSuccess(context, 'Expense saved successfully');
+      SnackbarHelper.showSuccess(context, 'Transaction saved');
     } catch (error) {
       if (!mounted) return;
       SnackbarHelper.showMessage(
         context,
         '${AppConstants.errorFailedToSaveExpense}: $error',
+      );
+    }
+  }
+
+  Future<void> _replaceTransaction(Transaction transaction) async {
+    try {
+      final updated = await SupabaseService.updateTransaction(transaction);
+      if (!mounted) return;
+      setState(() {
+        final idx = _transactions.indexWhere((t) => t.id == transaction.id);
+        if (idx >= 0) _transactions[idx] = updated;
+      });
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context, AppConstants.expenseUpdated);
+    } catch (error) {
+      if (!mounted) return;
+      SnackbarHelper.showMessage(
+        context,
+        '${AppConstants.errorFailedToUpdateExpense}: $error',
       );
     }
   }
@@ -166,7 +188,19 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     }
   }
 
-  void _openAddExpenseDialog() {
+  void _openAddTransactionPage({
+    TransactionDraft? initialDraft,
+    TransactionKind? kind,
+  }) {
+    final draft = initialDraft ??
+        TransactionDraft(
+          kind: kind ?? TransactionKind.expense,
+          accountId: _accounts.isEmpty ? null : _accounts.first.id,
+        );
+    if (kind != null && initialDraft == null) {
+      draft.kind = kind;
+    }
+
     Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (context) => AddTransactionPage(
@@ -176,6 +210,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           recentIncomeSuggestions: _buildRecentIncomeSuggestions(),
           recentIncomeCategoryNames: _buildRecentIncomeCategoryNames(),
           recentPayers: _buildRecentPayers(),
+          initialDraft: draft,
           onAddAccount: _openAddAccountDialog,
           onSave: _saveTransactionDraft,
         ),
@@ -188,7 +223,24 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       (a) => a.id == draft.accountId,
       orElse: () => _accounts.first,
     );
-    await _saveExpense(draft.toExpense(account: account));
+    Account? transferTo;
+    if (draft.transferToAccountId != null) {
+      for (final a in _accounts) {
+        if (a.id == draft.transferToAccountId) {
+          transferTo = a;
+          break;
+        }
+      }
+    }
+    final tx = draft.toTransaction(
+      account: account,
+      transferToAccount: transferTo,
+    );
+    if (draft.isEditing) {
+      await _replaceTransaction(tx);
+    } else {
+      await _insertTransaction(tx);
+    }
   }
 
   /// Build "Recent" merchant suggestions from the local expense cache.
@@ -196,14 +248,14 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   List<RecentSuggestion> _buildRecentSuggestions() {
     final seen = <String>{};
     final out = <RecentSuggestion>[];
-    for (final e in _expenses) {
-      final key = e.name.toLowerCase();
+    for (final t in _transactions.where((t) => t.isExpense)) {
+      final key = t.counterpartyName.toLowerCase();
       if (key.isEmpty || !seen.add(key)) continue;
       out.add(RecentSuggestion(
-        merchant: e.name,
-        category: e.category,
-        accountId: e.accountId,
-        amount: e.amount,
+        merchant: t.counterpartyName,
+        category: t.category ?? 'Other',
+        accountId: t.accountId,
+        amount: t.amount,
       ));
       if (out.length >= 5) break;
     }
@@ -213,77 +265,87 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   /// Prioritise the 6 most-used categories so they land first in the pills.
   List<String> _buildRecentCategoryNames() {
     final counts = <String, int>{};
-    for (final e in _expenses) {
-      counts[e.category] = (counts[e.category] ?? 0) + 1;
+    for (final t in _transactions.where((t) => t.isExpense)) {
+      final cat = t.category ?? 'Other';
+      counts[cat] = (counts[cat] ?? 0) + 1;
     }
     final sorted = counts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     return sorted.take(6).map((e) => e.key).toList();
   }
 
-  /// Sample income autofill rows until income is persisted separately.
   List<RecentSuggestion> _buildRecentIncomeSuggestions() {
-    return [
+    final seen = <String>{};
+    final out = <RecentSuggestion>[];
+    for (final t in _transactions.where((t) => t.isIncome)) {
+      final key = t.counterpartyName.toLowerCase();
+      if (key.isEmpty || !seen.add(key)) continue;
+      out.add(RecentSuggestion(
+        merchant: t.counterpartyName,
+        category: t.category ?? 'Other',
+        accountId: t.accountId,
+        amount: t.amount,
+        kind: TransactionKind.income,
+        recurring: t.isRecurring
+            ? RecurringConfig(
+                enabled: true,
+                frequency:
+                    t.recurrenceFrequency ?? RecurrenceFrequency.monthly,
+                endDate: t.recurrenceEndDate,
+              )
+            : null,
+      ));
+      if (out.length >= 5) break;
+    }
+    if (out.isNotEmpty) return out;
+    return const [
       RecentSuggestion(
         merchant: 'Company XYZ',
         category: 'Salary',
-        amount: 85000,
-        kind: TransactionKind.income,
-        recurring: RecurringConfig(
-          enabled: true,
-          frequency: RecurrenceFrequency.monthly,
-        ),
-      ),
-      const RecentSuggestion(
-        merchant: 'Amazon',
-        category: 'Refund',
-        kind: TransactionKind.income,
-      ),
-      const RecentSuggestion(
-        merchant: 'Acme Corp',
-        category: 'Freelance',
-        kind: TransactionKind.income,
-      ),
-      const RecentSuggestion(
-        merchant: 'Axis Ace',
-        category: 'Cashback',
         kind: TransactionKind.income,
       ),
     ];
   }
 
   List<String> _buildRecentIncomeCategoryNames() {
-    return IncomeCategoryCatalog.instance.names.take(6).toList();
+    final counts = <String, int>{};
+    for (final t in _transactions.where((t) => t.isIncome)) {
+      final cat = t.category;
+      if (cat == null) continue;
+      counts[cat] = (counts[cat] ?? 0) + 1;
+    }
+    if (counts.isEmpty) {
+      return IncomeCategoryCatalog.instance.names.take(6).toList();
+    }
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.take(6).map((e) => e.key).toList();
   }
 
   List<String> _buildRecentPayers() {
-    return const [
-      'Company XYZ',
-      'Acme Corp',
-      'Amazon',
-      'Rahul',
-      'Axis Ace',
-    ];
+    final seen = <String>{};
+    final out = <String>[];
+    for (final t in _transactions.where((t) => t.isIncome)) {
+      final payer = t.counterpartyName.trim();
+      if (payer.isEmpty || !seen.add(payer.toLowerCase())) continue;
+      out.add(payer);
+      if (out.length >= 8) break;
+    }
+    if (out.isNotEmpty) return out;
+    return const ['Company XYZ', 'Acme Corp'];
   }
 
-  void _openEditExpenseDialog(Expense expense) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => ExpenseFormDialog(
-        accounts: _accounts,
-        onSave: _updateExpense,
-        expense: expense,
-      ),
-    );
+  void _openEditTransaction(Transaction transaction) {
+    _openAddTransactionPage(initialDraft: transaction.toDraft());
   }
 
-  Future<void> _confirmAndDeleteExpense(Expense expense) async {
+  Future<void> _confirmAndDeleteTransaction(Transaction transaction) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete expense'),
+        title: const Text('Delete transaction'),
         content: Text(
-          'Are you sure you want to delete "${expense.name}"?',
+          'Are you sure you want to delete "${transaction.counterpartyName}"?',
         ),
         actions: [
           TextButton(
@@ -304,9 +366,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
     if (confirmed != true) return;
     try {
-      await SupabaseService.deleteExpense(expense.id!);
+      await SupabaseService.deleteTransaction(transaction.id!);
       if (!mounted) return;
-      setState(() => _expenses.removeWhere((e) => e.id == expense.id));
+      setState(() => _transactions.removeWhere((t) => t.id == transaction.id));
       SnackbarHelper.showSuccess(context, AppConstants.expenseDeleted);
     } catch (error) {
       if (!mounted) return;
@@ -317,44 +379,33 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     }
   }
 
-  Future<void> _updateExpense(Expense expense) async {
-    try {
-      final updated = await SupabaseService.updateExpense(expense);
-      if (!mounted) return;
-      setState(() {
-        final idx = _expenses.indexWhere((e) => e.id == expense.id);
-        if (idx >= 0) _expenses[idx] = updated;
-      });
-      if (!mounted) return;
-      SnackbarHelper.showSuccess(context, AppConstants.expenseUpdated);
-    } catch (error) {
-      if (!mounted) return;
-      SnackbarHelper.showMessage(
-        context,
-        '${AppConstants.errorFailedToUpdateExpense}: $error',
-      );
-    }
-  }
-
-  void _openAddAccountDialog({AccountType initialType = AccountType.bank}) {
-    showAddAccountDialog(
-      context,
-      initialType: initialType,
-      onSave: _saveAccount,
+  Future<void> _duplicateTransaction(Transaction transaction) async {
+    final copy = transaction.copyWith(
+      id: null,
+      date: DateTime.now(),
     );
+    await _insertTransaction(copy);
   }
 
   Widget _buildHomeContent(BuildContext context) {
-    return HomeContent(expenses: _expenses, isLoading: _isLoading);
+    return HomeContent(
+      transactions: _expenseTransactions,
+      isLoading: _isLoading,
+    );
   }
 
-  Widget _buildExpensesContent(BuildContext context) {
-    return ExpensesContent(
-      expenses: _expenses,
+  Widget _buildTransactionsContent(BuildContext context) {
+    return TransactionsContent(
+      transactions: _transactions,
       accounts: _accounts,
       isLoading: _isLoading,
-      onEdit: _openEditExpenseDialog,
-      onDelete: _confirmAndDeleteExpense,
+      onEdit: _openEditTransaction,
+      onDelete: _confirmAndDeleteTransaction,
+      onDuplicate: _duplicateTransaction,
+      onAddTransaction: () => _openAddTransactionPage(),
+      onAddExpense: () => _openAddTransactionPage(kind: TransactionKind.expense),
+      onAddIncome: () => _openAddTransactionPage(kind: TransactionKind.income),
+      onAddTransfer: () => _openAddTransactionPage(kind: TransactionKind.transfer),
     );
   }
 
@@ -394,10 +445,18 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
   }
 
+  void _openAddAccountDialog({AccountType initialType = AccountType.bank}) {
+    showAddAccountDialog(
+      context,
+      initialType: initialType,
+      onSave: _saveAccount,
+    );
+  }
+
   Widget _buildSettingsContent(BuildContext context) {
     return SettingsPage(
       accounts: _accounts,
-      expenses: _expenses,
+      transactions: _transactions,
       onAddAccount: _openAddAccountDialog,
       onSignOut: widget.onSignOut,
     );
@@ -406,7 +465,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   Widget _buildBody(BuildContext context) {
     switch (_selectedIndex) {
       case 1:
-        return _buildExpensesContent(context);
+        return _buildTransactionsContent(context);
       case 3:
         return _buildPlaceholderContent('Advise', Icons.psychology);
       case 4:
@@ -479,10 +538,10 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
               ),
               _buildBottomBarItem(
                 icon: Icons.list_alt_rounded,
-                label: 'Expenses',
+                label: 'Transactions',
                 index: 1,
               ),
-              _AddExpenseFab(onTap: _openAddExpenseDialog),
+              _AddExpenseFab(onTap: () => _openAddTransactionPage()),
               _buildBottomBarItem(
                 icon: Icons.insights_rounded,
                 label: 'Advise',

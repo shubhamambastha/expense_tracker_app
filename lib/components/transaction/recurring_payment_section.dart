@@ -3,13 +3,9 @@ import 'package:intl/intl.dart';
 
 import '../../config/design_tokens.dart';
 import '../../models/transaction_draft.dart';
-import 'smart_contextual_fields.dart';
 
 /// Collapsible "Recurring Payment" card with all the recurring-only fields
-/// inside (frequency, reminder, start, end). Smart contextual
-/// fields render here too when the category is EMI / Subscription —
-/// progressive disclosure means *nothing* recurring-specific is visible
-/// until the user opts in via the header toggle.
+/// inside (frequency, reminder, start, end).
 class RecurringPaymentSection extends StatelessWidget {
   const RecurringPaymentSection({
     super.key,
@@ -17,8 +13,6 @@ class RecurringPaymentSection extends StatelessWidget {
     required this.onChanged,
     required this.onPickStartDate,
     required this.onPickEndDate,
-    required this.showContextualFields,
-    required this.contextualCategory,
     this.isIncome = false,
     this.reminderHint,
   });
@@ -27,8 +21,6 @@ class RecurringPaymentSection extends StatelessWidget {
   final ValueChanged<RecurringConfig> onChanged;
   final Future<void> Function() onPickStartDate;
   final Future<void> Function() onPickEndDate;
-  final bool showContextualFields;
-  final String? contextualCategory;
   final bool isIncome;
   final String? reminderHint;
 
@@ -71,8 +63,6 @@ class RecurringPaymentSection extends StatelessWidget {
                       onChanged: onChanged,
                       onPickStartDate: onPickStartDate,
                       onPickEndDate: onPickEndDate,
-                      showContextualFields: showContextualFields,
-                      contextualCategory: contextualCategory,
                       isIncome: isIncome,
                       reminderHint: reminderHint,
                     )
@@ -173,8 +163,6 @@ class _ExpandedBody extends StatelessWidget {
     required this.onChanged,
     required this.onPickStartDate,
     required this.onPickEndDate,
-    required this.showContextualFields,
-    required this.contextualCategory,
     this.isIncome = false,
     this.reminderHint,
   });
@@ -183,8 +171,6 @@ class _ExpandedBody extends StatelessWidget {
   final ValueChanged<RecurringConfig> onChanged;
   final Future<void> Function() onPickStartDate;
   final Future<void> Function() onPickEndDate;
-  final bool showContextualFields;
-  final String? contextualCategory;
   final bool isIncome;
   final String? reminderHint;
 
@@ -262,19 +248,6 @@ class _ExpandedBody extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          AnimatedSize(
-            duration: AppDurations.page,
-            curve: AppCurves.emphasized,
-            alignment: Alignment.topCenter,
-            child: showContextualFields
-                ? Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.md),
-                    child: SmartContextualFields(
-                      categoryName: contextualCategory ?? '',
-                    ),
-                  )
-                : const SizedBox(width: double.infinity),
           ),
         ],
       ),

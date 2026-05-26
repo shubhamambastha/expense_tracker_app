@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../config/design_tokens.dart';
-import '../../models/expense.dart';
+import '../../models/transaction.dart';
 import 'monthly_analytics_card.dart';
 
 class HomeContent extends StatelessWidget {
   const HomeContent({
     super.key,
-    required this.expenses,
+    required this.transactions,
     required this.isLoading,
   });
 
-  final List<Expense> expenses;
+  final List<Transaction> transactions;
   final bool isLoading;
 
   @override
@@ -40,7 +40,7 @@ class HomeContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          MonthlyAnalyticsCard(expenses: expenses),
+          MonthlyAnalyticsCard(transactions: transactions),
         ],
       ),
     );

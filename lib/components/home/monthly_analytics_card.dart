@@ -6,7 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart' as intl;
 
 import '../../config/design_tokens.dart';
-import '../../models/expense.dart';
+import '../../models/transaction.dart';
 import '../../services/currency_settings.dart';
 import '../../services/category_catalog.dart';
 
@@ -25,15 +25,17 @@ Color analyticsColorForCategory(String category) =>
     CategoryCatalog.instance.colorForName(category);
 
 class MonthlyAnalyticsCard extends StatelessWidget {
-  const MonthlyAnalyticsCard({super.key, required this.expenses});
+  const MonthlyAnalyticsCard({super.key, required this.transactions});
 
-  final List<Expense> expenses;
+  final List<Transaction> transactions;
 
   DateTime get _now => DateTime.now();
 
-  List<Expense> get _currentMonthExpenses {
-    return expenses.where((expense) {
-      return expense.date.year == _now.year && expense.date.month == _now.month;
+  List<Transaction> get _currentMonthExpenses {
+    return transactions.where((tx) {
+      return tx.isExpense &&
+          tx.date.year == _now.year &&
+          tx.date.month == _now.month;
     }).toList();
   }
 
@@ -47,8 +49,8 @@ class MonthlyAnalyticsCard extends StatelessWidget {
   Map<String, double> get _categoryTotals {
     final totals = <String, double>{};
     for (final expense in _currentMonthExpenses) {
-      totals[expense.category] =
-          (totals[expense.category] ?? 0.0) + expense.amount;
+      final cat = expense.category ?? 'Other';
+      totals[cat] = (totals[cat] ?? 0.0) + expense.amount;
     }
     return totals;
   }

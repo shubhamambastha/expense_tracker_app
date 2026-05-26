@@ -20,53 +20,58 @@ Future<T?> selectFromList<T>({
 }) {
   return showModalBottomSheet<T>(
     context: context,
+    isScrollControlled: true,
     showDragHandle: true,
     backgroundColor: AppColors.surface,
     builder: (sheetContext) {
+      final maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.75;
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                AppSpacing.xs,
-                AppSpacing.xl,
-                AppSpacing.sm,
-              ),
-              child: Text(title, style: AppTextStyles.headingSmall),
-            ),
-            if (subtitle != null)
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                child: Text(subtitle, style: AppTextStyles.caption),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.xs,
+                  AppSpacing.xl,
+                  AppSpacing.sm,
+                ),
+                child: Text(title, style: AppTextStyles.headingSmall),
               ),
-            const SizedBox(height: AppSpacing.sm),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                0,
-                AppSpacing.lg,
-                AppSpacing.md,
+              if (subtitle != null)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  child: Text(subtitle, style: AppTextStyles.caption),
+                ),
+              const SizedBox(height: AppSpacing.sm),
+              Flexible(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
+                  itemCount: options.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final option = options[index];
+                    final selected = current != null && option == current;
+                    return SettingsSelectableRow(
+                      label: labelFor(option),
+                      selected: selected,
+                      onTap: () => Navigator.of(sheetContext).pop(option),
+                    );
+                  },
+                ),
               ),
-              itemCount: options.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, index) {
-                final option = options[index];
-                final selected = current != null && option == current;
-                return SettingsSelectableRow(
-                  label: labelFor(option),
-                  selected: selected,
-                  onTap: () => Navigator.of(sheetContext).pop(option),
-                );
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       );
     },

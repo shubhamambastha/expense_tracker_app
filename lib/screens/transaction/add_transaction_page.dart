@@ -21,7 +21,9 @@ import '../../models/transaction_draft.dart';
 import '../../services/category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../services/income_category_catalog.dart';
+import '../../components/transaction/transaction_subtype_chips.dart';
 import '../../utils/income_flow_helpers.dart';
+import '../../utils/transaction_subtype_helpers.dart';
 import '../../utils/snackbar_helper.dart';
 
 /// The most important screen in the app: expense entry under 3 seconds.
@@ -180,11 +182,23 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           categoryName: _draft.categoryName,
           current: _draft.recurring,
         );
+      } else if (kind == TransactionKind.transfer) {
+        _draft.categoryName ??= 'Transfer';
+        _detailsExpanded = true;
+        _draft.recurring = RecurringConfig();
+        if (_draft.transferToAccountId == null &&
+            widget.accounts.length > 1) {
+          _draft.transferToAccountId = widget.accounts[1].id;
+        }
       } else {
         _draft.categoryName ??= _defaultCategory();
         _detailsExpanded = true;
       }
     });
+  }
+
+  void _onTransferToChanged(Account account) {
+    setState(() => _draft.transferToAccountId = account.id);
   }
 
   void _onCategoryChanged(String name) {
@@ -430,6 +444,20 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
       SnackbarHelper.showWarning(context, 'Select an account');
       return false;
     }
+    if (_draft.isTransfer) {
+      if (_draft.transferToAccountId == null) {
+        SnackbarHelper.showWarning(context, 'Select a destination account');
+        return false;
+      }
+      if (_draft.transferToAccountId == _draft.accountId) {
+        SnackbarHelper.showWarning(
+          context,
+          'From and to accounts must be different',
+        );
+        return false;
+      }
+      return true;
+    }
     if (_draft.categoryName == null) {
       SnackbarHelper.showWarning(context, 'Pick a category');
       return false;
@@ -509,6 +537,18 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
       const SizedBox(height: AppSpacing.lg),
       const _SectionHeading(title: 'Income category'),
       const SizedBox(height: AppSpacing.sm),
+      IncomeRefundChip(
+        selectedCategory: _draft.categoryName,
+        onSelected: () {
+          setState(() {
+            TransactionSubtypeHelpers.applyIncomeRefund(_draft);
+            _applySalaryAutofillIfNeeded(
+              TransactionSubtypeHelpers.incomeCategoryRefund,
+            );
+          });
+        },
+      ),
+      const SizedBox(height: AppSpacing.sm),
       IncomeCategoryPillsSelector(
         selectedName: _draft.categoryName,
         prioritisedNames: widget.recentIncomeCategoryNames,
@@ -564,8 +604,6 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           onChanged: _onRecurringChanged,
           onPickStartDate: _pickStartDate,
           onPickEndDate: _pickEndDate,
-          showContextualFields: false,
-          contextualCategory: _draft.categoryName,
           isIncome: true,
           reminderHint:
               IncomeFlowHelpers.recurringReminderHint(_draft.categoryName),
@@ -588,6 +626,17 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           selected: _draft.kind,
           onChanged: _onKindChanged,
         ),
+      ),
+      const SizedBox(height: AppSpacing.lg),
+      const _SectionHeading(title: 'Quick type'),
+      const SizedBox(height: AppSpacing.sm),
+      ExpenseSubtypeChips(
+        selectedCategory: _draft.categoryName,
+        onSubtypeSelected: (label) {
+          setState(() {
+            TransactionSubtypeHelpers.applyExpenseSubtype(_draft, label);
+          });
+        },
       ),
       const SizedBox(height: AppSpacing.lg),
       const _SectionHeading(title: 'Category'),
@@ -636,8 +685,6 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           onChanged: _onRecurringChanged,
           onPickStartDate: _pickStartDate,
           onPickEndDate: _pickEndDate,
-          showContextualFields: _draft.needsContextualRecurringFields,
-          contextualCategory: _draft.categoryName,
         ),
       ),
       const SizedBox(height: AppSpacing.md),
@@ -648,17 +695,98 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     ];
   }
 
+  List<Widget> _buildTransferSections() {
+    return [
+      AmountSection(
+        controller: _amountController,
+        focusNode: _amountFocus,
+        accent: AppColors.secondary,
+        onChangeCurrency: _openCurrencyPicker,
+        helperText: 'Move money between accounts',
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: TransactionTypeSelector(
+          selected: _draft.kind,
+          onChanged: _onKindChanged,
+        ),
+      ),
+      const SizedBox(height: AppSpacing.lg),
+      const _SectionHeading(title: 'From account'),
+      const SizedBox(height: AppSpacing.sm),
+      AccountChipsSelector(
+        accounts: widget.accounts,
+        selectedAccountId: _draft.accountId,
+        onChanged: _onAccountChanged,
+        onAddAccount: widget.onAddAccount,
+        heading: 'From account',
+      ),
+      const SizedBox(height: AppSpacing.lg),
+      const _SectionHeading(title: 'To account'),
+      const SizedBox(height: AppSpacing.sm),
+      AccountChipsSelector(
+        accounts: widget.accounts,
+        selectedAccountId: _draft.transferToAccountId,
+        onChanged: _onTransferToChanged,
+        onAddAccount: widget.onAddAccount,
+        heading: 'To account',
+      ),
+      const SizedBox(height: AppSpacing.lg),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: TransactionDetailsCard(
+          layout: TransactionDetailsLayout.incomeSecondaryOnly,
+          expanded: _detailsExpanded,
+          onExpandToggle: () =>
+              setState(() => _detailsExpanded = !_detailsExpanded),
+          date: _draft.date,
+          onPickDate: _pickTransactionDate,
+          onQuickDate: _applyQuickDate,
+          noteController: _noteController,
+          noteHintText: 'Optional note',
+        ),
+      ),
+    ];
+  }
+
+  String get _appBarTitle {
+    if (_draft.isEditing) return 'Edit Transaction';
+    switch (_draft.kind) {
+      case TransactionKind.income:
+        return 'Add Income';
+      case TransactionKind.transfer:
+        return 'Add Transfer';
+      case TransactionKind.expense:
+        return 'Add Transaction';
+    }
+  }
+
+  String get _saveLabel {
+    if (_draft.isEditing) return 'Save Changes';
+    switch (_draft.kind) {
+      case TransactionKind.income:
+        return 'Save Income';
+      case TransactionKind.transfer:
+        return 'Save Transfer';
+      case TransactionKind.expense:
+        return 'Save Transaction';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final sections =
-        _draft.isIncome ? _buildIncomeSections() : _buildExpenseSections();
+    final sections = switch (_draft.kind) {
+      TransactionKind.income => _buildIncomeSections(),
+      TransactionKind.transfer => _buildTransferSections(),
+      TransactionKind.expense => _buildExpenseSections(),
+    };
 
     return Scaffold(
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: true,
       body: Column(
         children: [
-          TransactionAppBar(onMic: null),
+          TransactionAppBar(title: _appBarTitle, onMic: null),
           Expanded(
             child: ListenableBuilder(
               listenable: CategoryCatalog.instance,
@@ -685,7 +813,8 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           ),
           StickyBottomCTA(
             isBusy: _isBusy,
-            saveLabel: _draft.isIncome ? 'Save Income' : 'Save Transaction',
+            saveLabel: _saveLabel,
+            showSaveAndAddAnother: !_draft.isEditing,
             onSave: () => _onSave(addAnother: false),
             onSaveAndAddAnother: () => _onSave(addAnother: true),
           ),
