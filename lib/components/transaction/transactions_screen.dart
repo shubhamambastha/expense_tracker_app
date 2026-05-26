@@ -106,7 +106,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     var height = 72.0;
     if (_activeChips.isNotEmpty) height += 44;
     if (_searchController.text.isEmpty && _recentSearches.isNotEmpty) {
-      height += 72;
+      // Recent label row (~48) + chip row (~32) + spacing (8).
+      height += 88;
+      // Extra row when multiple recent chips wrap.
+      if (_recentSearches.length > 2) height += 36;
     }
     return height;
   }
@@ -1149,7 +1152,7 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return child;
+    return SizedBox(height: extent, child: child);
   }
 
   @override
