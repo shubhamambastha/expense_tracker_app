@@ -13,6 +13,7 @@ class TransactionsContent extends StatelessWidget {
     this.onEdit,
     this.onDelete,
     this.onDuplicate,
+    this.onConvertToRecurring,
     this.onAddTransaction,
   });
 
@@ -22,6 +23,7 @@ class TransactionsContent extends StatelessWidget {
   final void Function(Transaction transaction)? onEdit;
   final void Function(Transaction transaction)? onDelete;
   final void Function(Transaction transaction)? onDuplicate;
+  final void Function(Transaction transaction)? onConvertToRecurring;
   final VoidCallback? onAddTransaction;
 
   @override
@@ -33,6 +35,7 @@ class TransactionsContent extends StatelessWidget {
       onEdit: onEdit,
       onDelete: onDelete,
       onDuplicate: onDuplicate,
+      onConvertToRecurring: onConvertToRecurring,
       onAddTransaction: onAddTransaction,
     );
   }

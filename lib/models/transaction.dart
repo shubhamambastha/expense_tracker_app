@@ -20,6 +20,7 @@ class Transaction {
     this.recurrenceStartDate,
     this.recurrenceEndDate,
     this.reminderTiming,
+    this.insertedAt,
   });
 
   final int? id;
@@ -38,6 +39,7 @@ class Transaction {
   final DateTime? recurrenceStartDate;
   final DateTime? recurrenceEndDate;
   final ReminderTiming? reminderTiming;
+  final DateTime? insertedAt;
 
   /// Alias used by legacy expense-oriented UI.
   String get name => counterpartyName;
@@ -101,6 +103,7 @@ class Transaction {
       recurrenceStartDate: parseDate(map['recurrence_start_date']),
       recurrenceEndDate: parseDate(map['recurrence_end_date']),
       reminderTiming: reminder,
+      insertedAt: parseDate(map['inserted_at']),
     );
   }
 
@@ -147,6 +150,7 @@ class Transaction {
     DateTime? recurrenceStartDate,
     DateTime? recurrenceEndDate,
     ReminderTiming? reminderTiming,
+    DateTime? insertedAt,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -165,6 +169,7 @@ class Transaction {
       recurrenceStartDate: recurrenceStartDate ?? this.recurrenceStartDate,
       recurrenceEndDate: recurrenceEndDate ?? this.recurrenceEndDate,
       reminderTiming: reminderTiming ?? this.reminderTiming,
+      insertedAt: insertedAt ?? this.insertedAt,
     );
   }
 

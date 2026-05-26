@@ -25,6 +25,7 @@ class TransactionsScreen extends StatefulWidget {
     this.onEdit,
     this.onDelete,
     this.onDuplicate,
+    this.onConvertToRecurring,
     this.onAddTransaction,
   });
 
@@ -34,6 +35,7 @@ class TransactionsScreen extends StatefulWidget {
   final void Function(Transaction transaction)? onEdit;
   final void Function(Transaction transaction)? onDelete;
   final void Function(Transaction transaction)? onDuplicate;
+  final void Function(Transaction transaction)? onConvertToRecurring;
   final VoidCallback? onAddTransaction;
 
   @override
@@ -635,6 +637,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   transferToAccount: _transferToAccountFor(tx),
                   onEdit: () => widget.onEdit?.call(tx),
                   onDuplicate: () => widget.onDuplicate?.call(tx),
+                  onConvertToRecurring: () =>
+                      widget.onConvertToRecurring?.call(tx),
                   onDelete: () => widget.onDelete?.call(tx),
                 ),
                 onEdit: () => widget.onEdit?.call(tx),

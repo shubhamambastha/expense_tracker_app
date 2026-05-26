@@ -339,6 +339,12 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     _openAddTransactionPage(initialDraft: transaction.toDraft());
   }
 
+  void _convertToRecurring(Transaction transaction) {
+    final draft = transaction.toDraft();
+    draft.recurring = draft.recurring.copyWith(enabled: true);
+    _openAddTransactionPage(initialDraft: draft);
+  }
+
   Future<void> _confirmAndDeleteTransaction(Transaction transaction) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -402,6 +408,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       onEdit: _openEditTransaction,
       onDelete: _confirmAndDeleteTransaction,
       onDuplicate: _duplicateTransaction,
+      onConvertToRecurring: _convertToRecurring,
       onAddTransaction: () => _openAddTransactionPage(),
     );
   }
