@@ -5,6 +5,7 @@ import 'components/common/error_app.dart';
 import 'components/common/auth_gate.dart';
 import 'services/category_catalog.dart';
 import 'services/currency_settings.dart';
+import 'services/settings_preferences.dart';
 import 'services/supabase_service.dart';
 
 Future<void> main() async {
@@ -15,6 +16,7 @@ Future<void> main() async {
     await Future.wait([
       SupabaseService.init(),
       CurrencySettings.instance.load(),
+      SettingsPreferences.instance.load(),
     ]);
     runApp(const ExpenseTrackerApp());
   } catch (error) {
@@ -31,6 +33,7 @@ class ExpenseTrackerApp extends StatelessWidget {
       listenable: Listenable.merge([
         CurrencySettings.instance,
         CategoryCatalog.instance,
+        SettingsPreferences.instance,
       ]),
       builder: (context, _) {
         return MaterialApp(

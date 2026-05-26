@@ -61,10 +61,14 @@ class SupabaseService {
       throw Exception('Not signed in. Please sign in to load expenses.');
     }
 
+    // Expenses now live in the unified `transactions` table; filter on
+    // kind = 'expense' so income / transfer rows don't bleed into the
+    // expense ledger (sql/20260526_create_transactions.sql).
     final data = await Supabase.instance.client
-        .from('expenses')
+        .from('transactions')
         .select()
         .eq('user_id', user.id)
+        .eq('kind', 'expense')
         .order('date', ascending: false);
 
     return (data as List<dynamic>)
@@ -113,7 +117,7 @@ class SupabaseService {
 
     final payload = expense.toMap()..['user_id'] = user.id;
     final data = await Supabase.instance.client
-        .from('expenses')
+        .from('transactions')
         .insert(payload)
         .select()
         .single();
@@ -127,13 +131,16 @@ class SupabaseService {
       throw Exception('Not signed in. Please sign in to update expenses.');
     }
 
+    // Strip identity-bound columns from the update payload so we never
+    // attempt to rewrite the row's owner or surrogate id.
     final payload = expense.toMap()
-      ..['user_id'] = user.id
-      ..remove('user_id');
+      ..remove('user_id')
+      ..remove('id');
     final data = await Supabase.instance.client
-        .from('expenses')
+        .from('transactions')
         .update(payload)
         .eq('id', expense.id!)
+        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -147,7 +154,7 @@ class SupabaseService {
     }
 
     await Supabase.instance.client
-        .from('expenses')
+        .from('transactions')
         .delete()
         .eq('id', expenseId)
         .eq('user_id', user.id);

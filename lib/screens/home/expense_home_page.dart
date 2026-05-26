@@ -3,18 +3,16 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../components/common/compact_header.dart';
 import '../../components/dialogs/expense_form_dialog.dart';
-import '../../components/profile/accounts_settings_section.dart';
-import '../../components/profile/categories_settings_section.dart';
 import '../../components/home/home_content.dart';
 import '../../components/home/expenses_content.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
 import '../../models/transaction_draft.dart';
-import '../../services/currency_settings.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/snackbar_helper.dart';
+import '../settings/settings_page.dart';
 import '../transaction/add_transaction_page.dart';
 
 /// Home page for viewing and managing expenses
@@ -409,23 +407,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     ).whenComplete(nameController.dispose);
   }
 
-  String get _currentEmail =>
-      SupabaseService.currentUser?.email ?? 'Unknown user';
-
-  double get _totalAmount {
-    return _expenses.fold<double>(0.0, (sum, expense) => sum + expense.amount);
-  }
-
-  int get _recurringCount {
-    return _expenses.where((expense) => expense.isRecurring).length;
-  }
-
-  String get _profileInitial {
-    final email = _currentEmail.trim();
-    if (email.isEmpty || email == 'Unknown user') return '?';
-    return email.characters.first.toUpperCase();
-  }
-
   Widget _buildHomeContent(BuildContext context) {
     return HomeContent(expenses: _expenses, isLoading: _isLoading);
   }
@@ -476,303 +457,12 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
   }
 
-  void _onChangePassword() {
-    SnackbarHelper.showMessage(
-      context,
-      'Change password will be available soon.',
-    );
-  }
-
-  void _openCurrencyPicker() {
-    final settings = CurrencySettings.instance;
-
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        final maxSheetHeight = MediaQuery.sizeOf(sheetContext).height * 0.72;
-
-        return StatefulBuilder(
-          builder: (sheetContext, setSheetState) {
-            final currentCode = settings.currencyCode;
-
-            return SafeArea(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxSheetHeight),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-                      child: Text(
-                        'Default currency',
-                        style: Theme.of(sheetContext)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Text(
-                        'All amounts are entered and shown in this currency.',
-                        style: Theme.of(sheetContext)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(
-                          color: Theme.of(sheetContext)
-                              .colorScheme
-                              .onSurfaceVariant,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Flexible(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        itemCount: CurrencySettings.supported.length,
-                        itemBuilder: (context, index) {
-                          final option = CurrencySettings.supported[index];
-                          final selected = option.code == currentCode;
-
-                          return ListTile(
-                            dense: true,
-                            visualDensity: VisualDensity.compact,
-                            leading: CircleAvatar(
-                              radius: 18,
-                              backgroundColor: selected
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
-                              child: Text(
-                                option.symbol,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                  color: selected
-                                      ? Theme.of(context)
-                                          .colorScheme
-                                          .onPrimaryContainer
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface,
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              option.name,
-                              style: TextStyle(
-                                fontWeight: selected
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
-                              ),
-                            ),
-                            subtitle: Text(option.code),
-                            trailing: selected
-                                ? Icon(
-                                    Icons.check_circle_rounded,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  )
-                                : null,
-                            onTap: () async {
-                              await settings.setCurrency(option.code);
-                              setSheetState(() {});
-                              if (!sheetContext.mounted) return;
-                              Navigator.of(sheetContext).pop();
-                              if (!mounted) return;
-                              setState(() {});
-                              SnackbarHelper.showSuccess(
-                                context,
-                                'Currency set to ${option.name}',
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildProfileContent(BuildContext context) {
-    return ListenableBuilder(
-      listenable: CurrencySettings.instance,
-      builder: (context, _) {
-        final currencySettings = CurrencySettings.instance;
-
-        return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadii.cardRadius,
-              border: Border.all(color: AppColors.border),
-              boxShadow: AppShadows.card,
-            ),
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primary.withAlpha(64),
-                            AppColors.secondary.withAlpha(32),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppColors.primary.withAlpha(50),
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        _profileInitial,
-                        style: AppTextStyles.headingSmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Profile',
-                            style: AppTextStyles.headingSmall,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _currentEmail,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _ProfileMetric(
-                        value: currencySettings.format(_totalAmount),
-                        label: 'tracked',
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: _ProfileMetric(
-                        value: _expenses.length.toString(),
-                        label: 'entries',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _ProfileMetric(
-                  value: _recurringCount.toString(),
-                  label: 'recurring expenses',
-                  icon: Icons.repeat_rounded,
-                ),
-              ],
-            ),
-          )
-              .animate()
-              .fadeIn(duration: AppDurations.page)
-              .slideY(
-                begin: 0.04,
-                end: 0,
-                duration: AppDurations.page,
-                curve: AppCurves.spring,
-              ),
-          const SizedBox(height: AppSpacing.md),
-          AccountsSettingsSection(
-            accounts: _accounts,
-            onAddAccount: _openAddAccountDialog,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const CategoriesSettingsSection(),
-          const SizedBox(height: AppSpacing.md),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadii.cardRadius,
-              border: Border.all(color: AppColors.border),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _ProfileActionTile(
-                  icon: Icons.payments_rounded,
-                  title: 'Default currency',
-                  subtitle:
-                      '${currencySettings.current.name} (${currencySettings.currencyCode})',
-                  onTap: _openCurrencyPicker,
-                ),
-                const Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: AppColors.border,
-                ),
-                _ProfileActionTile(
-                  icon: Icons.lock_outline_rounded,
-                  title: 'Change password',
-                  subtitle: 'Update your account credentials',
-                  onTap: _onChangePassword,
-                ),
-                const Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: AppColors.border,
-                ),
-                _ProfileActionTile(
-                  icon: Icons.logout_rounded,
-                  title: 'Sign out',
-                  subtitle: 'End this session',
-                  isDestructive: true,
-                  onTap: widget.onSignOut,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-      },
+  Widget _buildSettingsContent(BuildContext context) {
+    return SettingsPage(
+      accounts: _accounts,
+      expenses: _expenses,
+      onAddAccount: _openAddAccountDialog,
+      onSignOut: widget.onSignOut,
     );
   }
 
@@ -783,7 +473,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       case 3:
         return _buildPlaceholderContent('Advise', Icons.psychology);
       case 4:
-        return _buildProfileContent(context);
+        return _buildSettingsContent(context);
       case 0:
       default:
         return _buildHomeContent(context);
@@ -862,8 +552,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                 index: 3,
               ),
               _buildBottomBarItem(
-                icon: Icons.person_rounded,
-                label: 'Profile',
+                icon: Icons.settings_rounded,
+                label: 'Settings',
                 index: 4,
               ),
             ],
@@ -919,125 +609,3 @@ class _AddExpenseFab extends StatelessWidget {
   }
 }
 
-class _ProfileMetric extends StatelessWidget {
-  const _ProfileMetric({required this.value, required this.label, this.icon});
-
-  final String value;
-  final String label;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceSecondary,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 18, color: AppColors.primary),
-            const SizedBox(width: AppSpacing.sm),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.caption,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileActionTile extends StatelessWidget {
-  const _ProfileActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.isDestructive = false,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final bool isDestructive;
-
-  @override
-  Widget build(BuildContext context) {
-    final foreground =
-        isDestructive ? AppColors.danger : AppColors.primary;
-
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: foreground.withAlpha(28),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Icon(icon, color: foreground, size: 18),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: AppTextStyles.caption,
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textSecondary,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
