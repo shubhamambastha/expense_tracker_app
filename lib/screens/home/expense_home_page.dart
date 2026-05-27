@@ -20,6 +20,7 @@ import '../../utils/constants.dart';
 import '../../utils/financial_insights.dart';
 import '../../utils/snackbar_helper.dart';
 import '../../utils/transaction_subtype_helpers.dart';
+import '../analytics/analytics_page.dart';
 import '../settings/sections/budgets_and_spending_page.dart';
 import '../settings/settings_page.dart';
 import '../transaction/add_transaction_page.dart';
@@ -77,37 +78,41 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     final fg =
         isSelected ? AppColors.primary : AppColors.textSecondary;
 
-    return InkWell(
-      onTap: () => _onNavItemTapped(index),
-      borderRadius: AppRadii.buttonRadius,
-      child: AnimatedContainer(
-        duration: AppDurations.micro,
-        curve: AppCurves.spring,
-        constraints: const BoxConstraints(minWidth: 60),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withAlpha(28)
-              : Colors.transparent,
-          borderRadius: AppRadii.buttonRadius,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: fg, size: 22),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: fg,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+    return Expanded(
+      child: InkWell(
+        onTap: () => _onNavItemTapped(index),
+        borderRadius: AppRadii.buttonRadius,
+        child: AnimatedContainer(
+          duration: AppDurations.micro,
+          curve: AppCurves.spring,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.primary.withAlpha(28)
+                : Colors.transparent,
+            borderRadius: AppRadii.buttonRadius,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: fg, size: 22),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.caption.copyWith(
+                  color: fg,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -425,7 +430,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
         return HomeContent(
           transactions: _transactions,
           accounts: _accounts,
-          categoryBudgets: CategoryBudgetService.instance.budgets,
           monthlyLimit: SettingsPreferences.instance.monthlySpendingLimit,
           userEmail: SupabaseService.currentUser?.email,
           isLoading: _isLoading,
@@ -436,7 +440,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           onManageAccounts: () => _switchToTab(4),
           onOpenBudgetSettings: _openBudgetSettings,
           onTapAccount: _openAccountTransactions,
-          onInsightAction: _handleInsightAction,
         );
       },
     );
@@ -527,39 +530,25 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
   }
 
-  Widget _buildPlaceholderContent(String title, IconData icon) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.primary.withAlpha(36),
-                  AppColors.secondary.withAlpha(20),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.primary.withAlpha(60)),
-            ),
-            child: Icon(icon, size: 40, color: AppColors.primary),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(title, style: AppTextStyles.headingSmall),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Content will be available soon.',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
+  Widget _buildAnalyticsContent(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        SettingsPreferences.instance,
+        CategoryBudgetService.instance,
+      ]),
+      builder: (context, _) {
+        return AnalyticsPage(
+          transactions: _transactions,
+          accounts: _accounts,
+          categoryBudgets: CategoryBudgetService.instance.budgets,
+          isLoading: _isLoading,
+          onRefresh: _refreshDashboard,
+          onAddTransaction: () => _openAddTransactionPage(),
+          onTapTransaction: _openTransactionDetail,
+          onOpenBudgetSettings: _openBudgetSettings,
+          onInsightAction: _handleInsightAction,
+        );
+      },
     );
   }
 
@@ -585,7 +574,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       case 1:
         return _buildTransactionsContent(context);
       case 3:
-        return _buildPlaceholderContent('Advise', Icons.psychology);
+        return _buildAnalyticsContent(context);
       case 4:
         return _buildSettingsContent(context);
       case 0:
@@ -662,7 +651,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
               _AddExpenseFab(onTap: () => _openAddTransactionPage()),
               _buildBottomBarItem(
                 icon: Icons.insights_rounded,
-                label: 'Advise',
+                label: 'Analytics',
                 index: 3,
               ),
               _buildBottomBarItem(

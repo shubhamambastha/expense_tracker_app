@@ -2,32 +2,32 @@ import 'package:flutter/material.dart';
 
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
-import '../../models/category_budget.dart';
 import '../../models/transaction.dart';
 import '../../utils/dashboard_aggregations.dart';
-import '../../utils/financial_insights.dart';
 import '../../utils/upcoming_payments.dart';
 import 'dashboard/account_overview_section.dart';
-import 'dashboard/budget_health_section.dart';
 import 'dashboard/dashboard_greeting_header.dart';
 import 'dashboard/dashboard_intents.dart';
-import 'dashboard/financial_insights_section.dart';
 import 'dashboard/hero_overview_card.dart';
 import 'dashboard/quick_actions_row.dart';
 import 'dashboard/recent_transactions_section.dart';
-import 'dashboard/upcoming_payments_section.dart';
 
 /// Behavioral-finance dashboard composed from modular section widgets.
 ///
 /// Aggregations are computed once per build and passed down so each section
 /// stays stateless and cheap. Designed to swap onto a Riverpod/Bloc layer
 /// later without touching the section widgets themselves.
+///
+/// Budget progress, behavioural insights, and recurring/upcoming payment
+/// summaries live on the Analytics screen (`BudgetAnalyticsSection`,
+/// `BehavioralInsightsSection`, `SubscriptionsSection`) so home stays
+/// scannable and focused on today/this-month action. Only the upcoming-bills
+/// signal is surfaced here as the greeting subtitle.
 class HomeContent extends StatelessWidget {
   const HomeContent({
     super.key,
     required this.transactions,
     required this.accounts,
-    required this.categoryBudgets,
     required this.monthlyLimit,
     required this.userEmail,
     required this.isLoading,
@@ -38,12 +38,10 @@ class HomeContent extends StatelessWidget {
     required this.onManageAccounts,
     required this.onOpenBudgetSettings,
     required this.onTapAccount,
-    required this.onInsightAction,
   });
 
   final List<Transaction> transactions;
   final List<Account> accounts;
-  final List<CategoryBudget> categoryBudgets;
   final double? monthlyLimit;
   final String? userEmail;
   final bool isLoading;
@@ -54,7 +52,6 @@ class HomeContent extends StatelessWidget {
   final VoidCallback onManageAccounts;
   final VoidCallback onOpenBudgetSettings;
   final void Function(Account account) onTapAccount;
-  final void Function(FinancialInsight insight) onInsightAction;
 
   @override
   Widget build(BuildContext context) {
@@ -83,11 +80,6 @@ class HomeContent extends StatelessWidget {
     final upcoming = upcomingPaymentsFor(
       transactions,
       accounts: accounts,
-      now: now,
-    );
-    final insights = generateInsights(
-      transactions: transactions,
-      budgets: categoryBudgets,
       now: now,
     );
     final greetingSubtitle = _greetingSubtitle(
@@ -124,8 +116,6 @@ class HomeContent extends StatelessWidget {
                       monthSpent: monthSpent,
                       safeDaily: safeDaily,
                       daysRemaining: daysRemaining,
-                      upcoming: upcoming,
-                      insights: insights,
                       greetingSubtitle: greetingSubtitle,
                     ),
             ),
@@ -141,8 +131,6 @@ class HomeContent extends StatelessWidget {
     required double monthSpent,
     required double? safeDaily,
     required int daysRemaining,
-    required List<UpcomingPayment> upcoming,
-    required List<FinancialInsight> insights,
     required String greetingSubtitle,
   }) {
     return [
@@ -170,27 +158,11 @@ class HomeContent extends StatelessWidget {
         onViewAll: onViewAllTransactions,
       ),
       const SizedBox(height: AppSpacing.xxl),
-      BudgetHealthSection(
-        budgets: categoryBudgets,
-        transactions: transactions,
-      ),
-      const SizedBox(height: AppSpacing.xxl),
-      UpcomingPaymentsSection(
-        payments: upcoming,
-        onTap: (payment) => onTapTransaction(payment.transaction),
-        onViewAll: onViewAllTransactions,
-      ),
-      const SizedBox(height: AppSpacing.xxl),
       AccountOverviewSection(
         accounts: accounts,
         transactions: transactions,
         onTapAccount: onTapAccount,
         onManage: onManageAccounts,
-      ),
-      const SizedBox(height: AppSpacing.xxl),
-      FinancialInsightsSection(
-        insights: insights,
-        onAction: onInsightAction,
       ),
     ];
   }
