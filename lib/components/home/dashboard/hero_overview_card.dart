@@ -303,16 +303,18 @@ class _BudgetProgress extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(99),
-          child: LinearProgressIndicator(
-            value: hasLimit ? ratio : null,
-            minHeight: 6,
-            backgroundColor: AppColors.background,
-            color: color,
+        if (hasLimit) ...[
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 6,
+              backgroundColor: AppColors.background,
+              color: color,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
