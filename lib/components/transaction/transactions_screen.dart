@@ -48,7 +48,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   final _filters = TransactionFilterState();
   final _debounce = _Debouncer(const Duration(milliseconds: 280));
 
-  List<String> _recentSearches = [];
   String _debouncedQuery = '';
   bool _fabVisible = true;
   double _lastScrollOffset = 0;
@@ -66,15 +65,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Future<void> _loadPreferences() async {
-    await TransactionListPreferences.instance.load();
     await TransactionListPreferences.instance.restoreFilterSnapshot(_filters);
     if (!mounted) return;
-    setState(() {
-      _recentSearches = TransactionListPreferences.instance.recentSearches;
-      _debouncedQuery = _filters.searchQuery;
-      _searchController.text = _filters.searchQuery;
-      _prefsLoaded = true;
-    });
+    setState(() => _prefsLoaded = true);
   }
 
   @override
@@ -95,22 +88,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         _filters.searchQuery = _debouncedQuery;
         _visibleLimit = _pageSize;
       });
-      if (_debouncedQuery.trim().isNotEmpty) {
-        TransactionListPreferences.instance.rememberSearch(_debouncedQuery);
-      }
-      TransactionListPreferences.instance.saveFilterSnapshot(_filters);
     });
   }
 
   double get _stickyHeaderHeight {
     var height = 72.0;
     if (_activeChips.isNotEmpty) height += 44;
-    if (_searchController.text.isEmpty && _recentSearches.isNotEmpty) {
-      // Recent label row (~48) + chip row (~32) + spacing (8).
-      height += 88;
-      // Extra row when multiple recent chips wrap.
-      if (_recentSearches.length > 2) height += 36;
-    }
     return height;
   }
 
@@ -524,8 +507,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final summaryCount =
         _filters.hasActiveFilters ? filtered.length : summaryExpenses.length;
     final hasFilters = _filters.hasActiveFilters;
-    final showRecent =
-        _searchController.text.isEmpty && _recentSearches.isNotEmpty;
     final itemCount = filtered.isEmpty ? 0 : _sliverItemCount(groups);
 
     return _wrapWithFilterFab(
@@ -546,19 +527,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               extent: _stickyHeaderHeight,
               child: _StickySearchFilters(
                 searchController: _searchController,
-                recentSearches: _recentSearches,
-                showRecent: showRecent,
-                onRecentTap: (q) {
-                  _searchController.text = q;
-                  _debouncedQuery = q;
-                  _filters.searchQuery = q;
-                  setState(() {});
-                },
-                onClearRecent: () async {
-                  await TransactionListPreferences.instance
-                      .clearRecentSearches();
-                  setState(() => _recentSearches = []);
-                },
                 onSearchClear: () {
                   _searchController.clear();
                   _debouncedQuery = '';
@@ -697,20 +665,12 @@ class _TransactionsAppBar extends StatelessWidget {
 class _StickySearchFilters extends StatelessWidget {
   const _StickySearchFilters({
     required this.searchController,
-    required this.recentSearches,
-    required this.showRecent,
-    required this.onRecentTap,
-    required this.onClearRecent,
     required this.onSearchClear,
     required this.activeChips,
     required this.onClearAll,
   });
 
   final TextEditingController searchController;
-  final List<String> recentSearches;
-  final bool showRecent;
-  final ValueChanged<String> onRecentTap;
-  final VoidCallback onClearRecent;
   final VoidCallback onSearchClear;
   final List<ActiveFilterChip> activeChips;
   final VoidCallback onClearAll;
@@ -762,29 +722,6 @@ class _StickySearchFilters extends StatelessWidget {
               isDense: true,
             ),
           ),
-          if (showRecent && recentSearches.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Text('Recent', style: AppTextStyles.caption),
-                const Spacer(),
-                TextButton(
-                  onPressed: onClearRecent,
-                  child: const Text('Clear'),
-                ),
-              ],
-            ),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.xs,
-              children: recentSearches.map((q) {
-                return ActionChip(
-                  label: Text(q),
-                  onPressed: () => onRecentTap(q),
-                );
-              }).toList(),
-            ),
-          ],
           if (activeChips.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             SizedBox(
