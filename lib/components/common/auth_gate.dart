@@ -1,9 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../config/design_tokens.dart';
 import '../../screens/auth/login_page.dart';
+import '../../screens/auth/splash_screen.dart';
 import '../../screens/home/expense_home_page.dart';
 import '../../services/category_budget_service.dart';
 import '../../services/category_catalog.dart';
@@ -12,7 +13,10 @@ import '../../services/currency_settings.dart';
 import '../../services/settings_preferences.dart';
 import '../../services/supabase_service.dart';
 
-/// Gate that handles auth state and routes to appropriate screen
+enum _AuthPhase { splash, login, app }
+
+/// Root gate: splash while restoring session, login when signed out, app when
+/// signed in. Nothing else is reachable without a valid session.
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
@@ -21,42 +25,59 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  bool _isInitializing = true;
-  User? _user;
+  static const _minSplashDuration = Duration(milliseconds: 1200);
+
+  _AuthPhase _phase = _AuthPhase.splash;
   StreamSubscription<dynamic>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
-    _user = SupabaseService.currentUser;
-    _authSubscription = SupabaseService.authStateChanges.listen(_onAuthStateChange);
-    _finishInitialization();
+    _authSubscription =
+        SupabaseService.authStateChanges.listen(_onAuthStateChange);
+    unawaited(_bootstrap());
   }
 
-  void _onAuthStateChange(dynamic _) {
+  Future<void> _bootstrap() async {
+    final splashDelay = Future<void>.delayed(_minSplashDuration);
     final user = SupabaseService.currentUser;
-    if (user != null) {
-      unawaited(_syncUserPreferences(user.id));
-    } else {
-      CurrencySettings.instance.onSignedOut();
-      SettingsPreferences.instance.onSignedOut();
-      CategoryCatalog.instance.onSignedOut();
-      IncomeCategoryCatalog.instance.onSignedOut();
-      CategoryBudgetService.instance.onSignedOut();
-    }
-    setState(() => _user = user);
-  }
 
-  Future<void> _finishInitialization() async {
-    final user = SupabaseService.currentUser;
     if (user != null) {
       await _syncUserPreferences(user.id);
     }
+
+    await splashDelay;
     if (!mounted) return;
+
     setState(() {
-      _isInitializing = false;
-      _user = user;
+      _phase = user != null ? _AuthPhase.app : _AuthPhase.login;
     });
+  }
+
+  void _onAuthStateChange(dynamic _) {
+    if (_phase == _AuthPhase.splash) return;
+
+    final user = SupabaseService.currentUser;
+    if (user != null) {
+      unawaited(_handleSignedIn(user.id));
+    } else {
+      _clearUserScopedState();
+      setState(() => _phase = _AuthPhase.login);
+    }
+  }
+
+  Future<void> _handleSignedIn(String userId) async {
+    await _syncUserPreferences(userId);
+    if (!mounted || _phase == _AuthPhase.splash) return;
+    setState(() => _phase = _AuthPhase.app);
+  }
+
+  void _clearUserScopedState() {
+    CurrencySettings.instance.onSignedOut();
+    SettingsPreferences.instance.onSignedOut();
+    CategoryCatalog.instance.onSignedOut();
+    IncomeCategoryCatalog.instance.onSignedOut();
+    CategoryBudgetService.instance.onSignedOut();
   }
 
   @override
@@ -75,48 +96,36 @@ class _AuthGateState extends State<AuthGate> {
 
   Future<void> _signOut() async {
     await SupabaseService.signOut();
-    CurrencySettings.instance.onSignedOut();
-    SettingsPreferences.instance.onSignedOut();
-    CategoryCatalog.instance.onSignedOut();
-    IncomeCategoryCatalog.instance.onSignedOut();
-    CategoryBudgetService.instance.onSignedOut();
+    _clearUserScopedState();
     if (!mounted) return;
-    setState(() {
-      _user = null;
-    });
+    setState(() => _phase = _AuthPhase.login);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isInitializing) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(
-          child: SizedBox(
-            width: 36,
-            height: 36,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.4,
-              color: AppColors.primary,
+    return PopScope(
+      canPop: _phase == _AuthPhase.app,
+      child: AnimatedSwitcher(
+        duration: AppDurations.page,
+        switchInCurve: AppCurves.emphasized,
+        switchOutCurve: Curves.easeIn,
+        child: switch (_phase) {
+          _AuthPhase.splash => const SplashScreen(key: ValueKey('splash')),
+          _AuthPhase.login => LoginPage(
+              key: const ValueKey('login'),
+              onSignedIn: () async {
+                final user = SupabaseService.currentUser;
+                if (user != null) {
+                  await _handleSignedIn(user.id);
+                }
+              },
             ),
-          ),
-        ),
-      );
-    }
-
-    if (_user == null) {
-      return LoginPage(
-        onSignedIn: () async {
-          final user = SupabaseService.currentUser;
-          if (user != null) {
-            await _syncUserPreferences(user.id);
-          }
-          if (!mounted) return;
-          setState(() => _user = user);
+          _AuthPhase.app => ExpenseHomePage(
+              key: const ValueKey('app'),
+              onSignOut: _signOut,
+            ),
         },
-      );
-    }
-
-    return ExpenseHomePage(onSignOut: _signOut);
+      ),
+    );
   }
 }
