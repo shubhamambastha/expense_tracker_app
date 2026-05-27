@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/design_tokens.dart';
 import '../../screens/auth/login_page.dart';
 import '../../screens/home/expense_home_page.dart';
+import '../../services/category_budget_service.dart';
 import '../../services/category_catalog.dart';
 import '../../services/income_category_catalog.dart';
 import '../../services/currency_settings.dart';
@@ -41,6 +42,7 @@ class _AuthGateState extends State<AuthGate> {
       SettingsPreferences.instance.onSignedOut();
       CategoryCatalog.instance.onSignedOut();
       IncomeCategoryCatalog.instance.onSignedOut();
+      CategoryBudgetService.instance.onSignedOut();
     }
     setState(() => _user = user);
   }
@@ -68,6 +70,7 @@ class _AuthGateState extends State<AuthGate> {
     await SettingsPreferences.instance.syncForUser(userId);
     await CategoryCatalog.instance.syncForUser(userId);
     await IncomeCategoryCatalog.instance.syncForUser(userId);
+    await CategoryBudgetService.instance.refresh();
   }
 
   Future<void> _signOut() async {
@@ -76,6 +79,7 @@ class _AuthGateState extends State<AuthGate> {
     SettingsPreferences.instance.onSignedOut();
     CategoryCatalog.instance.onSignedOut();
     IncomeCategoryCatalog.instance.onSignedOut();
+    CategoryBudgetService.instance.onSignedOut();
     if (!mounted) return;
     setState(() {
       _user = null;

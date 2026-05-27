@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/account.dart';
+import '../models/category_budget.dart';
 import '../models/expense.dart';
 import '../models/transaction.dart';
 import '../models/transaction_draft.dart';
@@ -195,6 +196,83 @@ class SupabaseService {
         .single();
 
     return Account.fromMap(data);
+  }
+
+  static Future<Account> updateAccount(Account account) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to update accounts.');
+    }
+    if (account.id == null) {
+      throw Exception('Cannot update an account without an id.');
+    }
+
+    final payload = account.toMap()
+      ..remove('user_id')
+      ..remove('id');
+    final data = await Supabase.instance.client
+        .from('accounts')
+        .update(payload)
+        .eq('id', account.id!)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+    return Account.fromMap(data);
+  }
+
+  static Future<List<CategoryBudget>> fetchCategoryBudgets() async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to load budgets.');
+    }
+
+    final data = await Supabase.instance.client
+        .from('category_budgets')
+        .select()
+        .eq('user_id', user.id)
+        .order('category_name');
+
+    return (data as List<dynamic>)
+        .map((item) => CategoryBudget.fromMap(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Upserts a budget for `(user_id, category_name)`. The unique index in
+  /// `sql/20260527_dashboard_data.sql` is case-insensitive on category name,
+  /// so re-saving the same category replaces the existing row.
+  static Future<CategoryBudget> upsertCategoryBudget(
+    CategoryBudget budget,
+  ) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to save budgets.');
+    }
+
+    final payload = budget.toMap()
+      ..['user_id'] = user.id
+      ..remove('id');
+
+    final data = await Supabase.instance.client
+        .from('category_budgets')
+        .upsert(payload, onConflict: 'user_id,category_name')
+        .select()
+        .single();
+
+    return CategoryBudget.fromMap(data);
+  }
+
+  static Future<void> deleteCategoryBudget(int budgetId) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to delete budgets.');
+    }
+
+    await Supabase.instance.client
+        .from('category_budgets')
+        .delete()
+        .eq('id', budgetId)
+        .eq('user_id', user.id);
   }
 
   static Future<Expense> updateExpense(Expense expense) async {

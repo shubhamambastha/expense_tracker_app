@@ -9,6 +9,7 @@ import '../../config/design_tokens.dart';
 import '../../models/transaction.dart';
 import '../../services/currency_settings.dart';
 import '../../services/category_catalog.dart';
+import 'dashboard/dashboard_section_header.dart';
 
 /// Shared palette for category charts (premium dark accents).
 const kAnalyticsChartColors = <Color>[
@@ -191,7 +192,7 @@ class MonthlyAnalyticsCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.xxl),
-            _ChartSectionHeader(
+            DashboardSectionHeader(
               title: 'Spending mix',
               subtitle:
                   topCategory == null ? null : 'Top: ${topCategory.key}',
@@ -225,7 +226,7 @@ class MonthlyAnalyticsCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xxl),
-            _ChartSectionHeader(
+            const DashboardSectionHeader(
               title: 'Daily rhythm',
               subtitle: 'Tap a point for details',
             ),
@@ -284,38 +285,6 @@ class _EmptyAnalyticsState extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ChartSectionHeader extends StatelessWidget {
-  const _ChartSectionHeader({required this.title, this.subtitle});
-
-  final String title;
-  final String? subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: AppTextStyles.bodyLarge.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(subtitle!, style: AppTextStyles.caption),
-              ],
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

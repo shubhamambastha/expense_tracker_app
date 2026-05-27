@@ -3,17 +3,24 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../components/common/compact_header.dart';
 import '../../components/dialogs/add_account_dialog.dart';
+import '../../components/home/dashboard/dashboard_intents.dart';
 import '../../components/home/home_content.dart';
 import '../../components/home/transactions_content.dart';
+import '../../components/transaction/transaction_detail_sheet.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
 import '../../models/transaction.dart';
 import '../../models/transaction_draft.dart';
+import '../../services/category_budget_service.dart';
 import '../../services/income_category_catalog.dart';
+import '../../services/settings_preferences.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/constants.dart';
+import '../../utils/financial_insights.dart';
 import '../../utils/snackbar_helper.dart';
+import '../../utils/transaction_subtype_helpers.dart';
+import '../settings/sections/budgets_and_spending_page.dart';
 import '../settings/settings_page.dart';
 import '../transaction/add_transaction_page.dart';
 
@@ -33,13 +40,21 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   bool _isLoading = true;
   int _selectedIndex = 0;
 
-  List<Transaction> get _expenseTransactions =>
-      _transactions.where((t) => t.isExpense).toList();
-
   @override
   void initState() {
     super.initState();
+    CategoryBudgetService.instance.addListener(_onBudgetsChanged);
     _loadTransactions();
+  }
+
+  @override
+  void dispose() {
+    CategoryBudgetService.instance.removeListener(_onBudgetsChanged);
+    super.dispose();
+  }
+
+  void _onBudgetsChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onNavItemTapped(int index) {
@@ -116,6 +131,11 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           );
         }
       }
+      try {
+        await CategoryBudgetService.instance.refresh();
+      } catch (_) {
+        // Non-fatal: dashboard simply renders no budgets.
+      }
       if (!mounted) return;
       setState(() {
         _transactions
@@ -135,6 +155,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       );
     }
   }
+
+  Future<void> _refreshDashboard() => _loadTransactions();
 
   Future<void> _insertTransaction(Transaction transaction) async {
     try {
@@ -394,10 +416,102 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   Widget _buildHomeContent(BuildContext context) {
-    return HomeContent(
-      transactions: _expenseTransactions,
-      isLoading: _isLoading,
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        SettingsPreferences.instance,
+        CategoryBudgetService.instance,
+      ]),
+      builder: (context, _) {
+        return HomeContent(
+          transactions: _transactions,
+          accounts: _accounts,
+          categoryBudgets: CategoryBudgetService.instance.budgets,
+          monthlyLimit: SettingsPreferences.instance.monthlySpendingLimit,
+          userEmail: SupabaseService.currentUser?.email,
+          isLoading: _isLoading,
+          onRefresh: _refreshDashboard,
+          onQuickAction: _handleQuickAction,
+          onTapTransaction: _openTransactionDetail,
+          onViewAllTransactions: () => _switchToTab(1),
+          onManageAccounts: () => _switchToTab(4),
+          onOpenBudgetSettings: _openBudgetSettings,
+          onTapAccount: _openAccountTransactions,
+          onInsightAction: _handleInsightAction,
+        );
+      },
     );
+  }
+
+  void _switchToTab(int index) {
+    if (index < 0 || index > 4 || index == 2) return;
+    setState(() => _selectedIndex = index);
+  }
+
+  void _handleQuickAction(QuickAction action) {
+    switch (action) {
+      case QuickAction.addExpense:
+        _openAddTransactionPage(kind: TransactionKind.expense);
+        return;
+      case QuickAction.addIncome:
+        _openAddTransactionPage(kind: TransactionKind.income);
+        return;
+      case QuickAction.transfer:
+        _openAddTransactionPage(kind: TransactionKind.transfer);
+        return;
+      case QuickAction.addEmi:
+        final draft = TransactionDraft(
+          kind: TransactionKind.expense,
+          accountId: _accounts.isEmpty ? null : _accounts.first.id,
+        );
+        TransactionSubtypeHelpers.applyExpenseSubtype(
+          draft,
+          TransactionSubtypeHelpers.expenseCategoryEmi,
+        );
+        _openAddTransactionPage(initialDraft: draft);
+        return;
+    }
+  }
+
+  void _openTransactionDetail(Transaction transaction) {
+    showTransactionDetailSheet(
+      context: context,
+      transaction: transaction,
+      account: _accountFor(transaction.accountId),
+      transferToAccount: _accountFor(transaction.transferToAccountId),
+      onEdit: () => _openEditTransaction(transaction),
+      onDuplicate: () => _duplicateTransaction(transaction),
+      onConvertToRecurring: () => _convertToRecurring(transaction),
+      onDelete: () => _confirmAndDeleteTransaction(transaction),
+    );
+  }
+
+  Account? _accountFor(int? id) {
+    if (id == null) return null;
+    for (final account in _accounts) {
+      if (account.id == id) return account;
+    }
+    return null;
+  }
+
+  void _openAccountTransactions(Account account) {
+    _switchToTab(1);
+  }
+
+  Future<void> _openBudgetSettings() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => const BudgetsAndSpendingPage(),
+      ),
+    );
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _handleInsightAction(FinancialInsight insight) {
+    final payload = insight.actionPayload ?? '';
+    if (payload.startsWith('filter:') || payload.startsWith('budget:')) {
+      _switchToTab(1);
+    }
   }
 
   Widget _buildTransactionsContent(BuildContext context) {

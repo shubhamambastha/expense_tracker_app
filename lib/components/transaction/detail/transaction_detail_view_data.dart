@@ -10,6 +10,7 @@ import '../../../services/category_catalog.dart';
 import '../../../services/currency_settings.dart';
 import '../../../services/income_category_catalog.dart';
 import '../../../utils/transaction_subtype_helpers.dart';
+import '../../../utils/upcoming_payments.dart' as upcoming;
 
 /// Read-only view model for the transaction detail sheet.
 class TransactionDetailViewData {
@@ -113,18 +114,9 @@ class TransactionDetailViewData {
   String? get accountTypeLabel => account?.type.label;
 
   /// Computes the next recurring payment date from stored recurrence fields.
-  DateTime? get nextPaymentDate {
-    if (!transaction.isRecurring) return null;
-    final frequency =
-        transaction.recurrenceFrequency ?? RecurrenceFrequency.monthly;
-    final start = transaction.recurrenceStartDate ?? transaction.date;
-    final end = transaction.recurrenceEndDate;
-    return _computeNextOccurrence(
-      start: start,
-      frequency: frequency,
-      end: end,
-    );
-  }
+  /// Delegates to the shared util so the dashboard "Upcoming Payments" view
+  /// and this detail sheet stay in sync.
+  DateTime? get nextPaymentDate => upcoming.computeNextPaymentDate(transaction);
 
   /// Approximate EMI months remaining when category is EMI and end date exists.
   int? get emiRemainingMonths {
@@ -143,44 +135,3 @@ class TransactionDetailViewData {
   }
 }
 
-DateTime? _computeNextOccurrence({
-  required DateTime start,
-  required RecurrenceFrequency frequency,
-  DateTime? end,
-}) {
-  final now = DateTime.now();
-  var next = start;
-
-  if (next.isAfter(now)) {
-    if (end != null && next.isAfter(end)) return null;
-    return next;
-  }
-
-  for (var i = 0; i < 500; i++) {
-    next = _stepForward(next, frequency);
-    if (end != null && next.isAfter(end)) return null;
-    if (next.isAfter(now)) return next;
-  }
-
-  return null;
-}
-
-DateTime _stepForward(DateTime date, RecurrenceFrequency frequency) {
-  switch (frequency) {
-    case RecurrenceFrequency.daily:
-      return date.add(const Duration(days: 1));
-    case RecurrenceFrequency.weekly:
-      return date.add(const Duration(days: 7));
-    case RecurrenceFrequency.monthly:
-      return DateTime(date.year, date.month + 1, date.day, date.hour,
-          date.minute, date.second);
-    case RecurrenceFrequency.quarterly:
-      return DateTime(date.year, date.month + 3, date.day, date.hour,
-          date.minute, date.second);
-    case RecurrenceFrequency.yearly:
-      return DateTime(date.year + 1, date.month, date.day, date.hour,
-          date.minute, date.second);
-    case RecurrenceFrequency.custom:
-      return date.add(const Duration(days: 30));
-  }
-}

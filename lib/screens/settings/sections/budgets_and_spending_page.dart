@@ -1,17 +1,31 @@
 import 'package:flutter/material.dart';
 
+import '../../../components/home/dashboard/budget_edit_sheet.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_switch_tile.dart';
 import '../../../components/settings/settings_tile.dart';
 import '../../../config/design_tokens.dart';
+import '../../../models/category_budget.dart';
+import '../../../services/category_budget_service.dart';
 import '../../../services/currency_settings.dart';
 import '../../../services/settings_preferences.dart';
 import '../../../utils/snackbar_helper.dart';
 
 /// Caps, category-level budgets, and the soft warnings that go with them.
-class BudgetsAndSpendingPage extends StatelessWidget {
+class BudgetsAndSpendingPage extends StatefulWidget {
   const BudgetsAndSpendingPage({super.key});
+
+  @override
+  State<BudgetsAndSpendingPage> createState() => _BudgetsAndSpendingPageState();
+}
+
+class _BudgetsAndSpendingPageState extends State<BudgetsAndSpendingPage> {
+  @override
+  void initState() {
+    super.initState();
+    CategoryBudgetService.instance.refresh();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,11 +33,13 @@ class BudgetsAndSpendingPage extends StatelessWidget {
       listenable: Listenable.merge([
         CurrencySettings.instance,
         SettingsPreferences.instance,
+        CategoryBudgetService.instance,
       ]),
       builder: (context, _) {
         final currency = CurrencySettings.instance;
         final prefs = SettingsPreferences.instance;
         final limit = prefs.monthlySpendingLimit;
+        final budgets = CategoryBudgetService.instance.budgets;
 
         return SettingsSubpageScaffold(
           title: 'Budgets & Spending',
@@ -46,11 +62,23 @@ class BudgetsAndSpendingPage extends StatelessWidget {
                   icon: Icons.donut_small_rounded,
                   title: 'Category Budgets',
                   subtitle: 'Food, Shopping, Travel…',
-                  futureReady: true,
-                  onTap: () => _stub(context, 'Category budgets'),
+                  valueLabel: budgets.isEmpty
+                      ? 'None'
+                      : '${budgets.length} active',
+                  onTap: () => showBudgetEditSheet(context),
                 ),
               ],
             ),
+            if (budgets.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.lg),
+              SettingsSection(
+                title: 'Active category budgets',
+                children: [
+                  for (final budget in budgets)
+                    _CategoryBudgetTile(budget: budget),
+                ],
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             SettingsSection(
               title: 'Guardrails',
@@ -98,9 +126,23 @@ class BudgetsAndSpendingPage extends StatelessWidget {
       SnackbarHelper.showSuccess(context, 'Monthly limit updated');
     }
   }
+}
 
-  void _stub(BuildContext context, String label) {
-    SnackbarHelper.showMessage(context, '$label is coming soon');
+class _CategoryBudgetTile extends StatelessWidget {
+  const _CategoryBudgetTile({required this.budget});
+
+  final CategoryBudget budget;
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = CurrencySettings.instance;
+    return SettingsTile(
+      icon: Icons.donut_large_rounded,
+      title: budget.categoryName,
+      subtitle: 'Monthly cap',
+      valueLabel: currency.format(budget.monthlyLimit),
+      onTap: () => showBudgetEditSheet(context, initial: budget),
+    );
   }
 }
 
