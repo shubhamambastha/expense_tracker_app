@@ -11,6 +11,7 @@ import '../../services/category_catalog.dart';
 import '../../services/income_category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../services/settings_preferences.dart';
+import '../../services/deep_link_service.dart';
 import '../../services/supabase_service.dart';
 
 enum _AuthPhase { splash, login, app }
@@ -33,6 +34,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
+    unawaited(DeepLinkService.instance.start());
     _authSubscription =
         SupabaseService.authStateChanges.listen(_onAuthStateChange);
     unawaited(_bootstrap());
@@ -52,6 +54,9 @@ class _AuthGateState extends State<AuthGate> {
     setState(() {
       _phase = user != null ? _AuthPhase.app : _AuthPhase.login;
     });
+    if (user != null) {
+      unawaited(DeepLinkService.instance.captureLinks());
+    }
   }
 
   void _onAuthStateChange(dynamic _) {
@@ -70,6 +75,7 @@ class _AuthGateState extends State<AuthGate> {
     await _syncUserPreferences(userId);
     if (!mounted || _phase == _AuthPhase.splash) return;
     setState(() => _phase = _AuthPhase.app);
+    unawaited(DeepLinkService.instance.captureLinks());
   }
 
   void _clearUserScopedState() {
@@ -83,6 +89,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void dispose() {
     _authSubscription?.cancel();
+    unawaited(DeepLinkService.instance.dispose());
     super.dispose();
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'config/theme.dart';
@@ -6,6 +8,7 @@ import 'components/common/auth_gate.dart';
 import 'services/category_catalog.dart';
 import 'services/currency_settings.dart';
 import 'services/settings_preferences.dart';
+import 'services/deep_link_service.dart';
 import 'services/supabase_service.dart';
 
 Future<void> main() async {
@@ -18,6 +21,7 @@ Future<void> main() async {
       CurrencySettings.instance.load(),
       SettingsPreferences.instance.load(),
     ]);
+    unawaited(DeepLinkService.instance.start());
     runApp(const ExpenseTrackerApp());
   } catch (error) {
     runApp(ErrorApp(message: error.toString()));

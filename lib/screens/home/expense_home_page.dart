@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -15,6 +17,8 @@ import '../../models/transaction_draft.dart';
 import '../../services/category_budget_service.dart';
 import '../../services/income_category_catalog.dart';
 import '../../services/settings_preferences.dart';
+import '../../services/app_launch_intent.dart';
+import '../../services/deep_link_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/financial_insights.dart';
@@ -40,18 +44,56 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   final List<Account> _accounts = [];
   bool _isLoading = true;
   int _selectedIndex = 0;
+  bool _addTransactionRouteOpen = false;
+  final List<Timer> _launchIntentTimers = [];
 
   @override
   void initState() {
     super.initState();
     CategoryBudgetService.instance.addListener(_onBudgetsChanged);
+    AppLaunchIntentHolder.instance.pending.addListener(_onLaunchIntentChanged);
+    _scheduleLaunchIntentChecks();
     _loadTransactions();
   }
 
   @override
   void dispose() {
+    for (final timer in _launchIntentTimers) {
+      timer.cancel();
+    }
+    _launchIntentTimers.clear();
     CategoryBudgetService.instance.removeListener(_onBudgetsChanged);
+    AppLaunchIntentHolder.instance.pending.removeListener(_onLaunchIntentChanged);
     super.dispose();
+  }
+
+  /// Widget URLs can arrive slightly after the first frame; poll briefly.
+  void _scheduleLaunchIntentChecks() {
+    for (final delay in const [
+      Duration.zero,
+      Duration(milliseconds: 200),
+      Duration(milliseconds: 600),
+      Duration(milliseconds: 1200),
+    ]) {
+      _launchIntentTimers.add(
+        Timer(delay, () {
+          if (!mounted) return;
+          unawaited(DeepLinkService.instance.captureLinks());
+          _tryHandleLaunchIntent();
+        }),
+      );
+    }
+  }
+
+  void _onLaunchIntentChanged() {
+    _tryHandleLaunchIntent();
+  }
+
+  void _tryHandleLaunchIntent() {
+    if (!mounted || _isLoading || _addTransactionRouteOpen) return;
+    if (AppLaunchIntentHolder.instance.consume() == AppLaunchIntent.addExpense) {
+      _openAddTransactionPage(kind: TransactionKind.expense);
+    }
   }
 
   void _onBudgetsChanged() {
@@ -151,9 +193,11 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           ..addAll(accounts);
         _isLoading = false;
       });
+      _scheduleLaunchIntentChecks();
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
+      _scheduleLaunchIntentChecks();
       SnackbarHelper.showMessage(
         context,
         '${AppConstants.errorFailedToLoadExpenses}: $error',
@@ -228,21 +272,28 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       draft.kind = kind;
     }
 
-    Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (context) => AddTransactionPage(
-          accounts: _accounts,
-          recentSuggestions: _buildRecentSuggestions(),
-          recentCategoryNames: _buildRecentCategoryNames(),
-          recentIncomeSuggestions: _buildRecentIncomeSuggestions(),
-          recentIncomeCategoryNames: _buildRecentIncomeCategoryNames(),
-          recentPayers: _buildRecentPayers(),
-          initialDraft: draft,
-          onAddAccount: _openAddAccountDialog,
-          onSave: _saveTransactionDraft,
-        ),
-      ),
-    );
+    _addTransactionRouteOpen = true;
+    Navigator.of(context)
+        .push<void>(
+          MaterialPageRoute(
+            builder: (context) => AddTransactionPage(
+              accounts: _accounts,
+              recentSuggestions: _buildRecentSuggestions(),
+              recentCategoryNames: _buildRecentCategoryNames(),
+              recentIncomeSuggestions: _buildRecentIncomeSuggestions(),
+              recentIncomeCategoryNames: _buildRecentIncomeCategoryNames(),
+              recentPayers: _buildRecentPayers(),
+              initialDraft: draft,
+              onAddAccount: _openAddAccountDialog,
+              onSave: _saveTransactionDraft,
+            ),
+          ),
+        )
+        .whenComplete(() {
+          if (mounted) {
+            _addTransactionRouteOpen = false;
+          }
+        });
   }
 
   Future<void> _saveTransactionDraft(TransactionDraft draft) async {
