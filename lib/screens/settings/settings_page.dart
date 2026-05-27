@@ -21,7 +21,6 @@ import 'sections/categories_page.dart';
 import 'sections/ai_assistant_page.dart';
 import 'sections/app_preferences_page.dart';
 import 'sections/budgets_and_spending_page.dart';
-import 'sections/data_and_privacy_page.dart';
 import 'sections/financial_preferences_page.dart';
 import 'sections/notifications_page.dart';
 import 'sections/edit_profile_page.dart';
@@ -154,14 +153,6 @@ class SettingsPage extends StatelessWidget {
                     onTap: () => _open(context, const AiAssistantPage()),
                   ),
                   SettingsTile(
-                    icon: Icons.shield_rounded,
-                    title: 'Data & Privacy',
-                    subtitle:
-                        'Export, backup & sync, account removal',
-                    onTap: () =>
-                        _open(context, const DataAndPrivacyPage()),
-                  ),
-                  SettingsTile(
                     icon: Icons.tune_rounded,
                     title: 'App Preferences',
                     subtitle: 'Theme, lock, haptics, density',
@@ -172,17 +163,15 @@ class SettingsPage extends StatelessWidget {
                   SettingsTile(
                     icon: Icons.support_agent_rounded,
                     title: 'Support & Feedback',
-                    subtitle: 'Send feedback, report issues, legal',
+                    subtitle:
+                        'Feedback, data & privacy, legal, account removal',
                     onTap: () =>
                         _open(context, const SupportAndFeedbackPage()),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.xl),
-              SettingsDangerSection(
-                onLogout: onSignOut,
-                onDeleteAccount: () => _stub(context, 'Account deletion'),
-              ),
+              SettingsDangerSection(onLogout: onSignOut),
             ],
           ),
         )

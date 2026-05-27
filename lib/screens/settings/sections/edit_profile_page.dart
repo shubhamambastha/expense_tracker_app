@@ -544,19 +544,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
-        SettingsSection(
-          title: 'Danger zone',
-          children: [
-            SettingsTile(
-              icon: Icons.delete_forever_rounded,
-              title: 'Delete Account',
-              subtitle: 'Permanently remove your account and data',
-              destructive: true,
-              onTap: _confirmDeleteAccount,
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -760,67 +747,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ),
     );
     return result == true;
-  }
-
-  Future<void> _confirmDeleteAccount() async {
-    final controller = TextEditingController();
-    try {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (dialogContext, setDialogState) {
-              final canConfirm =
-                  controller.text.trim().toUpperCase() == 'DELETE';
-              return AlertDialog(
-                title: const Text('Delete account'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'This permanently removes your account and data. '
-                      'Type DELETE to confirm.',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextField(
-                      controller: controller,
-                      autofocus: true,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(hintText: 'DELETE'),
-                      onChanged: (_) => setDialogState(() {}),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(false),
-                    child: const Text('Cancel'),
-                  ),
-                  FilledButton(
-                    onPressed: canConfirm
-                        ? () => Navigator.of(dialogContext).pop(true)
-                        : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.danger,
-                    ),
-                    child: const Text('Delete forever'),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-      if (confirmed == true && mounted) {
-        SnackbarHelper.showMessage(context, 'Account deletion is coming soon');
-      }
-    } finally {
-      controller.dispose();
-    }
   }
 
   Future<void> _save() async {

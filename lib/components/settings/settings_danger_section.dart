@@ -3,21 +3,17 @@ import 'package:flutter/material.dart';
 import '../../config/design_tokens.dart';
 import 'settings_tile.dart';
 
-/// Bottom danger zone with Logout + Delete Account.
+/// Bottom danger zone with Logout.
 ///
 /// Wrapped in a danger-tinted card so it visually separates from the rest
-/// of the Settings screen. Delete Account opens a typed-confirmation
-/// dialog (matches premium destructive-action UX) before invoking the
-/// caller-supplied callback.
+/// of the Settings screen.
 class SettingsDangerSection extends StatelessWidget {
   const SettingsDangerSection({
     super.key,
     required this.onLogout,
-    required this.onDeleteAccount,
   });
 
   final VoidCallback onLogout;
-  final VoidCallback onDeleteAccount;
 
   @override
   Widget build(BuildContext context) {
@@ -56,18 +52,6 @@ class SettingsDangerSection extends StatelessWidget {
                 destructive: true,
                 onTap: () => _confirmLogout(context),
               ),
-              const Divider(
-                height: 1,
-                thickness: 1,
-                color: AppColors.border,
-              ),
-              SettingsTile(
-                icon: Icons.delete_forever_rounded,
-                title: 'Delete Account',
-                subtitle: 'Permanently remove your account and data',
-                destructive: true,
-                onTap: () => _confirmDelete(context),
-              ),
             ],
           ),
         ),
@@ -102,77 +86,6 @@ class SettingsDangerSection extends StatelessWidget {
 
     if (confirmed == true) {
       onLogout();
-    }
-  }
-
-  Future<void> _confirmDelete(BuildContext context) async {
-    final controller = TextEditingController();
-    try {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (dialogContext, setDialogState) {
-              final canConfirm =
-                  controller.text.trim().toUpperCase() == 'DELETE';
-
-              return AlertDialog(
-                title: const Text('Delete account'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'This permanently removes your account, transactions, '
-                      'accounts, and preferences. This cannot be undone.',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'Type DELETE to confirm:',
-                      style: AppTextStyles.caption,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    TextField(
-                      controller: controller,
-                      autofocus: true,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        hintText: 'DELETE',
-                      ),
-                      onChanged: (_) => setDialogState(() {}),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(false),
-                    child: const Text('Cancel'),
-                  ),
-                  FilledButton(
-                    onPressed: canConfirm
-                        ? () => Navigator.of(dialogContext).pop(true)
-                        : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.danger,
-                      foregroundColor: AppColors.textPrimary,
-                    ),
-                    child: const Text('Delete forever'),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-
-      if (confirmed == true) {
-        onDeleteAccount();
-      }
-    } finally {
-      controller.dispose();
     }
   }
 }

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../components/settings/settings_delete_account_tile.dart';
 import '../../../components/settings/settings_info_tile.dart';
+import '../../../components/settings/settings_picker_helpers.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_tile.dart';
 import '../../../config/design_tokens.dart';
+import '../../../services/settings_preferences.dart';
 import '../../../utils/snackbar_helper.dart';
 
-/// Feedback channels, legal links, and the app version footer.
+/// Feedback channels, data & privacy, legal links, and account deletion.
 class SupportAndFeedbackPage extends StatelessWidget {
   const SupportAndFeedbackPage({super.key});
 
@@ -43,6 +46,31 @@ class SupportAndFeedbackPage extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         SettingsSection(
+          title: 'Data & Privacy',
+          children: [
+            SettingsTile(
+              icon: Icons.file_download_rounded,
+              title: 'Export Data',
+              subtitle: 'Download transactions as CSV or JSON',
+              onTap: () => _pickExportFormat(context),
+            ),
+            const SettingsInfoTile(
+              icon: Icons.cloud_done_rounded,
+              title: 'Backup & Sync',
+              subtitle: 'Last sync: just now',
+              statusPill: 'Synced',
+            ),
+            const SettingsInfoTile(
+              icon: Icons.cloud_off_rounded,
+              title: 'Offline Mode',
+              subtitle:
+                  'Reads/writes work without internet — synced later',
+              statusPill: 'Local-first',
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        SettingsSection(
           title: 'Legal',
           children: [
             SettingsTile(
@@ -62,8 +90,26 @@ class SupportAndFeedbackPage extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: AppSpacing.xl),
+        SettingsDeleteAccountSection(
+          onDeleteConfirmed: () => _stub(context, 'Account deletion'),
+        ),
       ],
     );
+  }
+
+  Future<void> _pickExportFormat(BuildContext context) async {
+    final picked = await selectFromList<ExportFormat>(
+      context: context,
+      title: 'Export data',
+      subtitle: 'Choose the file format to download.',
+      current: null,
+      options: ExportFormat.values,
+      labelFor: (v) => v.label,
+    );
+    if (picked != null && context.mounted) {
+      _stub(context, '${picked.label} export');
+    }
   }
 
   void _stub(BuildContext context, String label) {
