@@ -24,7 +24,9 @@ import 'sections/budgets_and_spending_page.dart';
 import 'sections/data_and_privacy_page.dart';
 import 'sections/financial_preferences_page.dart';
 import 'sections/notifications_page.dart';
+import 'sections/edit_profile_page.dart';
 import 'sections/support_and_feedback_page.dart';
+import '../../utils/profile_identity.dart';
 
 /// Premium Settings *hub*.
 ///
@@ -82,7 +84,10 @@ class SettingsPage extends StatelessWidget {
                 subscriptionsSummary:
                     '${_recurringCount()} subscriptions active',
                 onCurrencyTap: () => showCurrencyPickerSheet(context),
-                onEditProfile: () => _stub(context, 'Edit Profile'),
+                onEditProfile: () => _open(
+                  context,
+                  EditProfilePage(accounts: accounts),
+                ),
                 onManageAccount: () => _stub(context, 'Manage Account'),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -243,22 +248,20 @@ class SettingsPage extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   String _profileInitial() {
-    final email = _email();
-    if (email.isEmpty || email == 'Unknown user') return '?';
-    return email.characters.first.toUpperCase();
+    return ProfileIdentity.initialFor(_displayName(), _email());
   }
 
   String _displayName() {
-    final email = _email();
-    if (email.isEmpty || email == 'Unknown user') return 'Your profile';
-    final at = email.indexOf('@');
-    if (at <= 0) return email;
-    final local = email.substring(0, at);
-    if (local.isEmpty) return email;
-    return local[0].toUpperCase() + local.substring(1);
+    final prefs = SettingsPreferences.instance;
+    if (prefs.displayName.trim().isNotEmpty) return prefs.displayName.trim();
+    final meta = ProfileIdentity.metadataDisplayName(
+      SupabaseService.currentUser,
+    );
+    if (meta != null) return meta;
+    return ProfileIdentity.displayNameFromEmail(_email());
   }
 
-  String _email() => SupabaseService.currentUser?.email ?? 'Unknown user';
+  String _email() => ProfileIdentity.emailFor(SupabaseService.currentUser);
 
   double _monthSpent() {
     final now = DateTime.now();

@@ -3,6 +3,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart' as intl;
 
 import '../../../config/design_tokens.dart';
+import '../../../services/settings_preferences.dart';
+import '../../../services/supabase_service.dart';
+import '../../../utils/profile_identity.dart';
 
 /// Top-of-screen "Good morning, Shubham" + context subtitle + avatar shortcut.
 class DashboardGreetingHeader extends StatelessWidget {
@@ -34,17 +37,22 @@ class DashboardGreetingHeader extends StatelessWidget {
   }
 
   String get _displayName {
-    final email = userEmail;
-    if (email == null || email.isEmpty) return '';
-    final local = email.split('@').first.trim();
-    if (local.isEmpty) return '';
-    return local[0].toUpperCase() + local.substring(1);
+    final prefs = SettingsPreferences.instance;
+    if (prefs.displayName.trim().isNotEmpty) return prefs.displayName.trim();
+    final meta = ProfileIdentity.metadataDisplayName(
+      SupabaseService.currentUser,
+    );
+    if (meta != null) return meta;
+    final email = userEmail ?? '';
+    if (email.isEmpty) return '';
+    return ProfileIdentity.displayNameFromEmail(email);
   }
 
   String get _avatarInitial {
-    final n = _displayName;
-    if (n.isEmpty) return '?';
-    return n[0].toUpperCase();
+    return ProfileIdentity.initialFor(
+      _displayName,
+      userEmail ?? '',
+    );
   }
 
   @override

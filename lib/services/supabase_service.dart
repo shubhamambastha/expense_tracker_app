@@ -59,6 +59,30 @@ class SupabaseService {
     await Supabase.instance.client.auth.signOut();
   }
 
+  /// Updates auth user metadata (display name, phone, etc.).
+  static Future<void> updateUserProfileMetadata({
+    String? displayName,
+    String? phone,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in.');
+    }
+
+    final data = <String, dynamic>{};
+    if (displayName != null) {
+      data['display_name'] = displayName.trim().isEmpty ? null : displayName.trim();
+    }
+    if (phone != null) {
+      data['phone'] = phone.trim().isEmpty ? null : phone.trim();
+    }
+    if (data.isEmpty) return;
+
+    await Supabase.instance.client.auth.updateUser(
+      UserAttributes(data: data),
+    );
+  }
+
   static Future<List<Transaction>> fetchTransactions() async {
     final user = currentUser;
     if (user == null) {

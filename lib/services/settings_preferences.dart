@@ -89,6 +89,34 @@ extension ExportFormatLabel on ExportFormat {
   }
 }
 
+/// Regional date display preference.
+enum DateFormatPref { ddMMyyyy, mmDDyyyy }
+
+extension DateFormatPrefLabel on DateFormatPref {
+  String get label {
+    switch (this) {
+      case DateFormatPref.ddMMyyyy:
+        return 'DD/MM/YYYY';
+      case DateFormatPref.mmDDyyyy:
+        return 'MM/DD/YYYY';
+    }
+  }
+}
+
+/// First day of the week for analytics and calendar roll-ups.
+enum WeekStartDay { monday, sunday }
+
+extension WeekStartDayLabel on WeekStartDay {
+  String get label {
+    switch (this) {
+      case WeekStartDay.monday:
+        return 'Monday';
+      case WeekStartDay.sunday:
+        return 'Sunday';
+    }
+  }
+}
+
 /// App-wide preferences singleton.
 ///
 /// [load] hydrates from [SharedPreferences] for fast cold start. After
@@ -124,6 +152,16 @@ class SettingsPreferences extends ChangeNotifier {
   static const _kHapticEnabled = 'pref.haptic_enabled';
   static const _kAnimationsEnabled = 'pref.animations_enabled';
   static const _kCompactModeEnabled = 'pref.compact_mode_enabled';
+  static const _kDisplayName = 'pref.display_name';
+  static const _kPhoneNumber = 'pref.phone_number';
+  static const _kTimezoneId = 'pref.timezone_id';
+  static const _kDateFormatPref = 'pref.date_format_pref';
+  static const _kWeekStartDay = 'pref.week_start_day';
+  static const _kExportFormatPref = 'pref.export_format_pref';
+  static const _kAvatarRemoved = 'pref.avatar_removed';
+
+  /// Sentinel stored in [_timezoneId] to follow the device timezone.
+  static const deviceTimezoneId = 'device';
 
   // --- In-memory state with defaults ---
   bool _multiCurrencyEnabled = false;
@@ -147,6 +185,13 @@ class SettingsPreferences extends ChangeNotifier {
   bool _hapticEnabled = true;
   bool _animationsEnabled = true;
   bool _compactModeEnabled = false;
+  String _displayName = '';
+  String _phoneNumber = '';
+  String _timezoneId = deviceTimezoneId;
+  DateFormatPref _dateFormatPref = DateFormatPref.ddMMyyyy;
+  WeekStartDay _weekStartDay = WeekStartDay.monday;
+  ExportFormat _exportFormatPref = ExportFormat.csv;
+  bool _avatarRemoved = false;
 
   bool _loaded = false;
   Timer? _remoteSyncTimer;
@@ -174,6 +219,13 @@ class SettingsPreferences extends ChangeNotifier {
   bool get hapticEnabled => _hapticEnabled;
   bool get animationsEnabled => _animationsEnabled;
   bool get compactModeEnabled => _compactModeEnabled;
+  String get displayName => _displayName;
+  String get phoneNumber => _phoneNumber;
+  String get timezoneId => _timezoneId;
+  DateFormatPref get dateFormatPref => _dateFormatPref;
+  WeekStartDay get weekStartDay => _weekStartDay;
+  ExportFormat get exportFormatPref => _exportFormatPref;
+  bool get avatarRemoved => _avatarRemoved;
 
   /// Pulls remote `preferences` after sign-in (must run after
   /// [CurrencySettings.syncForUser] so `user_settings` exists). Keeps
@@ -254,6 +306,25 @@ class SettingsPreferences extends ChangeNotifier {
         prefs.getBool(_kAnimationsEnabled) ?? _animationsEnabled;
     _compactModeEnabled =
         prefs.getBool(_kCompactModeEnabled) ?? _compactModeEnabled;
+    _displayName = prefs.getString(_kDisplayName) ?? _displayName;
+    _phoneNumber = prefs.getString(_kPhoneNumber) ?? _phoneNumber;
+    _timezoneId = prefs.getString(_kTimezoneId) ?? _timezoneId;
+    _dateFormatPref = _readEnum(
+      prefs.getString(_kDateFormatPref),
+      DateFormatPref.values,
+      _dateFormatPref,
+    );
+    _weekStartDay = _readEnum(
+      prefs.getString(_kWeekStartDay),
+      WeekStartDay.values,
+      _weekStartDay,
+    );
+    _exportFormatPref = _readEnum(
+      prefs.getString(_kExportFormatPref),
+      ExportFormat.values,
+      _exportFormatPref,
+    );
+    _avatarRemoved = prefs.getBool(_kAvatarRemoved) ?? _avatarRemoved;
 
     _loaded = true;
     notifyListeners();
@@ -364,6 +435,49 @@ class SettingsPreferences extends ChangeNotifier {
   Future<void> setCompactModeEnabled(bool value) =>
       _writeBool(_kCompactModeEnabled, value, (v) => _compactModeEnabled = v);
 
+  Future<void> setDisplayName(String value) async {
+    final trimmed = value.trim();
+    if (_displayName == trimmed) return;
+    _displayName = trimmed;
+    final prefs = await SharedPreferences.getInstance();
+    if (trimmed.isEmpty) {
+      await prefs.remove(_kDisplayName);
+    } else {
+      await prefs.setString(_kDisplayName, trimmed);
+    }
+    notifyListeners();
+    _scheduleRemoteSync();
+  }
+
+  Future<void> setPhoneNumber(String value) async {
+    final trimmed = value.trim();
+    if (_phoneNumber == trimmed) return;
+    _phoneNumber = trimmed;
+    final prefs = await SharedPreferences.getInstance();
+    if (trimmed.isEmpty) {
+      await prefs.remove(_kPhoneNumber);
+    } else {
+      await prefs.setString(_kPhoneNumber, trimmed);
+    }
+    notifyListeners();
+    _scheduleRemoteSync();
+  }
+
+  Future<void> setTimezoneId(String value) =>
+      _writeString(_kTimezoneId, value, (v) => _timezoneId = v);
+
+  Future<void> setDateFormatPref(DateFormatPref value) =>
+      _writeEnum(_kDateFormatPref, value, (v) => _dateFormatPref = v);
+
+  Future<void> setWeekStartDay(WeekStartDay value) =>
+      _writeEnum(_kWeekStartDay, value, (v) => _weekStartDay = v);
+
+  Future<void> setExportFormatPref(ExportFormat value) =>
+      _writeEnum(_kExportFormatPref, value, (v) => _exportFormatPref = v);
+
+  Future<void> setAvatarRemoved(bool value) =>
+      _writeBool(_kAvatarRemoved, value, (v) => _avatarRemoved = v);
+
   // --- Remote sync ---
 
   Map<String, dynamic> preferencesToJson() {
@@ -388,6 +502,13 @@ class SettingsPreferences extends ChangeNotifier {
       _kHapticEnabled: _hapticEnabled,
       _kAnimationsEnabled: _animationsEnabled,
       _kCompactModeEnabled: _compactModeEnabled,
+      _kDisplayName: _displayName,
+      _kPhoneNumber: _phoneNumber,
+      _kTimezoneId: _timezoneId,
+      _kDateFormatPref: _dateFormatPref.name,
+      _kWeekStartDay: _weekStartDay.name,
+      _kExportFormatPref: _exportFormatPref.name,
+      _kAvatarRemoved: _avatarRemoved,
     };
     return m;
   }
@@ -501,6 +622,43 @@ class SettingsPreferences extends ChangeNotifier {
       final v = json[_kCompactModeEnabled];
       if (v is bool) _compactModeEnabled = v;
     }
+    if (json.containsKey(_kDisplayName)) {
+      final v = json[_kDisplayName];
+      if (v is String) _displayName = v;
+    }
+    if (json.containsKey(_kPhoneNumber)) {
+      final v = json[_kPhoneNumber];
+      if (v is String) _phoneNumber = v;
+    }
+    if (json.containsKey(_kTimezoneId)) {
+      final v = json[_kTimezoneId];
+      if (v is String && v.isNotEmpty) _timezoneId = v;
+    }
+    if (json.containsKey(_kDateFormatPref)) {
+      _dateFormatPref = _readEnum(
+        json[_kDateFormatPref]?.toString(),
+        DateFormatPref.values,
+        _dateFormatPref,
+      );
+    }
+    if (json.containsKey(_kWeekStartDay)) {
+      _weekStartDay = _readEnum(
+        json[_kWeekStartDay]?.toString(),
+        WeekStartDay.values,
+        _weekStartDay,
+      );
+    }
+    if (json.containsKey(_kExportFormatPref)) {
+      _exportFormatPref = _readEnum(
+        json[_kExportFormatPref]?.toString(),
+        ExportFormat.values,
+        _exportFormatPref,
+      );
+    }
+    if (json.containsKey(_kAvatarRemoved)) {
+      final v = json[_kAvatarRemoved];
+      if (v is bool) _avatarRemoved = v;
+    }
   }
 
   Future<void> _persistAllToSharedPrefs() async {
@@ -537,6 +695,21 @@ class SettingsPreferences extends ChangeNotifier {
     await prefs.setBool(_kHapticEnabled, _hapticEnabled);
     await prefs.setBool(_kAnimationsEnabled, _animationsEnabled);
     await prefs.setBool(_kCompactModeEnabled, _compactModeEnabled);
+    if (_displayName.isEmpty) {
+      await prefs.remove(_kDisplayName);
+    } else {
+      await prefs.setString(_kDisplayName, _displayName);
+    }
+    if (_phoneNumber.isEmpty) {
+      await prefs.remove(_kPhoneNumber);
+    } else {
+      await prefs.setString(_kPhoneNumber, _phoneNumber);
+    }
+    await prefs.setString(_kTimezoneId, _timezoneId);
+    await prefs.setString(_kDateFormatPref, _dateFormatPref.name);
+    await prefs.setString(_kWeekStartDay, _weekStartDay.name);
+    await prefs.setString(_kExportFormatPref, _exportFormatPref.name);
+    await prefs.setBool(_kAvatarRemoved, _avatarRemoved);
   }
 
   Future<void> _pushFullRemote() async {
@@ -587,6 +760,18 @@ class SettingsPreferences extends ChangeNotifier {
     apply(value);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value.name);
+    notifyListeners();
+    _scheduleRemoteSync();
+  }
+
+  Future<void> _writeString(
+    String key,
+    String value,
+    void Function(String) apply,
+  ) async {
+    apply(value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
     notifyListeners();
     _scheduleRemoteSync();
   }
