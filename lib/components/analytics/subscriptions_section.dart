@@ -19,11 +19,16 @@ class SubscriptionsSection extends StatelessWidget {
     required this.summary,
     required this.accounts,
     required this.onTapItem,
+    this.onViewAll,
   });
 
   final RecurringSummary summary;
   final List<Account> accounts;
   final void Function(Transaction transaction) onTapItem;
+
+  /// When set, the section header surfaces a "View all" action that pushes
+  /// the dedicated Recurring Payments Manager screen.
+  final VoidCallback? onViewAll;
 
   Account? _accountFor(int? id) {
     if (id == null) return null;
@@ -43,6 +48,8 @@ class SubscriptionsSection extends StatelessWidget {
           subtitle: summary.isEmpty
               ? 'Mark a transaction as recurring to track its monthly burden.'
               : 'Normalised to per-month so you can compare.',
+          actionLabel: onViewAll == null ? null : 'View all',
+          onActionTap: onViewAll,
         ),
         const SizedBox(height: AppSpacing.md),
         if (summary.isEmpty)

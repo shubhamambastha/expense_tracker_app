@@ -8,6 +8,7 @@ import '../../components/dialogs/add_account_dialog.dart';
 import '../../components/home/dashboard/dashboard_intents.dart';
 import '../../components/home/home_content.dart';
 import '../../components/home/transactions_content.dart';
+import '../../components/recurring/add_recurring_sheet.dart';
 import '../../components/transaction/transaction_detail_sheet.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
@@ -22,9 +23,11 @@ import '../../services/deep_link_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/financial_insights.dart';
+import '../../utils/recurring_management.dart';
 import '../../utils/snackbar_helper.dart';
 import '../../utils/transaction_subtype_helpers.dart';
 import '../analytics/analytics_page.dart';
+import '../recurring/recurring_payments_page.dart';
 import '../settings/sections/budgets_and_spending_page.dart';
 import '../settings/settings_page.dart';
 import '../transaction/add_transaction_page.dart';
@@ -598,9 +601,52 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           onTapTransaction: _openTransactionDetail,
           onOpenBudgetSettings: _openBudgetSettings,
           onInsightAction: _handleInsightAction,
+          onOpenRecurringManager: _openRecurringManager,
         );
       },
     );
+  }
+
+  Future<void> _openRecurringManager() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => RecurringPaymentsPage(
+          initialTransactions: _transactions,
+          accounts: _accounts,
+          monthlyIncome: _currentMonthIncome(),
+          onTapTransaction: _openTransactionDetail,
+          onAddRecurring: _openAddRecurringFromManager,
+          onMutation: _refreshDashboard,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    // The manager may have mutated transactions/events — pull the freshest
+    // snapshot so home / analytics / settings reflect the changes too.
+    await _refreshDashboard();
+  }
+
+  /// Wraps [_openAddTransactionPage] so the manager screen's "+" sheet can
+  /// kick off an add flow with the right kind preselected.
+  Future<void> _openAddRecurringFromManager(RecurringKind kind) async {
+    final draft = TransactionDraft(
+      accountId: _accounts.isEmpty ? null : _accounts.first.id,
+    );
+    applyDraftFor(draft, kind);
+    _openAddTransactionPage(initialDraft: draft);
+  }
+
+  /// Sums the current calendar-month income — fed to the manager's Payment
+  /// Insights section so it can render the "EMIs consume X% of income" line.
+  double? _currentMonthIncome() {
+    final now = DateTime.now();
+    final total = _transactions
+        .where((t) =>
+            t.isIncome &&
+            t.date.year == now.year &&
+            t.date.month == now.month)
+        .fold<double>(0, (sum, t) => sum + t.amount);
+    return total > 0 ? total : null;
   }
 
   void _openAddAccountDialog({AccountType initialType = AccountType.bank}) {

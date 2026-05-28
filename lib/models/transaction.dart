@@ -16,6 +16,8 @@ class Transaction {
     this.transferToAccountId,
     required this.date,
     this.isRecurring = false,
+    this.isPaused = false,
+    this.closedAt,
     this.recurrenceFrequency,
     this.recurrenceStartDate,
     this.recurrenceEndDate,
@@ -35,11 +37,26 @@ class Transaction {
   final int? transferToAccountId;
   final DateTime date;
   final bool isRecurring;
+
+  /// When true, the recurring schedule is temporarily paused. The
+  /// Recurring Payments Manager excludes paused schedules from the
+  /// upcoming-payments timeline until the user resumes them.
+  final bool isPaused;
+
+  /// When non-null, the recurring schedule has been *terminated* (user
+  /// cancelled their subscription, marked an EMI completed, or closed a
+  /// recurring expense). Closed schedules disappear from the Recurring
+  /// Payments Manager entirely; Undo within the post-close snackbar
+  /// window clears the value back to null.
+  final DateTime? closedAt;
   final RecurrenceFrequency? recurrenceFrequency;
   final DateTime? recurrenceStartDate;
   final DateTime? recurrenceEndDate;
   final ReminderTiming? reminderTiming;
   final DateTime? insertedAt;
+
+  /// Convenience getter so call sites don't need to compare against null.
+  bool get isClosed => closedAt != null;
 
   /// Alias used by legacy expense-oriented UI.
   String get name => counterpartyName;
@@ -99,6 +116,8 @@ class Transaction {
           : int.tryParse(map['transfer_to_account_id']?.toString() ?? ''),
       date: DateTime.parse(map['date'] as String),
       isRecurring: map['is_recurring'] as bool? ?? false,
+      isPaused: map['is_paused'] as bool? ?? false,
+      closedAt: parseDate(map['closed_at']),
       recurrenceFrequency: frequency,
       recurrenceStartDate: parseDate(map['recurrence_start_date']),
       recurrenceEndDate: parseDate(map['recurrence_end_date']),
@@ -122,6 +141,8 @@ class Transaction {
         'transfer_to_account_id': transferToAccountId,
       'date': date.toIso8601String(),
       'is_recurring': isRecurring,
+      'is_paused': isPaused,
+      'closed_at': closedAt?.toIso8601String(),
       if (isRecurring && recurrenceFrequency != null)
         'recurrence_frequency': recurrenceFrequency!.name,
       if (isRecurring && recurrenceStartDate != null)
@@ -146,6 +167,9 @@ class Transaction {
     int? transferToAccountId,
     DateTime? date,
     bool? isRecurring,
+    bool? isPaused,
+    DateTime? closedAt,
+    bool clearClosedAt = false,
     RecurrenceFrequency? recurrenceFrequency,
     DateTime? recurrenceStartDate,
     DateTime? recurrenceEndDate,
@@ -165,6 +189,8 @@ class Transaction {
       transferToAccountId: transferToAccountId ?? this.transferToAccountId,
       date: date ?? this.date,
       isRecurring: isRecurring ?? this.isRecurring,
+      isPaused: isPaused ?? this.isPaused,
+      closedAt: clearClosedAt ? null : (closedAt ?? this.closedAt),
       recurrenceFrequency: recurrenceFrequency ?? this.recurrenceFrequency,
       recurrenceStartDate: recurrenceStartDate ?? this.recurrenceStartDate,
       recurrenceEndDate: recurrenceEndDate ?? this.recurrenceEndDate,

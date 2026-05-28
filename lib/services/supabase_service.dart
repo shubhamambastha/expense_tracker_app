@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/account.dart';
 import '../models/category_budget.dart';
 import '../models/expense.dart';
+import '../models/recurring_event.dart';
 import '../models/transaction.dart';
 import '../models/transaction_draft.dart';
 import '../models/expense_category.dart';
@@ -170,6 +171,126 @@ class SupabaseService {
         .from('transactions')
         .delete()
         .eq('id', transactionId)
+        .eq('user_id', user.id);
+  }
+
+  /// Toggles the `is_paused` flag on a recurring transaction without losing
+  /// any of its schedule metadata. Used by the Recurring Payments Manager
+  /// "Pause / Resume" action.
+  static Future<Transaction> setTransactionPaused(
+    int transactionId,
+    bool paused,
+  ) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to update transactions.');
+    }
+
+    final data = await Supabase.instance.client
+        .from('transactions')
+        .update({'is_paused': paused})
+        .eq('id', transactionId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+    return Transaction.fromMap(data);
+  }
+
+  /// Terminates (or re-opens via Undo) a recurring schedule by stamping
+  /// `closed_at`. Used by the Recurring Payments Manager actions:
+  /// "Cancel subscription", "Mark EMI as completed", and "Close schedule".
+  ///
+  /// `closed: true`  → sets `closed_at = now()` server-side semantics by
+  ///                   passing an ISO timestamp from the client.
+  /// `closed: false` → clears `closed_at` back to NULL (Undo snackbar).
+  static Future<Transaction> setTransactionClosed(
+    int transactionId, {
+    required bool closed,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception('Not signed in. Please sign in to update transactions.');
+    }
+
+    final payload = <String, dynamic>{
+      'closed_at': closed ? DateTime.now().toUtc().toIso8601String() : null,
+    };
+    final data = await Supabase.instance.client
+        .from('transactions')
+        .update(payload)
+        .eq('id', transactionId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+    return Transaction.fromMap(data);
+  }
+
+  /// Loads every per-occurrence event the user has logged for any of their
+  /// recurring transactions. The manager screen joins these in-memory with
+  /// the transaction list to compute the *real* next due date.
+  static Future<List<RecurringEvent>> fetchRecurringEvents() async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception(
+        'Not signed in. Please sign in to load recurring events.',
+      );
+    }
+
+    final data = await Supabase.instance.client
+        .from('recurring_events')
+        .select()
+        .eq('user_id', user.id)
+        .order('occurrence_date', ascending: false);
+
+    return (data as List<dynamic>)
+        .map((item) => RecurringEvent.fromMap(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Records a paid / skipped / snoozed action against a single scheduled
+  /// occurrence. Idempotent by `(transaction_id, occurrence_date, event_type)`
+  /// thanks to the unique index in `sql/20260528_recurring_events.sql`, so
+  /// repeated taps on the same swipe action upsert rather than duplicate.
+  static Future<RecurringEvent> insertRecurringEvent(
+    RecurringEvent event,
+  ) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception(
+        'Not signed in. Please sign in to update recurring events.',
+      );
+    }
+
+    final payload = event.toMap()..['user_id'] = user.id;
+    payload.remove('id');
+    final data = await Supabase.instance.client
+        .from('recurring_events')
+        .upsert(
+          payload,
+          onConflict: 'user_id,transaction_id,occurrence_date,event_type',
+        )
+        .select()
+        .single();
+
+    return RecurringEvent.fromMap(data);
+  }
+
+  /// Undoes a previously logged recurring event — used by the "Undo"
+  /// affordance on the Mark Paid / Skip / Snooze confirmation snackbars.
+  static Future<void> deleteRecurringEvent(int eventId) async {
+    final user = currentUser;
+    if (user == null) {
+      throw Exception(
+        'Not signed in. Please sign in to update recurring events.',
+      );
+    }
+
+    await Supabase.instance.client
+        .from('recurring_events')
+        .delete()
+        .eq('id', eventId)
         .eq('user_id', user.id);
   }
 

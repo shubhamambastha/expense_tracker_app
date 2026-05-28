@@ -36,6 +36,7 @@ class AnalyticsContent extends StatefulWidget {
     required this.onTapTransaction,
     required this.onOpenBudgetSettings,
     required this.onInsightAction,
+    this.onOpenRecurringManager,
   });
 
   final List<Transaction> transactions;
@@ -47,6 +48,10 @@ class AnalyticsContent extends StatefulWidget {
   final void Function(Transaction tx) onTapTransaction;
   final VoidCallback onOpenBudgetSettings;
   final void Function(FinancialInsight insight) onInsightAction;
+
+  /// When set, the Subscriptions & Recurring card surfaces a "View all"
+  /// link that pushes the dedicated Recurring Payments Manager screen.
+  final VoidCallback? onOpenRecurringManager;
 
   @override
   State<AnalyticsContent> createState() => _AnalyticsContentState();
@@ -239,6 +244,7 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
         summary: recurring,
         accounts: widget.accounts,
         onTapItem: widget.onTapTransaction,
+        onViewAll: widget.onOpenRecurringManager,
       ),
       const SizedBox(height: AppSpacing.xxl),
       BehavioralInsightsSection(

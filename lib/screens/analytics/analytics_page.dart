@@ -25,6 +25,7 @@ class AnalyticsPage extends StatelessWidget {
     required this.onTapTransaction,
     required this.onOpenBudgetSettings,
     required this.onInsightAction,
+    this.onOpenRecurringManager,
   });
 
   final List<Transaction> transactions;
@@ -36,6 +37,10 @@ class AnalyticsPage extends StatelessWidget {
   final void Function(Transaction tx) onTapTransaction;
   final VoidCallback onOpenBudgetSettings;
   final void Function(FinancialInsight insight) onInsightAction;
+
+  /// When set, the Subscriptions & Recurring card surfaces a "View all"
+  /// link that opens the dedicated Recurring Payments Manager screen.
+  final VoidCallback? onOpenRecurringManager;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +54,7 @@ class AnalyticsPage extends StatelessWidget {
       onTapTransaction: onTapTransaction,
       onOpenBudgetSettings: onOpenBudgetSettings,
       onInsightAction: onInsightAction,
+      onOpenRecurringManager: onOpenRecurringManager,
     );
   }
 }
