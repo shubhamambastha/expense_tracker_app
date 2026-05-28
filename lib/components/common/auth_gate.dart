@@ -12,6 +12,7 @@ import '../../services/income_category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../services/settings_preferences.dart';
 import '../../services/deep_link_service.dart';
+import '../../services/splash_bootstrap.dart';
 import '../../services/supabase_service.dart';
 
 enum _AuthPhase { splash, login, app }
@@ -26,10 +27,12 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  static const _minSplashDuration = Duration(milliseconds: 1200);
-
   _AuthPhase _phase = _AuthPhase.splash;
   StreamSubscription<dynamic>? _authSubscription;
+
+  SplashUiState _splashUiState = SplashUiState.loading;
+  String _splashStatusMessage = SplashBootstrapStep.restoringSession.statusMessage;
+  String? _splashErrorMessage;
 
   @override
   void initState() {
@@ -41,21 +44,56 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _bootstrap() async {
-    final splashDelay = Future<void>.delayed(_minSplashDuration);
-    final user = SupabaseService.currentUser;
-
-    if (user != null) {
-      await _syncUserPreferences(user.id);
-    }
-
-    await splashDelay;
     if (!mounted) return;
 
     setState(() {
-      _phase = user != null ? _AuthPhase.app : _AuthPhase.login;
+      _splashUiState = SplashUiState.loading;
+      _splashErrorMessage = null;
+      _splashStatusMessage =
+          SplashBootstrapStep.restoringSession.statusMessage;
     });
-    if (user != null) {
+
+    try {
+      final result = await SplashBootstrap.instance.run(
+        onProgress: (progress) {
+          if (!mounted || _phase != _AuthPhase.splash) return;
+          setState(() {
+            _splashStatusMessage = progress.statusMessage;
+          });
+        },
+      );
+
+      if (!mounted) return;
+      await _applyBootstrapResult(result);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _splashUiState = SplashUiState.error;
+        _splashErrorMessage = 'Unable to load app';
+      });
+    }
+  }
+
+  Future<void> _applyBootstrapResult(SplashBootstrapResult result) async {
+    // Future-ready: when [requiresBiometricUnlock] is true, insert a secure
+    // unlock step here before calling [_enterApp].
+    if (result.requiresBiometricUnlock) {
+      // Biometric gate will live between splash and app in a later iteration.
+    }
+
+    final nextPhase = switch (result.destination) {
+      SplashDestination.dashboard => _AuthPhase.app,
+      SplashDestination.authentication => _AuthPhase.login,
+      SplashDestination.onboarding => _AuthPhase.login,
+    };
+
+    setState(() => _phase = nextPhase);
+
+    if (result.userId != null) {
       unawaited(DeepLinkService.instance.captureLinks());
+      if (result.syncDeferred) {
+        unawaited(SplashBootstrap.instance.completeDeferredSync(result.userId!));
+      }
     }
   }
 
@@ -117,7 +155,13 @@ class _AuthGateState extends State<AuthGate> {
         switchInCurve: AppCurves.emphasized,
         switchOutCurve: Curves.easeIn,
         child: switch (_phase) {
-          _AuthPhase.splash => const SplashScreen(key: ValueKey('splash')),
+          _AuthPhase.splash => SplashScreen(
+              key: const ValueKey('splash'),
+              uiState: _splashUiState,
+              statusMessage: _splashStatusMessage,
+              errorMessage: _splashErrorMessage ?? 'Unable to load app',
+              onRetry: _bootstrap,
+            ),
           _AuthPhase.login => LoginPage(
               key: const ValueKey('login'),
               onSignedIn: () async {
