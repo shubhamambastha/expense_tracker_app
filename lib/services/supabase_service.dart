@@ -310,17 +310,24 @@ class SupabaseService {
     return Expense.fromMap(data);
   }
 
-  static Future<List<Account>> fetchAccounts() async {
+  static Future<List<Account>> fetchAccounts({
+    bool includeArchived = false,
+  }) async {
     final user = currentUser;
     if (user == null) {
       throw Exception('Not signed in. Please sign in to load accounts.');
     }
 
-    final data = await Supabase.instance.client
+    var query = Supabase.instance.client
         .from('accounts')
         .select()
-        .eq('user_id', user.id)
-        .order('name');
+        .eq('user_id', user.id);
+
+    if (!includeArchived) {
+      query = query.eq('is_archived', false);
+    }
+
+    final data = await query.order('name');
 
     return (data as List<dynamic>)
         .map((item) => Account.fromMap(item as Map<String, dynamic>))
@@ -364,6 +371,10 @@ class SupabaseService {
         .single();
 
     return Account.fromMap(data);
+  }
+
+  static Future<Account> archiveAccount(Account account) async {
+    return updateAccount(account.copyWith(isArchived: true));
   }
 
   static Future<List<CategoryBudget>> fetchCategoryBudgets() async {

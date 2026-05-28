@@ -26,6 +26,10 @@ import '../../utils/financial_insights.dart';
 import '../../utils/recurring_management.dart';
 import '../../utils/snackbar_helper.dart';
 import '../../utils/transaction_subtype_helpers.dart';
+import '../accounts/account_detail_page.dart';
+import '../accounts/accounts_list_page.dart';
+import '../accounts/add_edit_account_page.dart';
+import '../accounts/credit_card_detail_page.dart';
 import '../analytics/analytics_page.dart';
 import '../recurring/recurring_payments_page.dart';
 import '../settings/sections/budgets_and_spending_page.dart';
@@ -249,16 +253,42 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
   Future<void> _saveAccount(Account account) async {
     try {
-      final savedAccount = await SupabaseService.insertAccount(account);
+      final savedAccount = account.id == null
+          ? await SupabaseService.insertAccount(account)
+          : await SupabaseService.updateAccount(account);
       if (!mounted) return;
       setState(() {
-        _accounts.add(savedAccount);
+        if (account.id == null) {
+          _accounts.add(savedAccount);
+        } else {
+          final idx = _accounts.indexWhere((a) => a.id == savedAccount.id);
+          if (idx >= 0) {
+            _accounts[idx] = savedAccount;
+          } else {
+            _accounts.add(savedAccount);
+          }
+        }
         _accounts.sort((a, b) => a.name.compareTo(b.name));
       });
       SnackbarHelper.showSuccess(context, 'Account saved successfully');
     } catch (error) {
       if (!mounted) return;
       SnackbarHelper.showMessage(context, 'Could not save account: $error');
+    }
+  }
+
+  Future<void> _archiveAccount(Account account) async {
+    try {
+      final archived = await SupabaseService.archiveAccount(account);
+      if (!mounted) return;
+      setState(() {
+        final idx = _accounts.indexWhere((a) => a.id == archived.id);
+        if (idx >= 0) _accounts[idx] = archived;
+      });
+      SnackbarHelper.showSuccess(context, '${account.displayName} archived');
+    } catch (error) {
+      if (!mounted) return;
+      SnackbarHelper.showMessage(context, 'Could not archive account: $error');
     }
   }
 
@@ -491,9 +521,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           onQuickAction: _handleQuickAction,
           onTapTransaction: _openTransactionDetail,
           onViewAllTransactions: () => _switchToTab(1),
-          onManageAccounts: () => _switchToTab(4),
+          onManageAccounts: _openAccountsManager,
           onOpenBudgetSettings: _openBudgetSettings,
-          onTapAccount: _openAccountTransactions,
+          onTapAccount: _openAccountFromDashboard,
         );
       },
     );
@@ -550,8 +580,108 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     return null;
   }
 
-  void _openAccountTransactions(Account account) {
-    _switchToTab(1);
+  Future<void> _openAccountsManager() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => AccountsListPage(
+          initialAccounts: _accounts,
+          initialTransactions: _transactions,
+          onMutation: _refreshDashboard,
+          onAddTransaction: (draft) async {
+            _openAddTransactionPage(initialDraft: draft);
+          },
+          onOpenRecurring: _openRecurringManager,
+          onTapTransaction: _openTransactionDetail,
+          onViewAllTransactions: () => _switchToTab(1),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _refreshDashboard();
+  }
+
+  Future<void> _openAccountFromDashboard(Account account) async {
+    if (account.isCreditCard) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => CreditCardDetailPage(
+            account: account,
+            accounts: _accounts,
+            transactions: _transactions,
+            onMutation: _refreshDashboard,
+            onEdit: () => _editAccount(account),
+            onArchive: () async {
+              await _archiveAccount(account);
+              if (mounted) Navigator.of(context).pop();
+            },
+            onPayBill: () => _payCreditBill(account),
+            onAddEmi: () => _addEmiOnAccount(account),
+            onManageEmi: _openRecurringManager,
+            onTapTransaction: _openTransactionDetail,
+            onViewAllTransactions: () => _switchToTab(1),
+          ),
+        ),
+      );
+    } else {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => AccountDetailPage(
+            account: account,
+            accounts: _accounts,
+            transactions: _transactions,
+            onMutation: _refreshDashboard,
+            onEdit: () => _editAccount(account),
+            onArchive: () async {
+              await _archiveAccount(account);
+              if (mounted) Navigator.of(context).pop();
+            },
+            onAddTransaction: (draft) async {
+              _openAddTransactionPage(initialDraft: draft);
+            },
+            onTapTransaction: _openTransactionDetail,
+            onViewAllTransactions: () => _switchToTab(1),
+          ),
+        ),
+      );
+    }
+    if (!mounted) return;
+    await _refreshDashboard();
+  }
+
+  Future<void> _editAccount(Account account) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => AddEditAccountPage(
+          accounts: _accounts,
+          transactions: _transactions,
+          account: account,
+          onSave: _saveAccount,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _refreshDashboard();
+  }
+
+  Future<void> _payCreditBill(Account account) async {
+    final draft = TransactionDraft(
+      kind: TransactionKind.expense,
+      accountId: account.linkedAccountId ?? account.id,
+    );
+    draft.merchant = '${account.displayName} bill payment';
+    _openAddTransactionPage(initialDraft: draft);
+  }
+
+  Future<void> _addEmiOnAccount(Account account) async {
+    final draft = TransactionDraft(
+      kind: TransactionKind.expense,
+      accountId: account.id,
+    );
+    TransactionSubtypeHelpers.applyExpenseSubtype(
+      draft,
+      TransactionSubtypeHelpers.expenseCategoryEmi,
+    );
+    _openAddTransactionPage(initialDraft: draft);
   }
 
   Future<void> _openBudgetSettings() async {
