@@ -4,7 +4,6 @@ import 'package:intl/intl.dart' as intl;
 
 import '../../../config/design_tokens.dart';
 import '../../../services/settings_preferences.dart';
-import '../../../services/supabase_service.dart';
 import '../../../utils/profile_identity.dart';
 
 /// Top-of-screen "Good morning, Shubham" + context subtitle + avatar shortcut.
@@ -39,9 +38,7 @@ class DashboardGreetingHeader extends StatelessWidget {
   String get _displayName {
     final prefs = SettingsPreferences.instance;
     if (prefs.displayName.trim().isNotEmpty) return prefs.displayName.trim();
-    final meta = ProfileIdentity.metadataDisplayName(
-      SupabaseService.currentUser,
-    );
+    final meta = ProfileIdentity.sessionDisplayName();
     if (meta != null) return meta;
     final email = userEmail ?? '';
     if (email.isEmpty) return '';

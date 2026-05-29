@@ -1,4 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../utils/app_config.dart';
+import '../utils/constants.dart';
+import 'auth_service.dart';
 import '../models/account.dart';
 import '../models/category_budget.dart';
 import '../models/expense.dart';
@@ -16,84 +21,50 @@ class SupabaseService {
   // Supabase URL and anon key are read from environment variables.
   // Provide them via compile-time defines.
   static Future<void> init() async {
-    const urlFromDefine = 'https://axabbtuvufmahbgzmczk.supabase.co';
-    const anonFromDefine = 'sb_publishable_M1CWmWJTonBVm9JMcIaF8w_RYskfFKS';
-
-    final url = urlFromDefine.isNotEmpty ? urlFromDefine : '';
-    final anon = anonFromDefine.isNotEmpty ? anonFromDefine : '';
-
-    if (url.isEmpty || anon.isEmpty) {
+    if (!AppConfig.hasSupabase) {
       throw Exception(
         'Missing SUPABASE_URL or SUPABASE_ANON_KEY. Provide via --dart-define',
       );
     }
 
-    await Supabase.initialize(url: url, anonKey: anon, debug: true);
-  }
+    await AuthService.instance.init();
 
-  static User? get currentUser => Supabase.instance.client.auth.currentUser;
-
-  static Stream<dynamic> get authStateChanges =>
-      Supabase.instance.client.auth.onAuthStateChange;
-
-  static Future<AuthResponse> signInWithEmail(
-    String email,
-    String password,
-  ) async {
-    return Supabase.instance.client.auth.signInWithPassword(
-      email: email,
-      password: password,
+    await Supabase.initialize(
+      url: AppConfig.supabaseUrl,
+      anonKey: AppConfig.supabaseAnonKey,
+      debug: kDebugMode,
+      accessToken: () async {
+        if (!await AuthService.instance.hasValidCredentials()) {
+          return null;
+        }
+        final creds = await AuthService.instance.credentials();
+        final idToken = creds.idToken;
+        if (idToken == null || idToken.isEmpty) {
+          throw Exception(
+            'Auth0 ID token is missing. Sign in again via Continue with Auth0.',
+          );
+        }
+        return idToken;
+      },
     );
   }
 
-  static Future<AuthResponse> signUpWithEmail(
-    String email,
-    String password,
-  ) async {
-    return Supabase.instance.client.auth.signUp(
-      email: email,
-      password: password,
-    );
-  }
-
-  static Future<void> signOut() async {
-    await Supabase.instance.client.auth.signOut();
-  }
-
-  /// Updates auth user metadata (display name, phone, etc.).
-  static Future<void> updateUserProfileMetadata({
-    String? displayName,
-    String? phone,
-  }) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in.');
+  /// Auth0 `sub` — scopes all Supabase rows for the signed-in user.
+  static String requireUserId([String? message]) {
+    final userId = AuthService.instance.currentSession?.userId;
+    if (userId == null || userId.isEmpty) {
+      throw Exception(message ?? AppConstants.errorNotSignedIn);
     }
-
-    final data = <String, dynamic>{};
-    if (displayName != null) {
-      data['display_name'] = displayName.trim().isEmpty ? null : displayName.trim();
-    }
-    if (phone != null) {
-      data['phone'] = phone.trim().isEmpty ? null : phone.trim();
-    }
-    if (data.isEmpty) return;
-
-    await Supabase.instance.client.auth.updateUser(
-      UserAttributes(data: data),
-    );
+    return userId;
   }
 
   static Future<List<Transaction>> fetchTransactions() async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to load transactions.');
-    }
+    final userId = requireUserId();
 
     final data = await Supabase.instance.client
         .from('transactions')
         .select()
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('date', ascending: false);
 
     return (data as List<dynamic>)
@@ -125,12 +96,9 @@ class SupabaseService {
   }
 
   static Future<Transaction> insertTransaction(Transaction transaction) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to save transactions.');
-    }
+    final userId = requireUserId();
 
-    final payload = transaction.toMap()..['user_id'] = user.id;
+    final payload = transaction.toMap()..['user_id'] = userId;
     payload.remove('id');
     final data = await Supabase.instance.client
         .from('transactions')
@@ -142,10 +110,7 @@ class SupabaseService {
   }
 
   static Future<Transaction> updateTransaction(Transaction transaction) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to update transactions.');
-    }
+    final userId = requireUserId();
 
     final payload = transaction.toMap()
       ..remove('user_id')
@@ -154,7 +119,7 @@ class SupabaseService {
         .from('transactions')
         .update(payload)
         .eq('id', transaction.id!)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .select()
         .single();
 
@@ -162,16 +127,13 @@ class SupabaseService {
   }
 
   static Future<void> deleteTransaction(int transactionId) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to delete transactions.');
-    }
+    final userId = requireUserId();
 
     await Supabase.instance.client
         .from('transactions')
         .delete()
         .eq('id', transactionId)
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
   }
 
   /// Toggles the `is_paused` flag on a recurring transaction without losing
@@ -181,16 +143,13 @@ class SupabaseService {
     int transactionId,
     bool paused,
   ) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to update transactions.');
-    }
+    final userId = requireUserId();
 
     final data = await Supabase.instance.client
         .from('transactions')
         .update({'is_paused': paused})
         .eq('id', transactionId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .select()
         .single();
 
@@ -208,10 +167,7 @@ class SupabaseService {
     int transactionId, {
     required bool closed,
   }) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to update transactions.');
-    }
+    final userId = requireUserId();
 
     final payload = <String, dynamic>{
       'closed_at': closed ? DateTime.now().toUtc().toIso8601String() : null,
@@ -220,7 +176,7 @@ class SupabaseService {
         .from('transactions')
         .update(payload)
         .eq('id', transactionId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .select()
         .single();
 
@@ -231,17 +187,12 @@ class SupabaseService {
   /// recurring transactions. The manager screen joins these in-memory with
   /// the transaction list to compute the *real* next due date.
   static Future<List<RecurringEvent>> fetchRecurringEvents() async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception(
-        'Not signed in. Please sign in to load recurring events.',
-      );
-    }
+    final userId = requireUserId();
 
     final data = await Supabase.instance.client
         .from('recurring_events')
         .select()
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('occurrence_date', ascending: false);
 
     return (data as List<dynamic>)
@@ -256,14 +207,9 @@ class SupabaseService {
   static Future<RecurringEvent> insertRecurringEvent(
     RecurringEvent event,
   ) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception(
-        'Not signed in. Please sign in to update recurring events.',
-      );
-    }
+    final userId = requireUserId();
 
-    final payload = event.toMap()..['user_id'] = user.id;
+    final payload = event.toMap()..['user_id'] = userId;
     payload.remove('id');
     final data = await Supabase.instance.client
         .from('recurring_events')
@@ -280,27 +226,19 @@ class SupabaseService {
   /// Undoes a previously logged recurring event — used by the "Undo"
   /// affordance on the Mark Paid / Skip / Snooze confirmation snackbars.
   static Future<void> deleteRecurringEvent(int eventId) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception(
-        'Not signed in. Please sign in to update recurring events.',
-      );
-    }
+    final userId = requireUserId();
 
     await Supabase.instance.client
         .from('recurring_events')
         .delete()
         .eq('id', eventId)
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
   }
 
   static Future<Expense> insertExpense(Expense expense) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to save expenses.');
-    }
+    final userId = requireUserId();
 
-    final payload = expense.toMap()..['user_id'] = user.id;
+    final payload = expense.toMap()..['user_id'] = userId;
     final data = await Supabase.instance.client
         .from('transactions')
         .insert(payload)
@@ -313,15 +251,12 @@ class SupabaseService {
   static Future<List<Account>> fetchAccounts({
     bool includeArchived = false,
   }) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to load accounts.');
-    }
+    final userId = requireUserId();
 
     var query = Supabase.instance.client
         .from('accounts')
         .select()
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
 
     if (!includeArchived) {
       query = query.eq('is_archived', false);
@@ -335,12 +270,9 @@ class SupabaseService {
   }
 
   static Future<Account> insertAccount(Account account) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to save accounts.');
-    }
+    final userId = requireUserId();
 
-    final payload = account.toMap()..['user_id'] = user.id;
+    final payload = account.toMap()..['user_id'] = userId;
     final data = await Supabase.instance.client
         .from('accounts')
         .insert(payload)
@@ -351,10 +283,7 @@ class SupabaseService {
   }
 
   static Future<Account> updateAccount(Account account) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to update accounts.');
-    }
+    final userId = requireUserId();
     if (account.id == null) {
       throw Exception('Cannot update an account without an id.');
     }
@@ -366,7 +295,7 @@ class SupabaseService {
         .from('accounts')
         .update(payload)
         .eq('id', account.id!)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .select()
         .single();
 
@@ -378,15 +307,12 @@ class SupabaseService {
   }
 
   static Future<List<CategoryBudget>> fetchCategoryBudgets() async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to load budgets.');
-    }
+    final userId = requireUserId();
 
     final data = await Supabase.instance.client
         .from('category_budgets')
         .select()
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('category_name');
 
     return (data as List<dynamic>)
@@ -400,13 +326,10 @@ class SupabaseService {
   static Future<CategoryBudget> upsertCategoryBudget(
     CategoryBudget budget,
   ) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to save budgets.');
-    }
+    final userId = requireUserId();
 
     final payload = budget.toMap()
-      ..['user_id'] = user.id
+      ..['user_id'] = userId
       ..remove('id');
 
     final data = await Supabase.instance.client
@@ -419,23 +342,17 @@ class SupabaseService {
   }
 
   static Future<void> deleteCategoryBudget(int budgetId) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to delete budgets.');
-    }
+    final userId = requireUserId();
 
     await Supabase.instance.client
         .from('category_budgets')
         .delete()
         .eq('id', budgetId)
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
   }
 
   static Future<Expense> updateExpense(Expense expense) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to update expenses.');
-    }
+    final userId = requireUserId();
 
     // Strip identity-bound columns from the update payload so we never
     // attempt to rewrite the row's owner or surrogate id.
@@ -446,7 +363,7 @@ class SupabaseService {
         .from('transactions')
         .update(payload)
         .eq('id', expense.id!)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .select()
         .single();
 
@@ -458,15 +375,12 @@ class SupabaseService {
   }
 
   static Future<UserSettings?> fetchUserSettings() async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to load settings.');
-    }
+    final userId = requireUserId();
 
     final data = await Supabase.instance.client
         .from('user_settings')
         .select()
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
     if (data == null) return null;
@@ -482,10 +396,7 @@ class SupabaseService {
     String defaultCurrencyCode, {
     Map<String, dynamic>? preferences,
   }) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to save settings.');
-    }
+    final userId = requireUserId();
 
     Map<String, dynamic> resolvedPrefs;
     if (preferences != null) {
@@ -494,7 +405,7 @@ class SupabaseService {
       final existing = await Supabase.instance.client
           .from('user_settings')
           .select()
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .maybeSingle();
       if (existing == null) {
         resolvedPrefs = {};
@@ -511,7 +422,7 @@ class SupabaseService {
     final data = await Supabase.instance.client
         .from('user_settings')
         .upsert({
-          'user_id': user.id,
+          'user_id': userId,
           'default_currency_code': defaultCurrencyCode,
           'preferences': resolvedPrefs,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
@@ -523,15 +434,12 @@ class SupabaseService {
   }
 
   static Future<List<ExpenseCategory>> fetchCategories() async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to load categories.');
-    }
+    final userId = requireUserId();
 
     final data = await Supabase.instance.client
         .from('expense_categories')
         .select()
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('sort_order')
         .order('name');
 
@@ -542,10 +450,7 @@ class SupabaseService {
 
   /// Inserts only default categories the user does not already have.
   static Future<List<ExpenseCategory>> ensureDefaultCategories() async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to seed categories.');
-    }
+    final userId = requireUserId();
 
     var existing = await fetchCategories();
     final existingNames = existing
@@ -557,7 +462,7 @@ class SupabaseService {
       final seed = entry.value;
       if (existingNames.contains(seed.name.toLowerCase())) continue;
       missing.add({
-        'user_id': user.id,
+        'user_id': userId,
         'name': seed.name,
         'icon': seed.iconKey,
         'sort_order': entry.key,
@@ -578,15 +483,12 @@ class SupabaseService {
     required String iconKey,
     required int sortOrder,
   }) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to save categories.');
-    }
+    final userId = requireUserId();
 
     final data = await Supabase.instance.client
         .from('expense_categories')
         .insert({
-          'user_id': user.id,
+          'user_id': userId,
           'name': name,
           'icon': iconKey,
           'sort_order': sortOrder,
@@ -599,29 +501,23 @@ class SupabaseService {
   }
 
   static Future<void> deleteCategory(int categoryId) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to delete categories.');
-    }
+    final userId = requireUserId();
 
     await Supabase.instance.client
         .from('expense_categories')
         .delete()
         .eq('id', categoryId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_default', false);
   }
 
   static Future<List<IncomeCategory>> fetchIncomeCategories() async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to load income categories.');
-    }
+    final userId = requireUserId();
 
     final data = await Supabase.instance.client
         .from('income_categories')
         .select()
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('sort_order')
         .order('name');
 
@@ -631,10 +527,7 @@ class SupabaseService {
   }
 
   static Future<List<IncomeCategory>> ensureDefaultIncomeCategories() async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to seed income categories.');
-    }
+    final userId = requireUserId();
 
     var existing = await fetchIncomeCategories();
     final existingNames = existing
@@ -646,7 +539,7 @@ class SupabaseService {
       final seed = entry.value;
       if (existingNames.contains(seed.name.toLowerCase())) continue;
       missing.add({
-        'user_id': user.id,
+        'user_id': userId,
         'name': seed.name,
         'icon': seed.iconKey,
         'sort_order': entry.key,
@@ -667,15 +560,12 @@ class SupabaseService {
     required String iconKey,
     required int sortOrder,
   }) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to save income categories.');
-    }
+    final userId = requireUserId();
 
     final data = await Supabase.instance.client
         .from('income_categories')
         .insert({
-          'user_id': user.id,
+          'user_id': userId,
           'name': name,
           'icon': iconKey,
           'sort_order': sortOrder,
@@ -688,16 +578,13 @@ class SupabaseService {
   }
 
   static Future<void> deleteIncomeCategory(int categoryId) async {
-    final user = currentUser;
-    if (user == null) {
-      throw Exception('Not signed in. Please sign in to delete income categories.');
-    }
+    final userId = requireUserId();
 
     await Supabase.instance.client
         .from('income_categories')
         .delete()
         .eq('id', categoryId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_default', false);
   }
 }

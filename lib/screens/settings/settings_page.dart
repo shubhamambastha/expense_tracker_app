@@ -14,7 +14,6 @@ import '../../services/category_catalog.dart';
 import '../../services/income_category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../services/settings_preferences.dart';
-import '../../services/supabase_service.dart';
 import '../../utils/snackbar_helper.dart';
 import 'sections/accounts_and_cards_page.dart';
 import 'sections/categories_page.dart';
@@ -243,14 +242,12 @@ class SettingsPage extends StatelessWidget {
   String _displayName() {
     final prefs = SettingsPreferences.instance;
     if (prefs.displayName.trim().isNotEmpty) return prefs.displayName.trim();
-    final meta = ProfileIdentity.metadataDisplayName(
-      SupabaseService.currentUser,
-    );
+    final meta = ProfileIdentity.sessionDisplayName();
     if (meta != null) return meta;
     return ProfileIdentity.displayNameFromEmail(_email());
   }
 
-  String _email() => ProfileIdentity.emailFor(SupabaseService.currentUser);
+  String _email() => ProfileIdentity.emailFor();
 
   double _monthSpent() {
     final now = DateTime.now();

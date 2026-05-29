@@ -1,4 +1,6 @@
 {
   "SUPABASE_URL": "https://YOUR_PROJECT_ID.supabase.co",
-  "SUPABASE_ANON_KEY": "your-anon-key-here"
+  "SUPABASE_ANON_KEY": "your-anon-key-here",
+  "AUTH0_DOMAIN": "YOUR_TENANT.us.auth0.com",
+  "AUTH0_CLIENT_ID": "your-auth0-native-client-id"
 }

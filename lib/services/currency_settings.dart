@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'auth_service.dart';
 import 'supabase_service.dart';
 
 /// A supported currency for display and expense input.
@@ -124,7 +125,8 @@ class CurrencySettings extends ChangeNotifier {
 
   Future<void> _applyCode(String code, {required bool persistRemote}) async {
     _code = code;
-    final userId = _activeUserId ?? SupabaseService.currentUser?.id;
+    final userId =
+        _activeUserId ?? AuthService.instance.currentSession?.userId;
     await _cacheLocally(userId, code);
 
     if (persistRemote && userId != null) {

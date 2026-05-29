@@ -1,12 +1,20 @@
 # Supabase setup and CI notes
 
+## Authentication (Auth0)
+
+Login is handled by **Auth0**, not Supabase Auth. See [auth0_setup.md](auth0_setup.md) for dashboard steps.
+
+The Flutter app sends Auth0 **ID tokens** to Supabase via third-party Auth0 integration. Database `user_id` columns are **text** values matching the JWT `sub` claim (e.g. `auth0|…`).
+
 ## GitHub Actions
 
-The workflow at `.github/workflows/ci.yml` uses repository Secrets to inject Supabase keys at build time.
+The workflow at `.github/workflows/ci.yml` uses repository Secrets to inject keys at build time.
 
 Add the following secrets in your GitHub repository settings -> Secrets:
 - `SUPABASE_URL` — your project URL (e.g. `https://abcd1234.supabase.co`)
 - `SUPABASE_ANON_KEY` — the anon/public key (never expose the service role key)
+- `AUTH0_DOMAIN` — Auth0 tenant domain (e.g. `dev-abc.us.auth0.com`)
+- `AUTH0_CLIENT_ID` — Native application client ID
 
 The workflow passes these as `--dart-define=KEY=VALUE` to `flutter build`.
 
@@ -29,6 +37,12 @@ The workflow passes these as `--dart-define=KEY=VALUE` to `flutter build`.
 ### Existing databases (apply only the new migrations)
 
 If you have an existing database with the first five files already applied, run migrations 4b (if `preferences` is missing), then 6–8 as needed.
+
+| # | File | Purpose |
+|---|------|---------|
+| 9 | `sql/20260529_auth0_user_id_text.sql` | Auth0: `user_id` → text, drop `auth.users` FKs, RLS uses `requesting_user_id()` |
+
+Run migration 9 before using the Auth0-enabled app against an existing database (dev-only: no user migration from Supabase Auth UUIDs).
 
 ### Table overview
 
@@ -71,8 +85,9 @@ Do **not** drop it before the app is reading from `transactions`.
 The app stores amounts as numbers; `user_settings.default_currency_code` controls display and input formatting per account. `user_settings.preferences` stores the same keys as local `SettingsPreferences` (multi-currency, budgets, notifications, theme, etc.) for cross-device sync when signed in.
 
 ### Notes
-- Every table has `user_id uuid NOT NULL REFERENCES auth.users(id)` and RLS enabled.
-- Use `auth.uid()` in policies to scope rows to the authenticated user.
+- App tables use `user_id text NOT NULL` (Auth0 `sub`). There is no FK to `auth.users` when using third-party Auth0.
+- RLS policies use `user_id = (SELECT public.requesting_user_id())` where `requesting_user_id()` reads `auth.jwt() ->> 'sub'`.
+- Do **not** use `auth.uid()` with Auth0 JWTs — `sub` is not a UUID ([Supabase third-party Auth0](https://supabase.com/docs/guides/auth/third-party/auth0)).
 - For single-user or early prototyping you can omit RLS, but always enable it in production.
 
 ## RLS guidance

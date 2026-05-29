@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../../../components/profile/edit_profile_header.dart';
 import '../../../components/profile/profile_form_field.dart';
 import '../../../components/settings/settings_info_tile.dart';
@@ -14,7 +12,7 @@ import '../../../models/account.dart';
 import '../../../models/expense.dart';
 import '../../../services/currency_settings.dart';
 import '../../../services/settings_preferences.dart';
-import '../../../services/supabase_service.dart';
+import '../../../services/auth_service.dart';
 import '../../../utils/profile_identity.dart';
 import '../../../utils/snackbar_helper.dart';
 import '../../../utils/timezone_options.dart';
@@ -42,8 +40,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late String _baselineName;
   late String _baselinePhone;
   bool _isSaving = false;
-  bool _isGoogleAuth = false;
-
   @override
   void initState() {
     super.initState();
@@ -51,19 +47,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _loadDraft() {
-    final user = SupabaseService.currentUser;
+    final session = AuthService.instance.currentSession;
     final prefs = SettingsPreferences.instance;
     final currency = CurrencySettings.instance;
-    _isGoogleAuth = ProfileIdentity.isGoogleAuthUser(user);
 
-    final email = ProfileIdentity.emailFor(user);
+    final email = ProfileIdentity.emailFor(session);
     final storedName = prefs.displayName.trim().isNotEmpty
         ? prefs.displayName.trim()
-        : (ProfileIdentity.metadataDisplayName(user) ??
+        : (ProfileIdentity.sessionDisplayName(session) ??
             ProfileIdentity.displayNameFromEmail(email));
-    final phone = prefs.phoneNumber.trim().isNotEmpty
-        ? prefs.phoneNumber.trim()
-        : (ProfileIdentity.metadataPhone(user) ?? '');
+    final phone = prefs.phoneNumber.trim();
 
     _nameController.text = storedName;
     _emailController.text = email;
@@ -102,11 +95,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   bool get _hasUnsavedChanges {
     if (_nameController.text.trim() != _baselineName) return true;
-    if (!_isGoogleAuth &&
-        _emailController.text.trim() !=
-            ProfileIdentity.emailFor(SupabaseService.currentUser)) {
-      return true;
-    }
     if (_phoneController.text.trim() != _baselinePhone) return true;
     return _draft != _baseline;
   }
@@ -117,7 +105,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) {
     final prefs = SettingsPreferences.instance;
     final currency = CurrencySettings.instance;
-    final user = SupabaseService.currentUser;
     final email = _emailController.text.trim();
     final displayName = _nameController.text.trim().isNotEmpty
         ? _nameController.text.trim()
@@ -178,7 +165,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     const SizedBox(height: AppSpacing.lg),
                     _appPersonalizationSection(),
                     const SizedBox(height: AppSpacing.lg),
-                    _securitySection(user),
+                    _securitySection(),
                     const SizedBox(height: AppSpacing.lg),
                     _dataPreferencesSection(),
                     const SizedBox(height: AppSpacing.md),
@@ -240,13 +227,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
           label: 'Email Address',
           hint: 'you@domain.com',
           controller: _emailController,
-          readOnly: _isGoogleAuth,
+          readOnly: true,
           prefixIcon: Icons.alternate_email_rounded,
           keyboardType: TextInputType.emailAddress,
-          helperText: _isGoogleAuth
-              ? 'Managed by Google — read-only here.'
-              : 'Used to sign in and recover your account.',
-          onChanged: (_) => _markDirty(),
+          helperText: 'Managed by Auth0 — update in your Auth0 account.',
+          onChanged: (_) {},
         ),
         const Divider(height: 1, thickness: 1, color: AppColors.border),
         ProfileFormField(
@@ -466,11 +451,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _securitySection(User? user) {
-    final lastSignIn = user?.lastSignInAt;
-    final sessionSubtitle = lastSignIn != null
-        ? 'Last login · ${_formatSessionTime(lastSignIn)}'
-        : 'Current device session';
+  Widget _securitySection() {
+    const sessionSubtitle = 'Signed in with Auth0 on this device';
 
     return SettingsSection(
       title: 'Security',
@@ -717,15 +699,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return null;
   }
 
-  String _formatSessionTime(String iso) {
-    try {
-      final dt = DateTime.parse(iso).toLocal();
-      return '${dt.day}/${dt.month}/${dt.year}';
-    } catch (_) {
-      return 'Recently';
-    }
-  }
-
   Future<bool> _confirmDiscard() async {
     final result = await showDialog<bool>(
       context: context,
@@ -782,11 +755,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
           CurrencySettings.isSupportedCode(_draft.currencyCode)) {
         await currency.setCurrency(_draft.currencyCode);
       }
-
-      await SupabaseService.updateUserProfileMetadata(
-        displayName: name,
-        phone: phone,
-      );
 
       if (mounted) {
         _baseline = _draft.copyWith();

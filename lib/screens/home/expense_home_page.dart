@@ -20,6 +20,7 @@ import '../../services/income_category_catalog.dart';
 import '../../services/settings_preferences.dart';
 import '../../services/app_launch_intent.dart';
 import '../../services/deep_link_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/financial_insights.dart';
@@ -515,7 +516,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           transactions: _transactions,
           accounts: _accounts,
           monthlyLimit: SettingsPreferences.instance.monthlySpendingLimit,
-          userEmail: SupabaseService.currentUser?.email,
+          userEmail: AuthService.instance.currentSession?.email,
           isLoading: _isLoading,
           onRefresh: _refreshDashboard,
           onQuickAction: _handleQuickAction,

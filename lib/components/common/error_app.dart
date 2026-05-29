@@ -51,7 +51,7 @@ class ErrorApp extends StatelessWidget {
                         ),
                     const SizedBox(height: AppSpacing.xl),
                     Text(
-                      AppConstants.errorSupabaseInitFailed,
+                      AppConstants.errorAppInitFailed,
                       style: AppTextStyles.headingSmall,
                       textAlign: TextAlign.center,
                     ),
@@ -72,7 +72,7 @@ class ErrorApp extends StatelessWidget {
                         border: Border.all(color: AppColors.border),
                       ),
                       child: Text(
-                        AppConstants.errorSupabaseInstructions,
+                        AppConstants.errorAppInitInstructions,
                         textAlign: TextAlign.center,
                         style: AppTextStyles.caption,
                       ),

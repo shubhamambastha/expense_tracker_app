@@ -28,6 +28,14 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Auth0 Flutter SDK — domain from AUTH0_DOMAIN dart-define at build time.
+        val auth0Domain =
+            project.findProperty("AUTH0_DOMAIN") as String?
+                ?: System.getenv("AUTH0_DOMAIN")
+                ?: "YOUR_AUTH0_DOMAIN"
+        manifestPlaceholders["auth0Domain"] = auth0Domain
+        manifestPlaceholders["auth0Scheme"] = "https"
     }
 
     buildTypes {

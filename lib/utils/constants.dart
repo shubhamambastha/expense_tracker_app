@@ -2,10 +2,6 @@
 class AppConstants {
   AppConstants._();
 
-  /// Supabase configuration
-  static const String supabaseUrl = 'https://axabbtuvufmahbgzmczk.supabase.co';
-  static const String supabaseAnonKey = 'sb_publishable_M1CWmWJTonBVm9JMcIaF8w_RYskfFKS';
-
   /// Error messages
   static const String errorNotSignedIn = 'Not signed in. Please sign in to continue.';
   static const String errorFailedToLoadExpenses = 'Could not load expenses';
@@ -15,9 +11,10 @@ class AppConstants {
   static const String confirmDeleteExpense = 'Are you sure you want to delete this expense?';
   static const String expenseDeleted = 'Expense deleted successfully';
   static const String expenseUpdated = 'Expense updated successfully';
-  static const String errorSupabaseInitFailed = 'Unable to initialize Supabase.';
-  static const String errorSupabaseInstructions =
-      'Run with --dart-define=SUPABASE_URL=your_url --dart-define=SUPABASE_ANON_KEY=your_key';
+  static const String errorAppInitFailed = 'Unable to initialize the app.';
+  static const String errorAppInitInstructions =
+      'Copy config.dev.json.example to config.dev.json and run: '
+      'python3 scripts/define_from_json.py config.dev.json run';
 
   /// Validation messages
   static const String validationEmailRequired = 'Enter your email';

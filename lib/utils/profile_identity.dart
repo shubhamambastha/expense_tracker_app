@@ -1,19 +1,16 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/app_session.dart';
+import '../services/auth_service.dart';
 
-/// Helpers for deriving profile identity from Supabase Auth + local prefs.
+/// Helpers for deriving profile identity from Auth0 session + local prefs.
 class ProfileIdentity {
   ProfileIdentity._();
 
-  static String emailFor(User? user) =>
-      user?.email?.trim().isNotEmpty == true ? user!.email!.trim() : 'Unknown user';
+  static AppSession? get _session => AuthService.instance.currentSession;
 
-  static bool isGoogleAuthUser(User? user) {
-    if (user == null) return false;
-    final provider = user.appMetadata['provider'];
-    if (provider == 'google') return true;
-    final identities = user.identities;
-    if (identities == null) return false;
-    return identities.any((i) => i.provider == 'google');
+  static String emailFor([AppSession? session]) {
+    final s = session ?? _session;
+    final email = s?.email?.trim();
+    return email != null && email.isNotEmpty ? email : 'Unknown user';
   }
 
   /// Falls back to capitalized email local-part when no stored name exists.
@@ -32,15 +29,13 @@ class ProfileIdentity {
     return source[0].toUpperCase();
   }
 
-  static String? metadataDisplayName(User? user) {
-    final raw = user?.userMetadata?['display_name'];
-    if (raw is String && raw.trim().isNotEmpty) return raw.trim();
-    return null;
-  }
-
-  static String? metadataPhone(User? user) {
-    final raw = user?.userMetadata?['phone'];
-    if (raw is String && raw.trim().isNotEmpty) return raw.trim();
+  static String? sessionDisplayName([AppSession? session]) {
+    final s = session ?? _session;
+    if (s == null) return null;
+    final name = s.name?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    final nick = s.nickname?.trim();
+    if (nick != null && nick.isNotEmpty) return nick;
     return null;
   }
 }

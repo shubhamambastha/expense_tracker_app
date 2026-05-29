@@ -6,6 +6,7 @@ import '../../config/design_tokens.dart';
 import '../../screens/auth/login_page.dart';
 import '../../screens/auth/splash_screen.dart';
 import '../../screens/home/expense_home_page.dart';
+import '../../services/auth_service.dart';
 import '../../services/category_budget_service.dart';
 import '../../services/category_catalog.dart';
 import '../../services/income_category_catalog.dart';
@@ -13,7 +14,6 @@ import '../../services/currency_settings.dart';
 import '../../services/settings_preferences.dart';
 import '../../services/deep_link_service.dart';
 import '../../services/splash_bootstrap.dart';
-import '../../services/supabase_service.dart';
 
 enum _AuthPhase { splash, login, app }
 
@@ -28,7 +28,6 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   _AuthPhase _phase = _AuthPhase.splash;
-  StreamSubscription<dynamic>? _authSubscription;
 
   SplashUiState _splashUiState = SplashUiState.loading;
   String _splashStatusMessage = SplashBootstrapStep.restoringSession.statusMessage;
@@ -38,8 +37,7 @@ class _AuthGateState extends State<AuthGate> {
   void initState() {
     super.initState();
     unawaited(DeepLinkService.instance.start());
-    _authSubscription =
-        SupabaseService.authStateChanges.listen(_onAuthStateChange);
+    AuthService.instance.session.addListener(_onSessionChange);
     unawaited(_bootstrap());
   }
 
@@ -75,8 +73,6 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _applyBootstrapResult(SplashBootstrapResult result) async {
-    // Future-ready: when [requiresBiometricUnlock] is true, insert a secure
-    // unlock step here before calling [_enterApp].
     if (result.requiresBiometricUnlock) {
       // Biometric gate will live between splash and app in a later iteration.
     }
@@ -97,12 +93,12 @@ class _AuthGateState extends State<AuthGate> {
     }
   }
 
-  void _onAuthStateChange(dynamic _) {
+  void _onSessionChange() {
     if (_phase == _AuthPhase.splash) return;
 
-    final user = SupabaseService.currentUser;
-    if (user != null) {
-      unawaited(_handleSignedIn(user.id));
+    final session = AuthService.instance.currentSession;
+    if (session != null) {
+      unawaited(_handleSignedIn(session.userId));
     } else {
       _clearUserScopedState();
       setState(() => _phase = _AuthPhase.login);
@@ -126,7 +122,7 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   void dispose() {
-    _authSubscription?.cancel();
+    AuthService.instance.session.removeListener(_onSessionChange);
     unawaited(DeepLinkService.instance.dispose());
     super.dispose();
   }
@@ -140,7 +136,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _signOut() async {
-    await SupabaseService.signOut();
+    await AuthService.instance.logout();
     _clearUserScopedState();
     if (!mounted) return;
     setState(() => _phase = _AuthPhase.login);
@@ -165,9 +161,9 @@ class _AuthGateState extends State<AuthGate> {
           _AuthPhase.login => LoginPage(
               key: const ValueKey('login'),
               onSignedIn: () async {
-                final user = SupabaseService.currentUser;
-                if (user != null) {
-                  await _handleSignedIn(user.id);
+                final session = AuthService.instance.currentSession;
+                if (session != null) {
+                  await _handleSignedIn(session.userId);
                 }
               },
             ),

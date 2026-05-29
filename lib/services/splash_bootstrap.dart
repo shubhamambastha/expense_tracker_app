@@ -8,7 +8,7 @@ import 'category_catalog.dart';
 import 'currency_settings.dart';
 import 'income_category_catalog.dart';
 import 'settings_preferences.dart';
-import 'supabase_service.dart';
+import 'auth_service.dart';
 
 /// Where the splash flow should navigate once bootstrap completes.
 enum SplashDestination {
@@ -95,12 +95,12 @@ class SplashBootstrap {
     }
 
     report(SplashBootstrapStep.restoringSession);
-    final user = SupabaseService.currentUser;
+    final session = AuthService.instance.currentSession;
 
     report(SplashBootstrapStep.initializingLocal);
     await _ensureLocalStoresReady();
 
-    if (user == null) {
+    if (session == null) {
       return SplashBootstrapResult(
         destination: await _resolveLoggedOutDestination(),
       );
@@ -110,7 +110,7 @@ class SplashBootstrap {
     report(SplashBootstrapStep.loadingPreferences);
 
     final syncDeferred = await _warmUserData(
-      user.id,
+      session.userId,
       syncTimeout: syncTimeout,
     );
 
@@ -118,7 +118,7 @@ class SplashBootstrap {
 
     return SplashBootstrapResult(
       destination: SplashDestination.dashboard,
-      userId: user.id,
+      userId: session.userId,
       usedOfflineCache: syncDeferred,
       syncDeferred: syncDeferred,
       requiresBiometricUnlock: requiresBiometric,

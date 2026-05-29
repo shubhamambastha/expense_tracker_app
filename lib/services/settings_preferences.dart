@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'currency_settings.dart';
+import 'auth_service.dart';
 import 'supabase_service.dart';
 
 /// Fiscal year boundary used for analytics & budgeting roll-ups.
@@ -713,7 +714,7 @@ class SettingsPreferences extends ChangeNotifier {
   }
 
   Future<void> _pushFullRemote() async {
-    if (SupabaseService.currentUser == null) return;
+    if (AuthService.instance.currentSession == null) return;
     final code = CurrencySettings.instance.currencyCode;
     await SupabaseService.upsertUserSettings(
       code,
@@ -722,7 +723,7 @@ class SettingsPreferences extends ChangeNotifier {
   }
 
   void _scheduleRemoteSync() {
-    if (SupabaseService.currentUser == null) return;
+    if (AuthService.instance.currentSession == null) return;
     _remoteSyncTimer?.cancel();
     _remoteSyncTimer = Timer(_remoteSyncDebounce, () async {
       _remoteSyncTimer = null;
