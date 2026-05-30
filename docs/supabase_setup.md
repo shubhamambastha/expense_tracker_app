@@ -1,5 +1,7 @@
 # Supabase setup and CI notes
 
+See also: [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) (mind-map schema reference), [ARCHITECTURE.md](./ARCHITECTURE.md) (app structure).
+
 ## Authentication (Auth0)
 
 Login is handled by **Auth0**, not Supabase Auth. See [auth0_setup.md](auth0_setup.md) for dashboard steps.

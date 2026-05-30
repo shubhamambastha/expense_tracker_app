@@ -13,14 +13,57 @@ Premium dark theme for the Expense Tracker app. Source of truth lives in `lib/co
 
 ### File layout
 
+Design tokens and theme wiring live in `lib/config/`. Shared UI primitives that enforce those tokens live under `lib/components/`. Category/chart styling and snackbars live in `lib/utils/`.
+
 ```
-lib/config/
-├── design_tokens.dart   # AppColors, AppRadii, AppShadows, AppDurations,
-│                        # AppCurves, AppSpacing, AppTextStyles
-└── theme.dart           # AppTheme.darkTheme — wires tokens into Material 3
+lib/
+├── config/
+│   ├── design_tokens.dart      # AppColors, AppRadii, AppShadows, AppDurations,
+│   │                           # AppCurves, AppSpacing, AppTextStyles
+│   └── theme.dart              # AppTheme.darkTheme — wires tokens into Material 3
+├── utils/
+│   ├── category_style.dart     # kCategoryColors, CategoryIcons, default seeds
+│   └── snackbar_helper.dart    # SnackbarHelper — top-anchored feedback
+├── components/
+│   ├── common/
+│   │   ├── compact_header.dart # Safe-area header shell (no full AppBar)
+│   │   └── states/             # Empty, loading, error, offline, sync UX
+│   │       └── states.dart     # Barrel export — import this in features
+│   ├── settings/               # Settings rows, sections, subpage scaffold
+│   ├── analytics/widgets/      # AnalyticsSectionCard, charts, metric tiles
+│   ├── transaction/
+│   │   ├── detail/widgets/     # DetailSectionCard, DetailInfoRow
+│   │   └── …                   # Form fields, list items, type selectors
+│   ├── home/dashboard/         # HeroOverviewCard, section headers, quick actions
+│   ├── accounts/               # Account cards, swipe tiles, empty states
+│   ├── recurring/              # Subscription/EMI cards, timeline tiles
+│   ├── profile/                # Profile form fields, manage cards
+│   ├── auth/                   # Login form
+│   └── dialogs/                # Sheets and confirmation dialogs
+└── screens/                    # Full pages — compose components, own navigation
+    ├── home/expense_home_page.dart   # Tab shell + bottom nav + FAB
+    ├── auth/                         # Login, splash
+    ├── transaction/                  # Add/edit transaction
+    ├── accounts/                     # Account list & detail
+    ├── analytics/                    # Analytics tab
+    ├── recurring/                    # Recurring payments manager
+    └── settings/                     # Settings hub + sections/
 ```
 
-Token classes are private-constructor (`AppColors._()`) static-only namespaces. Import them as `import '../../config/design_tokens.dart';`.
+Token classes are private-constructor (`AppColors._()`) static-only namespaces. Import them as `import '../../config/design_tokens.dart';` (adjust depth per file).
+
+### Feature map
+
+| Tab / area | Screen | Primary design primitives |
+| --- | --- | --- |
+| Home | `screens/home/expense_home_page.dart` | `CompactHeader`, `HeroOverviewCard`, dashboard sections, `states.dart` |
+| Transactions | `components/home/transactions_content.dart` | `TransactionListItem`, filters, `EmptyStatePresets` |
+| Add (+ FAB) | `screens/transaction/add_transaction_page.dart` | Form inputs, category/account chips, `StickyBottomCTA` |
+| Analytics | `screens/analytics/analytics_page.dart` | `AnalyticsSectionCard`, chart widgets, `TimeRangeSelector` |
+| Settings | `screens/settings/settings_page.dart` | `SettingsSection`, `SettingsTile`, `SettingsSubpageScaffold` |
+| Accounts | `screens/accounts/` | `BankAccountCard`, `CreditCardCard`, `AccountsEmptyState` |
+| Recurring | `screens/recurring/recurring_payments_page.dart` | `SubscriptionCard`, `EmiCard`, `UpcomingPaymentTile` |
+| Detail sheets | `components/transaction/transaction_detail_sheet.dart` | `DetailSectionCard`, hero amount, action rows |
 
 ---
 
@@ -202,9 +245,20 @@ animations: ^2.0.11       # OpenContainer, FadeThroughTransition
 
 ## Components
 
-### Surfaces
+Prefer existing shared widgets over one-off `Container` decorations. Each primitive below already applies the border + shadow + radius combo from the spec.
 
-```
+### Surface cards
+
+| Widget | Location | Use for |
+| --- | --- | --- |
+| `AnalyticsSectionCard` | `components/analytics/widgets/` | Analytics sections; set `useGradient: true` for hero cards |
+| `DetailSectionCard` | `components/transaction/detail/widgets/` | Nested panels on transaction detail (uses `surfaceSecondary`) |
+| `SettingsSection` | `components/settings/` | Grouped settings rows inside a single card |
+| `HeroOverviewCard` | `components/home/dashboard/` | Dashboard hero with budget progress semantics |
+
+Raw surface pattern (when no shared widget fits):
+
+```dart
 Container(
   decoration: BoxDecoration(
     color: AppColors.surface,
@@ -217,7 +271,51 @@ Container(
 )
 ```
 
-For premium hero cards, swap the flat color for a soft `LinearGradient(colors: [AppColors.surface, AppColors.surfaceSecondary])`.
+For premium hero cards, swap the flat color for a soft `LinearGradient(colors: [AppColors.surface, AppColors.surfaceSecondary])` — see `AnalyticsSectionCard` and `HeroOverviewCard`.
+
+### App chrome
+
+| Widget | Location | Use for |
+| --- | --- | --- |
+| `CompactHeader` | `components/common/` | Top safe-area strip on tab screens (used by `ExpenseHomePage`) |
+| `SettingsSubpageScaffold` | `components/settings/` | Every settings sub-screen — back bar, scroll padding, entrance animation |
+
+### State UX
+
+Import the barrel once per feature:
+
+```dart
+import 'package:expense_tracker_app/components/common/states/states.dart';
+```
+
+| Widget | Use for |
+| --- | --- |
+| `EmptyState` + `EmptyStatePresets` | No-data lists and sections (`standard`, `compact`, `inline` layouts) |
+| `LoadingState` + skeletons (`ShimmerBox`, `SkeletonCard`, `SkeletonTransactionRow`) | Initial load and inline refresh |
+| `ErrorState` + `ErrorStatePresets` | Recoverable failures with retry CTA |
+| `OfflineBanner` | Connectivity hint above content |
+| `SyncIndicator` | Subtle sync-in-progress badge |
+| `StateContentTransition` | Cross-fade between loading / empty / content |
+
+### Settings rows
+
+| Widget | Use for |
+| --- | --- |
+| `SettingsTile` | Tappable row with icon, optional `valueLabel`, chevron |
+| `SettingsSwitchTile` | Toggle row |
+| `SettingsInfoTile` | Read-only info row |
+| `SettingsDangerSection` | Destructive actions grouped at bottom |
+
+### Transaction form & list
+
+| Widget | Use for |
+| --- | --- |
+| `TransactionTypeSelector` / `TransactionSubtypeChips` | Expense / income / transfer kind |
+| `CategoryPillsSelector` / `IncomeCategoryPillsSelector` | Category pickers |
+| `AccountChipsSelector` | Account selection |
+| `AmountSection` | Hero amount input (`displaySmall`) |
+| `StickyBottomCTA` | Primary save action pinned above keyboard |
+| `TransactionListItem` | Unified row in home + transactions tab |
 
 ### Buttons
 
@@ -244,7 +342,9 @@ Minimum height: 48. Default padding: `22 × 14`.
 
 ### Bottom navigation
 
-Custom pill nav (not `BottomNavigationBar`): rounded `card`-radius surface, items use `AnimatedContainer` with accent-tinted fill when selected. Gradient FAB sits in the centre slot.
+Implemented inline in `screens/home/expense_home_page.dart` (not `BottomNavigationBar`): rounded `card`-radius surface container, five slots (Home · Transactions · **+ FAB** · Analytics · Settings), items use `AnimatedContainer` with accent-tinted fill when selected. The centre `_AddExpenseFab` uses a teal→cyan gradient with a soft primary glow and a breathing scale animation.
+
+Tab content switches via `AnimatedSwitcher` + `AppDurations.page` + `AppCurves.emphasized` in the same file.
 
 ### Dialogs & sheets
 
@@ -261,9 +361,10 @@ SnackbarHelper.showSuccess(context, 'Saved');
 SnackbarHelper.showError(context, error);
 SnackbarHelper.showWarning(context, 'Almost full');
 SnackbarHelper.showMessage(context, 'Info');
+SnackbarHelper.showWithUndo(context, message: 'Deleted', undoLabel: 'Undo', onUndo: () { ... });
 ```
 
-Top-anchored, spring-in, accent-bordered, 2.4s lifetime.
+Top-anchored overlay, spring-in, accent-bordered, ~2.4s lifetime (`showWithUndo` stays longer).
 
 ---
 
@@ -287,15 +388,24 @@ Top-anchored, spring-in, accent-bordered, 2.4s lifetime.
 
 ## Adding a new screen
 
-1. Scaffold with `backgroundColor: AppColors.background`.
-2. Compose with token-based widgets — never hardcode a hex, radius, duration, or font.
-3. Wrap content blocks in subtle `AppShadows.card` containers, never raw `Card` (the theme has the radius right, but `Container` gives you the border-and-shadow combo cleanly).
-4. Apply a one-shot entrance: `fadeIn + slideY` (page) at the outermost block.
-5. Use `SnackbarHelper` for all messaging, semantic variant matching the meaning.
-6. Run `flutter analyze`; the project should remain clean.
+1. Scaffold with `backgroundColor: AppColors.background` (or wrap in `SettingsSubpageScaffold` for settings sub-pages).
+2. Compose with token-based shared widgets from the tables above — never hardcode a hex, radius, duration, or font.
+3. Use `AnalyticsSectionCard`, `SettingsSection`, or `DetailSectionCard` for surfaces; fall back to the raw `Container` pattern only when nothing fits.
+4. Wire empty / loading / error through `states.dart` presets where applicable.
+5. Apply a one-shot entrance: `fadeIn + slideY` (page) at the outermost block — see `SettingsSubpageScaffold` for the canonical pattern.
+6. Use `SnackbarHelper` for all messaging, semantic variant matching the meaning.
+7. Run `flutter analyze`; the project should remain clean.
 
 ---
 
 ## Changing a token
 
 Every visual change should start in `lib/config/design_tokens.dart`. Updating a single value (e.g. nudging `AppRadii.card` from 20 → 24, or swapping `AppColors.primary`) propagates everywhere — including snackbars, FABs, charts, and segmented controls — because nothing else in the codebase hardcodes those values.
+
+---
+
+## Related docs
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — app structure, services, navigation
+- [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) — Postgres schema mind map
+- [auth0_setup.md](./auth0_setup.md) · [supabase_setup.md](./supabase_setup.md) — backend setup

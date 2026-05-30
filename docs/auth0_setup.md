@@ -1,5 +1,7 @@
 # Auth0 + Supabase setup
 
+See also: [supabase_setup.md](./supabase_setup.md), [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md), [ARCHITECTURE.md](./ARCHITECTURE.md).
+
 Authentication uses **Auth0 Universal Login**; expense data stays in **Supabase** with Row Level Security keyed by the Auth0 JWT `sub` claim.
 
 ## 1. Auth0 Dashboard
