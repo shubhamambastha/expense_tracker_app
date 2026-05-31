@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../components/dialogs/add_account_dialog.dart';
 import '../../components/transaction/account_chips_selector.dart';
+import '../../components/transaction/amount_numeric_keypad.dart';
 import '../../components/transaction/amount_section.dart';
 import '../../components/transaction/category_pills_selector.dart';
 import '../../components/transaction/income_category_pills_selector.dart';
@@ -93,7 +94,6 @@ class AddTransactionPage extends StatefulWidget {
 class _AddTransactionPageState extends State<AddTransactionPage> {
   late TransactionDraft _draft;
   final _amountController = TextEditingController();
-  final _amountFocus = FocusNode();
   final _merchantController = TextEditingController();
   final _merchantFocus = FocusNode();
   final _noteController = TextEditingController();
@@ -101,6 +101,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
 
   bool _detailsExpanded = true;
   bool _isBusy = false;
+  bool _amountKeypadOpen = true;
 
   @override
   void initState() {
@@ -109,11 +110,19 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     _amountController.addListener(_syncAmountToDraft);
     _merchantController.addListener(_syncMerchantToDraft);
     _noteController.addListener(_syncNoteToDraft);
+    _merchantFocus.addListener(_onMerchantFocusChanged);
+  }
+
+  void _onMerchantFocusChanged() {
+    if (_merchantFocus.hasFocus) {
+      _setAmountKeypadOpen(false);
+    }
   }
 
   void _hydrateDraft() {
     final currency = CurrencySettings.instance;
-    _draft = widget.initialDraft ??
+    _draft =
+        widget.initialDraft ??
         TransactionDraft(
           currencyCode: currency.currencyCode,
           accountId: widget.accounts.isEmpty ? null : widget.accounts.first.id,
@@ -139,7 +148,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     _amountController
       ..removeListener(_syncAmountToDraft)
       ..dispose();
-    _amountFocus.dispose();
+    _merchantFocus.removeListener(_onMerchantFocusChanged);
     _merchantController
       ..removeListener(_syncMerchantToDraft)
       ..dispose();
@@ -186,8 +195,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         _draft.categoryName ??= 'Transfer';
         _detailsExpanded = true;
         _draft.recurring = RecurringConfig();
-        if (_draft.transferToAccountId == null &&
-            widget.accounts.length > 1) {
+        if (_draft.transferToAccountId == null && widget.accounts.length > 1) {
           _draft.transferToAccountId = widget.accounts[1].id;
         }
       } else {
@@ -372,7 +380,13 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     SnackbarHelper.showSuccess(context, 'Parsed: $raw');
   }
 
+  void _setAmountKeypadOpen(bool open) {
+    if (_amountKeypadOpen == open) return;
+    setState(() => _amountKeypadOpen = open);
+  }
+
   void _openCurrencyPicker() {
+    _setAmountKeypadOpen(false);
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -406,8 +420,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                 title: Text(
                   option.name,
                   style: AppTextStyles.bodyLarge.copyWith(
-                    fontWeight:
-                        selected ? FontWeight.w800 : FontWeight.w600,
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                   ),
                 ),
                 subtitle: Text(option.code, style: AppTextStyles.caption),
@@ -437,7 +450,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
   bool _validate() {
     if ((_draft.amount ?? 0) <= 0) {
       SnackbarHelper.showWarning(context, 'Enter an amount greater than zero');
-      _amountFocus.requestFocus();
+      _setAmountKeypadOpen(true);
       return false;
     }
     if (_selectedAccount == null) {
@@ -493,8 +506,8 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         currencyCode: _draft.currencyCode,
       );
       _detailsExpanded = true;
+      _amountKeypadOpen = true;
     });
-    _amountFocus.requestFocus();
     _scrollController.animateTo(
       0,
       duration: AppDurations.page,
@@ -522,7 +535,8 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     return [
       AmountSection(
         controller: _amountController,
-        focusNode: _amountFocus,
+        keypadOpen: _amountKeypadOpen,
+        onKeypadOpenChanged: _setAmountKeypadOpen,
         accent: _accentColor(),
         onChangeCurrency: _openCurrencyPicker,
         helperText: 'Where did this money come from?',
@@ -605,8 +619,9 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           onPickStartDate: _pickStartDate,
           onPickEndDate: _pickEndDate,
           isIncome: true,
-          reminderHint:
-              IncomeFlowHelpers.recurringReminderHint(_draft.categoryName),
+          reminderHint: IncomeFlowHelpers.recurringReminderHint(
+            _draft.categoryName,
+          ),
         ),
       ),
     ];
@@ -616,7 +631,8 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     return [
       AmountSection(
         controller: _amountController,
-        focusNode: _amountFocus,
+        keypadOpen: _amountKeypadOpen,
+        onKeypadOpenChanged: _setAmountKeypadOpen,
         accent: _accentColor(),
         onChangeCurrency: _openCurrencyPicker,
       ),
@@ -699,7 +715,8 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     return [
       AmountSection(
         controller: _amountController,
-        focusNode: _amountFocus,
+        keypadOpen: _amountKeypadOpen,
+        onKeypadOpenChanged: _setAmountKeypadOpen,
         accent: AppColors.secondary,
         onChangeCurrency: _openCurrencyPicker,
         helperText: 'Move money between accounts',
@@ -788,28 +805,53 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         children: [
           TransactionAppBar(title: _appBarTitle, onMic: null),
           Expanded(
-            child: ListenableBuilder(
-              listenable: CategoryCatalog.instance,
-              builder: (context, _) {
-                return SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: sections,
-                  ),
-                );
-              },
-            )
-                .animate()
-                .fadeIn(duration: AppDurations.page)
-                .slideY(
-                  begin: 0.02,
-                  end: 0,
-                  duration: AppDurations.page,
-                  curve: AppCurves.spring,
-                ),
+            child:
+                ListenableBuilder(
+                      listenable: CategoryCatalog.instance,
+                      builder: (context, _) {
+                        return GestureDetector(
+                          behavior: HitTestBehavior.deferToChild,
+                          onTap: () {
+                            _setAmountKeypadOpen(false);
+                            FocusManager.instance.primaryFocus?.unfocus();
+                          },
+                          child: SingleChildScrollView(
+                            controller: _scrollController,
+                            physics: const BouncingScrollPhysics(),
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.xxl,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: sections,
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                    .animate()
+                    .fadeIn(duration: AppDurations.page)
+                    .slideY(
+                      begin: 0.02,
+                      end: 0,
+                      duration: AppDurations.page,
+                      curve: AppCurves.spring,
+                    ),
+          ),
+          AnimatedSize(
+            duration: AppDurations.short,
+            curve: AppCurves.spring,
+            alignment: Alignment.topCenter,
+            child: _amountKeypadOpen
+                ? AmountNumericKeypad(
+                    controller: _amountController,
+                    maxDecimalDigits: CurrencySettings.instance.decimalDigits,
+                    accent: _accentColor(),
+                    onDone: () => _setAmountKeypadOpen(false),
+                  )
+                : const SizedBox(width: double.infinity),
           ),
           StickyBottomCTA(
             isBusy: _isBusy,
@@ -861,8 +903,9 @@ class _QuickParser {
     required CategoryCatalog catalog,
   }) {
     final amountMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(raw);
-    final amount =
-        amountMatch == null ? null : double.tryParse(amountMatch.group(1)!);
+    final amount = amountMatch == null
+        ? null
+        : double.tryParse(amountMatch.group(1)!);
 
     final accountTokens = const ['using', 'via', 'with', 'on'];
     int? accountId;

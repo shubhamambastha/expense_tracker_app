@@ -1,28 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../config/design_tokens.dart';
 import '../../services/currency_settings.dart';
 
-/// Big, centred amount display. Tapping anywhere on the row focuses the
-/// underlying invisible text field so the numeric keypad opens instantly —
-/// that single tap is the difference between "fast" and "slow" expense
-/// entry in this screen.
-///
-/// The widget intentionally has no border / fill of its own — the amount is
-/// the hero element on the screen so it floats over the background.
+/// Hero amount display for add-transaction. Uses the parent-owned in-app
+/// [AmountNumericKeypad] instead of the system decimal pad.
 class AmountSection extends StatefulWidget {
   const AmountSection({
     super.key,
     required this.controller,
-    required this.focusNode,
+    required this.keypadOpen,
+    required this.onKeypadOpenChanged,
     required this.accent,
     required this.onChangeCurrency,
-    this.helperText = 'Tap to edit · numeric keypad',
+    this.helperText = 'Tap amount · Done on keypad when finished',
   });
 
   final TextEditingController controller;
-  final FocusNode focusNode;
+  final bool keypadOpen;
+  final ValueChanged<bool> onKeypadOpenChanged;
   final Color accent;
   final VoidCallback onChangeCurrency;
   final String helperText;
@@ -46,6 +42,10 @@ class _AmountSectionState extends State<AmountSection> {
 
   void _onChanged() => setState(() {});
 
+  void _toggleKeypad() {
+    widget.onKeypadOpenChanged(!widget.keypadOpen);
+  }
+
   @override
   Widget build(BuildContext context) {
     final currency = CurrencySettings.instance;
@@ -53,96 +53,64 @@ class _AmountSectionState extends State<AmountSection> {
     final displayValue = hasValue
         ? widget.controller.text
         : (currency.decimalDigits == 0 ? '0' : '0.00');
+    final valueStyle = AppTextStyles.displayLarge.copyWith(
+      fontSize: 56,
+      fontWeight: FontWeight.w800,
+      letterSpacing: -1.0,
+      color: hasValue
+          ? AppColors.textPrimary
+          : AppColors.textSecondary.withAlpha(160),
+    );
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => widget.focusNode.requestFocus(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.lg,
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  currency.symbol,
-                  style: AppTextStyles.headingMedium.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w700,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      displayValue,
-                      style: AppTextStyles.displayLarge.copyWith(
-                        fontSize: 56,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -1.0,
-                        color: hasValue
-                            ? AppColors.textPrimary
-                            : AppColors.textSecondary.withAlpha(160),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.lg,
+      ),
+      child: Column(
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _toggleKeypad,
+              borderRadius: AppRadii.cardRadius,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      currency.symbol,
+                      style: AppTextStyles.headingMedium.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                        height: 1.1,
                       ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _CurrencyPill(
-              code: currency.currencyCode,
-              accent: widget.accent,
-              onTap: widget.onChangeCurrency,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              widget.helperText,
-              style: AppTextStyles.caption,
-            ),
-            SizedBox(
-              height: 0,
-              width: 0,
-              child: Offstage(
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: widget.focusNode,
-                  autofocus: true,
-                  showCursor: false,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                    _SingleDotFormatter(),
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(displayValue, style: valueStyle),
+                      ),
+                    ),
                   ],
-                  textInputAction: TextInputAction.next,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _CurrencyPill(
+            code: currency.currencyCode,
+            accent: widget.accent,
+            onTap: widget.onChangeCurrency,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(widget.helperText, style: AppTextStyles.caption),
+        ],
       ),
     );
-  }
-}
-
-/// Prevents the user from entering multiple decimal separators.
-class _SingleDotFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final dots = '.'.allMatches(newValue.text).length;
-    if (dots <= 1) return newValue;
-    return oldValue;
   }
 }
 
@@ -187,11 +155,7 @@ class _CurrencyPill extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 14,
-              color: accent,
-            ),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: accent),
           ],
         ),
       ),
