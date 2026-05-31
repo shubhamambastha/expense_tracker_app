@@ -853,12 +853,19 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                   )
                 : const SizedBox(width: double.infinity),
           ),
-          StickyBottomCTA(
-            isBusy: _isBusy,
-            saveLabel: _saveLabel,
-            showSaveAndAddAnother: !_draft.isEditing,
-            onSave: () => _onSave(addAnother: false),
-            onSaveAndAddAnother: () => _onSave(addAnother: true),
+          AnimatedSize(
+            duration: AppDurations.short,
+            curve: AppCurves.spring,
+            alignment: Alignment.topCenter,
+            child: !_amountKeypadOpen
+                ? StickyBottomCTA(
+                    isBusy: _isBusy,
+                    saveLabel: _saveLabel,
+                    showSaveAndAddAnother: !_draft.isEditing,
+                    onSave: () => _onSave(addAnother: false),
+                    onSaveAndAddAnother: () => _onSave(addAnother: true),
+                  )
+                : const SizedBox(width: double.infinity),
           ),
         ],
       ),
