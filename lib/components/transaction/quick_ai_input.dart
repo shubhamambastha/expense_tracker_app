@@ -69,8 +69,17 @@ class _QuickAiInputState extends State<QuickAiInput> {
           Expanded(
             child: TextField(
               controller: _controller,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _submit(),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {
+                _submit();
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
+              onEditingComplete: () {
+                _submit();
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
+              onTapOutside: (_) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,

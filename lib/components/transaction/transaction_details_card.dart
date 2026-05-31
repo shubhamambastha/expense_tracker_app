@@ -150,7 +150,10 @@ class _Header extends StatelessWidget {
                       controller: merchantController,
                       focusNode: merchantFocus,
                       textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => merchantFocus?.unfocus(),
+                      onEditingComplete: () => merchantFocus?.unfocus(),
+                      onTapOutside: (_) => merchantFocus?.unfocus(),
                       style: AppTextStyles.bodyLarge.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -222,9 +225,15 @@ class _ExpandedBody extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: noteController,
-            minLines: 1,
-            maxLines: 3,
+            maxLines: 1,
+            textInputAction: TextInputAction.done,
             textCapitalization: TextCapitalization.sentences,
+            onSubmitted: (_) =>
+                FocusManager.instance.primaryFocus?.unfocus(),
+            onEditingComplete: () =>
+                FocusManager.instance.primaryFocus?.unfocus(),
+            onTapOutside: (_) =>
+                FocusManager.instance.primaryFocus?.unfocus(),
             style: AppTextStyles.bodyMedium,
             decoration: InputDecoration(
               hintText: noteHintText,

@@ -75,7 +75,10 @@ class SourcePayerField extends StatelessWidget {
                       controller: controller,
                       focusNode: focusNode,
                       textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => focusNode.unfocus(),
+                      onEditingComplete: () => focusNode.unfocus(),
+                      onTapOutside: (_) => focusNode.unfocus(),
                       style: AppTextStyles.bodyLarge.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
