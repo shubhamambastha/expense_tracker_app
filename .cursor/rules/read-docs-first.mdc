@@ -1,0 +1,31 @@
+---
+description: Read project docs in docs/ before planning or editing code
+alwaysApply: true
+---
+
+# Read docs before changing code
+
+Before planning, implementing, or refactoring anything in this repo, read the relevant files under `docs/`:
+
+| When working on… | Read first |
+| --- | --- |
+| Any structural or feature change | `docs/ARCHITECTURE.md` |
+| UI, styling, widgets, tokens | `docs/DESIGN.md` |
+| Database, SQL, models, Supabase | `docs/DATABASE_SCHEMA.md` |
+| Auth0 login / callbacks | `docs/auth0_setup.md` |
+| Supabase setup, RLS, migrations | `docs/supabase_setup.md` |
+
+## Workflow
+
+1. Identify which doc(s) apply to the task.
+2. Read them (use the Read tool — do not guess from memory).
+3. Align the change with conventions in those docs (layers, tokens, schema, RLS).
+4. If the change contradicts a doc, update the doc in the same PR/session.
+
+## Do not
+
+- Hardcode colors, radii, or durations — follow `docs/DESIGN.md` and `lib/config/design_tokens.dart`.
+- Add tables or columns without checking `docs/DATABASE_SCHEMA.md` and `sql/`.
+- Bypass `AuthService` / `requesting_user_id()` patterns documented in architecture and setup docs.
+
+Entry index: root `README.md` links all docs.

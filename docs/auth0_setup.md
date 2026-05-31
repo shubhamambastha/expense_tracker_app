@@ -12,10 +12,10 @@ Authentication uses **Auth0 Universal Login**; expense data stays in **Supabase*
 
 ```
 https://YOUR_DOMAIN/android/com.example.expense_tracker_app/callback
-https://YOUR_DOMAIN/ios/com.example.expenseTrackerApp/callback
-com.example.expenseTrackerApp://YOUR_DOMAIN/ios/com.example.expenseTrackerApp/callback
-https://YOUR_DOMAIN/macos/com.example.expenseTrackerApp/callback
-com.example.expenseTrackerApp://YOUR_DOMAIN/macos/com.example.expenseTrackerApp/callback
+https://YOUR_DOMAIN/ios/com.shubhamambastha.expensetracker/callback
+com.shubhamambastha.expensetracker://YOUR_DOMAIN/ios/com.shubhamambastha.expensetracker/callback
+https://YOUR_DOMAIN/macos/com.shubhamambastha.expensetracker/callback
+com.shubhamambastha.expensetracker://YOUR_DOMAIN/macos/com.shubhamambastha.expensetracker/callback
 ```
 
 Replace `YOUR_DOMAIN` with your tenant host (e.g. `dev-abc123.us.auth0.com`).
@@ -41,7 +41,7 @@ Deploy the action and add it to the Login flow.
 
 ```bash
 cp config.dev.json.example config.dev.json
-# Fill SUPABASE_URL, SUPABASE_ANON_KEY, AUTH0_DOMAIN, AUTH0_CLIENT_ID
+# Fill SUPABASE_URL, SUPABASE_ANON_KEY, AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CALLBACK_SCHEME
 python3 scripts/define_from_json.py config.dev.json run
 ```
 
@@ -54,12 +54,25 @@ AUTH0_DOMAIN=dev-abc123.us.auth0.com
 
 ## 4. iOS / macOS callbacks (default: custom URL scheme)
 
-The app uses a **custom URL scheme** on iOS/macOS (`com.example.expenseTrackerApp`) so login works without Associated Domains. Ensure this URL is in Auth0 **Allowed Callback URLs** and **Allowed Logout URLs**:
+The app uses a **custom URL scheme** on iOS/macOS (`com.shubhamambastha.expensetracker`, same as `AUTH0_CALLBACK_SCHEME` in `config.dev.json`) so login works without Associated Domains. It must match `ios/Runner/Info.plist` and `macos/Runner/Info.plist` (`CFBundleURLSchemes` under the `auth0` entry). Ensure these URLs are in Auth0 **Allowed Callback URLs** and **Allowed Logout URLs**:
 
 ```
-com.example.expenseTrackerApp://YOUR_DOMAIN/ios/com.example.expenseTrackerApp/callback
-com.example.expenseTrackerApp://YOUR_DOMAIN/macos/com.example.expenseTrackerApp/callback
+com.shubhamambastha.expensetracker://YOUR_DOMAIN/ios/com.shubhamambastha.expensetracker/callback
+com.shubhamambastha.expensetracker://YOUR_DOMAIN/macos/com.shubhamambastha.expensetracker/callback
 ```
+
+If you change the iOS bundle identifier in Xcode, update the scheme, plists, `AUTH0_CALLBACK_SCHEME`, and Auth0 dashboard URLs together.
+
+**Callback not returning to the app?** Checklist:
+
+1. Auth0 **Allowed Callback URLs** and **Allowed Logout URLs** include the exact URLs (comma-separated), e.g. for tenant `dev-0555hmyxvhdoixcw.us.auth0.com`:
+   ```
+   com.shubhamambastha.expensetracker://dev-0555hmyxvhdoixcw.us.auth0.com/ios/com.shubhamambastha.expensetracker/callback
+   ```
+2. `config.dev.json` has `AUTH0_CALLBACK_SCHEME` matching `ios/Runner/Info.plist` (`CFBundleURLSchemes` under `auth0`).
+3. Run via `python3 scripts/define_from_json.py config.dev.json run` so `--dart-define` values are applied (plain `flutter run` omits them).
+4. Delete the app from the simulator/device and reinstall after changing schemes.
+5. Remove old `com.example.expenseTrackerApp://…` URLs from Auth0 only after the new URLs work (keeping both temporarily is fine).
 
 (Replace `YOUR_DOMAIN` with your tenant host, e.g. `dev-0555hmyxvhdoixcw.us.auth0.com` — must end in `.com`, not `.col`.)
 
@@ -68,7 +81,7 @@ com.example.expenseTrackerApp://YOUR_DOMAIN/macos/com.example.expenseTrackerApp/
 Only if you want `useHTTPS: true` (no “Open in App” prompt):
 
 1. Xcode → **Runner** → **Signing & Capabilities** → **Associated Domains** → `webcredentials:YOUR_DOMAIN`
-2. Auth0 → **Advanced** → **Device Settings** → Apple Team ID + bundle ID
+2. Auth0 → **Advanced** → **Device Settings** → Apple Team ID + bundle ID (`com.shubhamambastha.expensetracker` on iOS)
 3. Run with `--dart-define=AUTH0_USE_HTTPS=true`
 
 Without step 1, HTTPS login fails with “not associated with domain”.

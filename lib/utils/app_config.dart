@@ -7,10 +7,10 @@ class AppConfig {
   static const String auth0Domain = String.fromEnvironment('AUTH0_DOMAIN');
   static const String auth0ClientId = String.fromEnvironment('AUTH0_CLIENT_ID');
 
-  /// Custom URL scheme for iOS/macOS Auth0 callbacks (must match bundle ID).
+  /// Custom URL scheme for iOS/macOS Auth0 callbacks (must match Info.plist + Auth0 URLs).
   static const String auth0CallbackScheme = String.fromEnvironment(
     'AUTH0_CALLBACK_SCHEME',
-    defaultValue: 'com.example.expenseTrackerApp',
+    defaultValue: 'com.shubhamambastha.expensetracker',
   );
 
   /// Set true only after configuring Associated Domains (webcredentials) in Xcode.

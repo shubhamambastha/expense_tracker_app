@@ -35,7 +35,7 @@
 			<string>auth0</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.example.expenseTrackerApp</string>
+				<string>com.shubhamambastha.expensetracker</string>
 			</array>
 		</dict>
 	</array>

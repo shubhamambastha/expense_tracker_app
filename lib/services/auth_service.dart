@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/app_session.dart';
 import '../utils/app_config.dart';
+import '../utils/auth0_urls.dart';
 
 /// Auth0 Universal Login — session storage and token access for Supabase.
 class AuthService {
@@ -80,12 +81,16 @@ class AuthService {
     return defaultTargetPlatform == TargetPlatform.android;
   }
 
+  /// Explicit redirect for iOS/macOS custom scheme (must match Auth0 dashboard + Info.plist).
+  String? get _customSchemeRedirectUrl =>
+      Auth0Urls.customSchemeCallback(defaultTargetPlatform);
+
   Future<AppSession> login() async {
     try {
       final webAuth = _webAuthentication();
       final creds = _useHttpsCallbacks
           ? await webAuth.login(useHTTPS: true)
-          : await webAuth.login();
+          : await webAuth.login(redirectUrl: _customSchemeRedirectUrl);
       final appSession = _sessionFromCredentials(creds);
       session.value = appSession;
       return appSession;
@@ -104,7 +109,7 @@ class AuthService {
       if (_useHttpsCallbacks) {
         await webAuth.logout(useHTTPS: true);
       } else {
-        await webAuth.logout();
+        await webAuth.logout(returnTo: _customSchemeRedirectUrl);
       }
     } on WebAuthenticationException {
       // Still clear local session if browser logout fails.
