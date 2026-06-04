@@ -122,7 +122,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
   Widget _buildBottomBarItem({
     required IconData icon,
-    required String label,
+    required String semanticsLabel,
     required int index,
   }) {
     final isSelected = _selectedIndex == index;
@@ -130,39 +130,24 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
         isSelected ? AppColors.primary : AppColors.textSecondary;
 
     return Expanded(
-      child: InkWell(
-        onTap: () => _onNavItemTapped(index),
-        borderRadius: AppRadii.buttonRadius,
-        child: AnimatedContainer(
-          duration: AppDurations.micro,
-          curve: AppCurves.spring,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xs,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary.withAlpha(28)
-                : Colors.transparent,
-            borderRadius: AppRadii.buttonRadius,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: fg, size: 22),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.caption.copyWith(
-                  color: fg,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
+      child: Semantics(
+        button: true,
+        label: semanticsLabel,
+        selected: isSelected,
+        child: InkWell(
+          onTap: () => _onNavItemTapped(index),
+          borderRadius: AppRadii.buttonRadius,
+          child: SizedBox(
+            height: 52,
+            child: Center(
+              child: Icon(
+                icon,
+                size: 28,
+                color: fg,
+                fill: isSelected ? 1.0 : 0.0,
+                weight: isSelected ? 600 : 400,
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -852,47 +837,66 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
         top: false,
         minimum: const EdgeInsets.fromLTRB(
           AppSpacing.md,
-          0,
+          AppSpacing.lg,
           AppSpacing.md,
           AppSpacing.sm,
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadii.card),
-            border: Border.all(color: AppColors.border),
-            boxShadow: AppShadows.card,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildBottomBarItem(
-                icon: Icons.dashboard_rounded,
-                label: 'Home',
-                index: 0,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadii.card),
+                border: Border.all(color: AppColors.border),
+                boxShadow: AppShadows.card,
               ),
-              _buildBottomBarItem(
-                icon: Icons.list_alt_rounded,
-                label: 'Transactions',
-                index: 1,
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        _buildBottomBarItem(
+                          icon: Icons.dashboard_rounded,
+                          semanticsLabel: 'Home',
+                          index: 0,
+                        ),
+                        _buildBottomBarItem(
+                          icon: Icons.list_alt_rounded,
+                          semanticsLabel: 'Transactions',
+                          index: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Clears the floating add button between Transactions and Analytics.
+                  const SizedBox(width: 88),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        _buildBottomBarItem(
+                          icon: Icons.insights_rounded,
+                          semanticsLabel: 'Analytics',
+                          index: 3,
+                        ),
+                        _buildBottomBarItem(
+                          icon: Icons.settings_rounded,
+                          semanticsLabel: 'Settings',
+                          index: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              _AddExpenseFab(onTap: () => _openAddTransactionPage()),
-              _buildBottomBarItem(
-                icon: Icons.insights_rounded,
-                label: 'Analytics',
-                index: 3,
-              ),
-              _buildBottomBarItem(
-                icon: Icons.settings_rounded,
-                label: 'Settings',
-                index: 4,
-              ),
-            ],
-          ),
+            ),
+            Positioned(
+              top: -30,
+              child: _AddExpenseFab(onTap: () => _openAddTransactionPage()),
+            ),
+          ],
         ),
       ),
     );
@@ -906,31 +910,39 @@ class _AddExpenseFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppRadii.buttonRadius,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, AppColors.secondary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: AppRadii.buttonRadius,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withAlpha(80),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+    return Semantics(
+      button: true,
+      label: 'Add transaction',
+      child: Material(
+        color: Colors.transparent,
+        elevation: 8,
+        shadowColor: AppColors.primary.withAlpha(120),
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Ink(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.secondary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(
+                color: AppColors.background,
+                width: 3,
+              ),
+              boxShadow: AppShadows.elevated,
             ),
-          ],
-        ),
-        child: const Icon(
-          Icons.add_rounded,
-          color: Color(0xFF002820),
-          size: 26,
+            child: const Icon(
+              Icons.add_rounded,
+              color: Color(0xFF002820),
+              size: 32,
+            ),
+          ),
         ),
       ),
     )
