@@ -1,49 +1,40 @@
 PODS:
-  - app_links (1.0.0):
+  - Auth0 (2.18.0):
+    - JWTDecode (= 3.3.0)
+    - SimpleKeychain (= 1.3.0)
+  - auth0_flutter (2.1.0):
+    - Auth0 (= 2.18.0)
+    - Flutter
     - FlutterMacOS
+    - JWTDecode (= 3.3.0)
+    - SimpleKeychain (= 1.3.0)
   - FlutterMacOS (1.0.0)
-  - shared_preferences_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
-  - sign_in_with_apple (0.0.1):
-    - Flutter
-    - FlutterMacOS
-  - url_launcher_macos (0.0.1):
-    - FlutterMacOS
-  - webview_flutter_wkwebview (0.0.1):
-    - Flutter
-    - FlutterMacOS
+  - JWTDecode (3.3.0)
+  - SimpleKeychain (1.3.0)
 
 DEPENDENCIES:
-  - app_links (from `Flutter/ephemeral/.symlinks/plugins/app_links/macos`)
+  - auth0_flutter (from `Flutter/ephemeral/.symlinks/plugins/auth0_flutter/darwin`)
   - FlutterMacOS (from `Flutter/ephemeral`)
-  - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
-  - sign_in_with_apple (from `Flutter/ephemeral/.symlinks/plugins/sign_in_with_apple/darwin`)
-  - url_launcher_macos (from `Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos`)
-  - webview_flutter_wkwebview (from `Flutter/ephemeral/.symlinks/plugins/webview_flutter_wkwebview/darwin`)
+
+SPEC REPOS:
+  trunk:
+    - Auth0
+    - JWTDecode
+    - SimpleKeychain
 
 EXTERNAL SOURCES:
-  app_links:
-    :path: Flutter/ephemeral/.symlinks/plugins/app_links/macos
+  auth0_flutter:
+    :path: Flutter/ephemeral/.symlinks/plugins/auth0_flutter/darwin
   FlutterMacOS:
     :path: Flutter/ephemeral
-  shared_preferences_foundation:
-    :path: Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin
-  sign_in_with_apple:
-    :path: Flutter/ephemeral/.symlinks/plugins/sign_in_with_apple/darwin
-  url_launcher_macos:
-    :path: Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos
-  webview_flutter_wkwebview:
-    :path: Flutter/ephemeral/.symlinks/plugins/webview_flutter_wkwebview/darwin
 
 SPEC CHECKSUMS:
-  app_links: 9028728e32c83a0831d9db8cf91c526d16cc5468
+  Auth0: ddc5c6c7eb17e2484fd8d50a15d99b657c36c72c
+  auth0_flutter: 53b73d41060eda0eb0051c7fe8b7d981d921d263
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
-  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
-  sign_in_with_apple: 5e34677a4e74c5f42760f41b3bbe05343e84d171
-  url_launcher_macos: f87a979182d112f911de6820aefddaf56ee9fbfd
-  webview_flutter_wkwebview: 8ebf4fded22593026f7dbff1fbff31ea98573c8d
+  JWTDecode: 1ca6f765844457d0dd8690436860fecee788f631
+  SimpleKeychain: 9c0f3ca8458fed74e01db864d181c5cbe278603e
 
-PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
+PODFILE CHECKSUM: 346bfb2deb41d4a6ebd6f6799f92188bde2d246f
 
 COCOAPODS: 1.16.2

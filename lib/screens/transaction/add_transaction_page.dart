@@ -2,18 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../components/dialogs/add_account_dialog.dart';
-import '../../components/transaction/account_chips_selector.dart';
 import '../../components/transaction/amount_numeric_keypad.dart';
 import '../../components/transaction/amount_section.dart';
-import '../../components/transaction/category_pills_selector.dart';
-import '../../components/transaction/income_category_pills_selector.dart';
-import '../../components/transaction/quick_ai_input.dart';
-import '../../components/transaction/recent_suggestions_section.dart';
-import '../../components/transaction/recurring_payment_section.dart';
-import '../../components/transaction/source_payer_field.dart';
 import '../../components/transaction/sticky_bottom_cta.dart';
+import '../../components/transaction/transaction_advanced_section.dart';
 import '../../components/transaction/transaction_app_bar.dart';
-import '../../components/transaction/transaction_details_card.dart';
+import '../../components/transaction/transaction_primary_fields.dart';
 import '../../components/transaction/transaction_type_selector.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
@@ -22,7 +16,7 @@ import '../../models/transaction_draft.dart';
 import '../../services/category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../services/income_category_catalog.dart';
-import '../../components/transaction/transaction_subtype_chips.dart';
+import '../../utils/emi_schedule_helpers.dart';
 import '../../utils/income_flow_helpers.dart';
 import '../../utils/transaction_subtype_helpers.dart';
 import '../../utils/snackbar_helper.dart';
@@ -99,7 +93,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
   final _noteController = TextEditingController();
   final _scrollController = ScrollController();
 
-  bool _detailsExpanded = true;
+  bool _advancedExpanded = false;
   bool _isBusy = false;
   bool _amountKeypadOpen = true;
 
@@ -186,21 +180,18 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
       _draft.kind = kind;
       if (kind == TransactionKind.income) {
         _draft.categoryName ??= IncomeFlowHelpers.defaultCategory;
-        _detailsExpanded = false;
         _draft.recurring = IncomeFlowHelpers.applyCategoryRecurringDefaults(
           categoryName: _draft.categoryName,
           current: _draft.recurring,
         );
       } else if (kind == TransactionKind.transfer) {
         _draft.categoryName ??= 'Transfer';
-        _detailsExpanded = true;
         _draft.recurring = RecurringConfig();
         if (_draft.transferToAccountId == null && widget.accounts.length > 1) {
           _draft.transferToAccountId = widget.accounts[1].id;
         }
       } else {
         _draft.categoryName ??= _defaultCategory();
-        _detailsExpanded = true;
       }
     });
   }
@@ -274,6 +265,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
   }
 
   Future<void> _pickTransactionDate() {
+    _setAmountKeypadOpen(false);
     return _pickDate(
       initial: _draft.date,
       onPicked: (value) => setState(() => _draft.date = value),
@@ -303,22 +295,6 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-  void _applyQuickDate(DateQuickOption option) {
-    final now = DateTime.now();
-    switch (option) {
-      case DateQuickOption.today:
-        setState(() => _draft.date = DateTime(now.year, now.month, now.day));
-        break;
-      case DateQuickOption.yesterday:
-        final y = now.subtract(const Duration(days: 1));
-        setState(() => _draft.date = DateTime(y.year, y.month, y.day));
-        break;
-      case DateQuickOption.pick:
-        _pickTransactionDate();
-        break;
-    }
-  }
-
   void _applySuggestion(RecentSuggestion suggestion) {
     setState(() {
       _merchantController.text = suggestion.merchant;
@@ -344,13 +320,6 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           )
         : suggestion.merchant;
     SnackbarHelper.showMessage(context, 'Filled from $label');
-  }
-
-  void _applyPayerChip(String payer) {
-    setState(() {
-      _merchantController.text = payer;
-      _draft.merchant = payer;
-    });
   }
 
   void _handleQuickParse(String raw) {
@@ -505,7 +474,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         categoryName: _draft.categoryName,
         currencyCode: _draft.currencyCode,
       );
-      _detailsExpanded = true;
+      _advancedExpanded = false;
       _amountKeypadOpen = true;
     });
     _scrollController.animateTo(
@@ -523,15 +492,14 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     return CategoryCatalog.instance.colorForName(_draft.categoryName!);
   }
 
-  List<String> _payerSuggestionsForCategory() {
-    return IncomeFlowHelpers.filterPayerSuggestions(
-      categoryName: _draft.categoryName,
-      allPayers: widget.recentPayers,
-    );
-  }
+  List<Widget> _buildSections() {
+    final isIncome = _draft.isIncome;
+    final helperText = switch (_draft.kind) {
+      TransactionKind.income => 'Where did this money come from?',
+      TransactionKind.transfer => 'Move money between accounts',
+      TransactionKind.expense => 'Tap amount · Done on keypad when finished',
+    };
 
-  List<Widget> _buildIncomeSections() {
-    final incomeSuggestions = widget.recentIncomeSuggestions;
     return [
       AmountSection(
         controller: _amountController,
@@ -539,7 +507,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         onKeypadOpenChanged: _setAmountKeypadOpen,
         accent: _accentColor(),
         onChangeCurrency: _openCurrencyPicker,
-        helperText: 'Where did this money come from?',
+        helperText: helperText,
       ),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -548,12 +516,49 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           onChanged: _onKindChanged,
         ),
       ),
-      const SizedBox(height: AppSpacing.lg),
-      const _SectionHeading(title: 'Income category'),
-      const SizedBox(height: AppSpacing.sm),
-      IncomeRefundChip(
-        selectedCategory: _draft.categoryName,
-        onSelected: () {
+      TransactionPrimaryFields(
+        kind: _draft.kind,
+        merchantController: _merchantController,
+        merchantFocus: _merchantFocus,
+        categoryName: _draft.categoryName,
+        accountId: _draft.accountId,
+        transferToAccountId: _draft.transferToAccountId,
+        date: _draft.date,
+        accounts: widget.accounts,
+        recentCategoryNames: widget.recentCategoryNames,
+        recentIncomeCategoryNames: widget.recentIncomeCategoryNames,
+        onCategoryChanged: _onCategoryChanged,
+        onAccountChanged: _onAccountChanged,
+        onTransferToChanged: _onTransferToChanged,
+        onPickDate: _pickTransactionDate,
+        onAddAccount: widget.onAddAccount,
+      ),
+      TransactionAdvancedSection(
+        expanded: _advancedExpanded,
+        onExpandToggle: () =>
+            setState(() => _advancedExpanded = !_advancedExpanded),
+        kind: _draft.kind,
+        categoryName: _draft.categoryName,
+        amount: _draft.amount,
+        recurring: _draft.recurring,
+        noteController: _noteController,
+        onRecurringChanged: _onRecurringChanged,
+        onPickStartDate: _pickStartDate,
+        onPickEndDate: _pickEndDate,
+        onSubtypeSelected: (label) {
+          setState(() {
+            TransactionSubtypeHelpers.applyExpenseSubtype(_draft, label);
+            if (TransactionSubtypeHelpers.isEmiCategory(label)) {
+              _draft.recurring = _draft.recurring.copyWith(
+                endDate: EmiScheduleHelpers.endDateFromTenure(
+                  startDate: _draft.recurring.startDate,
+                  tenureMonths: 12,
+                ),
+              );
+            }
+          });
+        },
+        onIncomeRefundSelected: () {
           setState(() {
             TransactionSubtypeHelpers.applyIncomeRefund(_draft);
             _applySalaryAutofillIfNeeded(
@@ -561,207 +566,19 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
             );
           });
         },
-      ),
-      const SizedBox(height: AppSpacing.sm),
-      IncomeCategoryPillsSelector(
-        selectedName: _draft.categoryName,
-        prioritisedNames: widget.recentIncomeCategoryNames,
-        onChanged: _onCategoryChanged,
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      const _SectionHeading(title: 'Deposit to'),
-      const SizedBox(height: AppSpacing.sm),
-      AccountChipsSelector(
-        accounts: widget.accounts,
-        selectedAccountId: _draft.accountId,
-        onChanged: _onAccountChanged,
-        onAddAccount: widget.onAddAccount,
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      SourcePayerField(
-        label: IncomeFlowHelpers.payerFieldLabel(_draft.categoryName),
-        hintText: IncomeFlowHelpers.payerFieldHint(_draft.categoryName),
-        controller: _merchantController,
-        focusNode: _merchantFocus,
-        recentPayers: _payerSuggestionsForCategory(),
-        onPayerSelected: _applyPayerChip,
-      ),
-      if (incomeSuggestions.isNotEmpty) ...[
-        const SizedBox(height: AppSpacing.lg),
-        RecentSuggestionsSection(
-          suggestions: incomeSuggestions,
-          title: 'Recent income',
-          showCategoryPrefix: true,
-          onTap: _applySuggestion,
-        ),
-      ],
-      const SizedBox(height: AppSpacing.lg),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: TransactionDetailsCard(
-          layout: TransactionDetailsLayout.incomeSecondaryOnly,
-          expanded: _detailsExpanded,
-          onExpandToggle: () =>
-              setState(() => _detailsExpanded = !_detailsExpanded),
-          date: _draft.date,
-          onPickDate: _pickTransactionDate,
-          onQuickDate: _applyQuickDate,
-          noteController: _noteController,
-          noteHintText: IncomeFlowHelpers.noteFieldHint(_draft.categoryName),
-        ),
-      ),
-      const SizedBox(height: AppSpacing.md),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: RecurringPaymentSection(
-          config: _draft.recurring,
-          onChanged: _onRecurringChanged,
-          onPickStartDate: _pickStartDate,
-          onPickEndDate: _pickEndDate,
-          isIncome: true,
-          reminderHint: IncomeFlowHelpers.recurringReminderHint(
-            _draft.categoryName,
-          ),
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> _buildExpenseSections() {
-    return [
-      AmountSection(
-        controller: _amountController,
-        keypadOpen: _amountKeypadOpen,
-        onKeypadOpenChanged: _setAmountKeypadOpen,
-        accent: _accentColor(),
-        onChangeCurrency: _openCurrencyPicker,
-      ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: TransactionTypeSelector(
-          selected: _draft.kind,
-          onChanged: _onKindChanged,
-        ),
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      const _SectionHeading(title: 'Quick type'),
-      const SizedBox(height: AppSpacing.sm),
-      ExpenseSubtypeChips(
-        selectedCategory: _draft.categoryName,
-        onSubtypeSelected: (label) {
-          setState(() {
-            TransactionSubtypeHelpers.applyExpenseSubtype(_draft, label);
-          });
-        },
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      const _SectionHeading(title: 'Category'),
-      const SizedBox(height: AppSpacing.sm),
-      CategoryPillsSelector(
-        selectedName: _draft.categoryName,
-        prioritisedNames: widget.recentCategoryNames,
-        onChanged: _onCategoryChanged,
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      const _SectionHeading(title: 'Account'),
-      const SizedBox(height: AppSpacing.sm),
-      AccountChipsSelector(
-        accounts: widget.accounts,
-        selectedAccountId: _draft.accountId,
-        onChanged: _onAccountChanged,
-        onAddAccount: widget.onAddAccount,
-      ),
-      if (widget.recentSuggestions.isNotEmpty) ...[
-        const SizedBox(height: AppSpacing.lg),
-        RecentSuggestionsSection(
-          suggestions: widget.recentSuggestions,
-          onTap: _applySuggestion,
-        ),
-      ],
-      const SizedBox(height: AppSpacing.lg),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: TransactionDetailsCard(
-          expanded: _detailsExpanded,
-          onExpandToggle: () =>
-              setState(() => _detailsExpanded = !_detailsExpanded),
-          merchantController: _merchantController,
-          merchantFocus: _merchantFocus,
-          date: _draft.date,
-          onPickDate: _pickTransactionDate,
-          onQuickDate: _applyQuickDate,
-          noteController: _noteController,
-        ),
-      ),
-      const SizedBox(height: AppSpacing.md),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: RecurringPaymentSection(
-          config: _draft.recurring,
-          onChanged: _onRecurringChanged,
-          onPickStartDate: _pickStartDate,
-          onPickEndDate: _pickEndDate,
-        ),
-      ),
-      const SizedBox(height: AppSpacing.md),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: QuickAiInput(onParse: _handleQuickParse),
-      ),
-    ];
-  }
-
-  List<Widget> _buildTransferSections() {
-    return [
-      AmountSection(
-        controller: _amountController,
-        keypadOpen: _amountKeypadOpen,
-        onKeypadOpenChanged: _setAmountKeypadOpen,
-        accent: AppColors.secondary,
-        onChangeCurrency: _openCurrencyPicker,
-        helperText: 'Move money between accounts',
-      ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: TransactionTypeSelector(
-          selected: _draft.kind,
-          onChanged: _onKindChanged,
-        ),
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      const _SectionHeading(title: 'From account'),
-      const SizedBox(height: AppSpacing.sm),
-      AccountChipsSelector(
-        accounts: widget.accounts,
-        selectedAccountId: _draft.accountId,
-        onChanged: _onAccountChanged,
-        onAddAccount: widget.onAddAccount,
-        heading: 'From account',
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      const _SectionHeading(title: 'To account'),
-      const SizedBox(height: AppSpacing.sm),
-      AccountChipsSelector(
-        accounts: widget.accounts,
-        selectedAccountId: _draft.transferToAccountId,
-        onChanged: _onTransferToChanged,
-        onAddAccount: widget.onAddAccount,
-        heading: 'To account',
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: TransactionDetailsCard(
-          layout: TransactionDetailsLayout.incomeSecondaryOnly,
-          expanded: _detailsExpanded,
-          onExpandToggle: () =>
-              setState(() => _detailsExpanded = !_detailsExpanded),
-          date: _draft.date,
-          onPickDate: _pickTransactionDate,
-          onQuickDate: _applyQuickDate,
-          noteController: _noteController,
-          noteHintText: 'Optional note',
-        ),
+        onQuickParse: _handleQuickParse,
+        onSaveAndAddAnother: () => _onSave(addAnother: true),
+        onSuggestionTap: _applySuggestion,
+        recentSuggestions: widget.recentSuggestions,
+        recentIncomeSuggestions: widget.recentIncomeSuggestions,
+        isBusy: _isBusy,
+        showSaveAndAddAnother: !_draft.isEditing,
+        noteHintText: isIncome
+            ? IncomeFlowHelpers.noteFieldHint(_draft.categoryName)
+            : 'Add a note (optional)',
+        reminderHint: isIncome
+            ? IncomeFlowHelpers.recurringReminderHint(_draft.categoryName)
+            : null,
       ),
     ];
   }
@@ -792,11 +609,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final sections = switch (_draft.kind) {
-      TransactionKind.income => _buildIncomeSections(),
-      TransactionKind.transfer => _buildTransferSections(),
-      TransactionKind.expense => _buildExpenseSections(),
-    };
+    final sections = _buildSections();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -821,7 +634,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                             keyboardDismissBehavior:
                                 ScrollViewKeyboardDismissBehavior.onDrag,
                             padding: const EdgeInsets.only(
-                              bottom: AppSpacing.xxl,
+                              bottom: AppSpacing.md,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -840,6 +653,11 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                       curve: AppCurves.spring,
                     ),
           ),
+          StickyBottomCTA(
+            isBusy: _isBusy,
+            saveLabel: _saveLabel,
+            onSave: () => _onSave(addAnother: false),
+          ),
           AnimatedSize(
             duration: AppDurations.short,
             curve: AppCurves.spring,
@@ -853,56 +671,12 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                   )
                 : const SizedBox(width: double.infinity),
           ),
-          AnimatedSize(
-            duration: AppDurations.short,
-            curve: AppCurves.spring,
-            alignment: Alignment.topCenter,
-            child: !_amountKeypadOpen
-                ? StickyBottomCTA(
-                    isBusy: _isBusy,
-                    saveLabel: _saveLabel,
-                    showSaveAndAddAnother: !_draft.isEditing,
-                    onSave: () => _onSave(addAnother: false),
-                    onSaveAndAddAnother: () => _onSave(addAnother: true),
-                  )
-                : const SizedBox(width: double.infinity),
-          ),
         ],
       ),
     );
   }
 }
 
-class _SectionHeading extends StatelessWidget {
-  const _SectionHeading({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: AppTextStyles.label.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Tiny in-file parser for the AI quick-entry input. Lives here (not in
-/// services) because it's UX shorthand, not a service. Easy to lift into a
-/// dedicated parser once the real implementation grows. Pattern is roughly:
-///
-///   `[amount] [merchant words] (using|via|with|on) [account]`
 class _QuickParser {
   static _QuickParseResult parse(
     String raw, {

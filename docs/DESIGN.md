@@ -58,7 +58,7 @@ Token classes are private-constructor (`AppColors._()`) static-only namespaces. 
 | --- | --- | --- |
 | Home | `screens/home/expense_home_page.dart` | `CompactHeader`, `HeroOverviewCard`, dashboard sections, `states.dart` |
 | Transactions | `components/home/transactions_content.dart` | `TransactionListItem`, filters, `EmptyStatePresets` |
-| Add (+ FAB) | `screens/transaction/add_transaction_page.dart` | Form inputs, category/account chips, `StickyBottomCTA` |
+| Add (+ FAB) | `screens/transaction/add_transaction_page.dart` | `AmountSection`, `TransactionPrimaryFields`, `TransactionAdvancedSection`, `StickyBottomCTA` |
 | Analytics | `screens/analytics/analytics_page.dart` | `AnalyticsSectionCard`, chart widgets, `TimeRangeSelector` |
 | Settings | `screens/settings/settings_page.dart` | `SettingsSection`, `SettingsTile`, `SettingsSubpageScaffold` |
 | Accounts | `screens/accounts/` | `BankAccountCard`, `CreditCardCard`, `AccountsEmptyState` |
@@ -310,11 +310,13 @@ import 'package:expense_tracker_app/components/common/states/states.dart';
 
 | Widget | Use for |
 | --- | --- |
-| `TransactionTypeSelector` / `TransactionSubtypeChips` | Expense / income / transfer kind |
-| `CategoryPillsSelector` / `IncomeCategoryPillsSelector` | Category pickers |
-| `AccountChipsSelector` | Account selection |
+| `TransactionTypeSelector` | Expense / income / transfer kind |
+| `TransactionFormRow` / `TransactionPrimaryFields` | Compact dropdown rows for merchant, category, account, date |
+| `TransactionAdvancedSection` | Collapsed note, recurring, subtypes, suggestions, quick entry |
+| `CategoryPillsSelector` / `IncomeCategoryPillsSelector` | Category pickers (budget sheet; legacy horizontal chips) |
+| `AccountChipsSelector` | Account selection (legacy horizontal chips) |
 | `AmountSection` | Hero amount input (`displaySmall`) |
-| `StickyBottomCTA` | Primary save action pinned above keyboard |
+| `StickyBottomCTA` | Single primary save pinned above keyboard; optional secondary row |
 | `TransactionListItem` | Unified row in home + transactions tab |
 
 ### Buttons

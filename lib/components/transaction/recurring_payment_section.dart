@@ -4,8 +4,9 @@ import 'package:intl/intl.dart';
 import '../../config/design_tokens.dart';
 import '../../models/transaction_draft.dart';
 
-/// Collapsible "Recurring Payment" card with all the recurring-only fields
-/// inside (frequency, reminder, start, end).
+/// Collapsible "Recurring Payment" block with frequency, reminder, start, end.
+///
+/// Set [compact] for flat layout inside the Advanced section (no card chrome).
 class RecurringPaymentSection extends StatelessWidget {
   const RecurringPaymentSection({
     super.key,
@@ -15,6 +16,8 @@ class RecurringPaymentSection extends StatelessWidget {
     required this.onPickEndDate,
     this.isIncome = false,
     this.reminderHint,
+    this.compact = false,
+    this.showReminder = true,
   });
 
   final RecurringConfig config;
@@ -23,10 +26,44 @@ class RecurringPaymentSection extends StatelessWidget {
   final Future<void> Function() onPickEndDate;
   final bool isIncome;
   final String? reminderHint;
+  final bool compact;
+  final bool showReminder;
 
   @override
   Widget build(BuildContext context) {
     final expanded = config.enabled;
+
+    final content = Column(
+      children: [
+        _Header(
+          enabled: expanded,
+          isIncome: isIncome,
+          compact: compact,
+          onToggle: (value) {
+            onChanged(config.copyWith(enabled: value));
+          },
+        ),
+        AnimatedSize(
+          duration: AppDurations.page,
+          curve: AppCurves.emphasized,
+          alignment: Alignment.topCenter,
+          child: expanded
+              ? _ExpandedBody(
+                  config: config,
+                  onChanged: onChanged,
+                  onPickStartDate: onPickStartDate,
+                  onPickEndDate: onPickEndDate,
+                  isIncome: isIncome,
+                  reminderHint: reminderHint,
+                  compact: compact,
+                  showReminder: showReminder,
+                )
+              : const SizedBox(width: double.infinity),
+        ),
+      ],
+    );
+
+    if (compact) return content;
 
     return Container(
       decoration: BoxDecoration(
@@ -40,37 +77,7 @@ class RecurringPaymentSection extends StatelessWidget {
         ),
         boxShadow: AppShadows.card,
       ),
-      child: Column(
-        children: [
-          _Header(
-            enabled: expanded,
-            isIncome: isIncome,
-            onToggle: (value) {
-              onChanged(config.copyWith(enabled: value));
-            },
-          ),
-          AnimatedSize(
-            duration: AppDurations.page,
-            curve: AppCurves.emphasized,
-            alignment: Alignment.topCenter,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(AppRadii.card),
-              ),
-              child: expanded
-                  ? _ExpandedBody(
-                      config: config,
-                      onChanged: onChanged,
-                      onPickStartDate: onPickStartDate,
-                      onPickEndDate: onPickEndDate,
-                      isIncome: isIncome,
-                      reminderHint: reminderHint,
-                    )
-                  : const SizedBox(width: double.infinity),
-            ),
-          ),
-        ],
-      ),
+      child: content,
     );
   }
 }
@@ -80,11 +87,13 @@ class _Header extends StatelessWidget {
     required this.enabled,
     required this.onToggle,
     this.isIncome = false,
+    this.compact = false,
   });
 
   final bool enabled;
   final ValueChanged<bool> onToggle;
   final bool isIncome;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -93,57 +102,44 @@ class _Header extends StatelessWidget {
 
     return InkWell(
       onTap: () => onToggle(!enabled),
-      borderRadius: enabled
-          ? const BorderRadius.vertical(top: Radius.circular(AppRadii.card))
-          : AppRadii.cardRadius,
+      borderRadius: compact
+          ? null
+          : (enabled
+              ? const BorderRadius.vertical(top: Radius.circular(AppRadii.card))
+              : AppRadii.cardRadius),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.md,
-          AppSpacing.md,
+        padding: EdgeInsets.fromLTRB(
+          compact ? 0 : AppSpacing.lg,
+          AppSpacing.sm,
+          compact ? 0 : AppSpacing.md,
+          AppSpacing.sm,
         ),
         child: Row(
           children: [
-            AnimatedContainer(
-              duration: AppDurations.micro,
-              curve: AppCurves.spring,
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: accent.withAlpha(enabled ? 48 : 28),
-                borderRadius: BorderRadius.circular(11),
+            if (!compact) ...[
+              AnimatedContainer(
+                duration: AppDurations.micro,
+                curve: AppCurves.spring,
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(enabled ? 48 : 28),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(
+                  Icons.autorenew_rounded,
+                  size: 18,
+                  color: accent,
+                ),
               ),
-              child: Icon(
-                Icons.autorenew_rounded,
-                size: 18,
-                color: accent,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
+            ],
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    isIncome ? 'Recurring Income' : 'Recurring Payment',
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    enabled
-                        ? (isIncome
-                            ? 'Repeat salary, rent, or retainers on a schedule.'
-                            : 'Automate this transaction on a schedule.')
-                        : (isIncome
-                            ? 'Turn on for monthly salary or rental income.'
-                            : 'Turn on to repeat this transaction.'),
-                    style: AppTextStyles.caption,
-                  ),
-                ],
+              child: Text(
+                isIncome ? 'Recurring Income' : 'Recurring Payment',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             Switch.adaptive(
@@ -165,6 +161,8 @@ class _ExpandedBody extends StatelessWidget {
     required this.onPickEndDate,
     this.isIncome = false,
     this.reminderHint,
+    this.compact = false,
+    this.showReminder = true,
   });
 
   final RecurringConfig config;
@@ -173,21 +171,24 @@ class _ExpandedBody extends StatelessWidget {
   final Future<void> Function() onPickEndDate;
   final bool isIncome;
   final String? reminderHint;
+  final bool compact;
+  final bool showReminder;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
+      padding: EdgeInsets.fromLTRB(
+        compact ? 0 : AppSpacing.lg,
         0,
-        AppSpacing.lg,
-        AppSpacing.lg,
+        compact ? 0 : AppSpacing.lg,
+        compact ? AppSpacing.sm : AppSpacing.lg,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Divider(height: 1, thickness: 1, color: AppColors.border),
-          const SizedBox(height: AppSpacing.md),
+          if (!compact)
+            const Divider(height: 1, thickness: 1, color: AppColors.border),
+          if (!compact) const SizedBox(height: AppSpacing.md),
           const _SectionLabel(label: 'Frequency'),
           const SizedBox(height: AppSpacing.sm),
           _FrequencyWrap(
@@ -196,18 +197,20 @@ class _ExpandedBody extends StatelessWidget {
             onChanged: (value) =>
                 onChanged(config.copyWith(frequency: value)),
           ),
-          const SizedBox(height: AppSpacing.md),
-          const _SectionLabel(label: 'Reminder'),
-          if (reminderHint != null) ...[
-            const SizedBox(height: 4),
-            Text(reminderHint!, style: AppTextStyles.caption),
+          if (showReminder) ...[
+            const SizedBox(height: AppSpacing.md),
+            const _SectionLabel(label: 'Reminder'),
+            if (reminderHint != null) ...[
+              const SizedBox(height: 4),
+              Text(reminderHint!, style: AppTextStyles.caption),
+            ],
+            const SizedBox(height: AppSpacing.sm),
+            _ReminderWrap(
+              selected: config.reminder,
+              onChanged: (value) =>
+                  onChanged(config.copyWith(reminder: value)),
+            ),
           ],
-          const SizedBox(height: AppSpacing.sm),
-          _ReminderWrap(
-            selected: config.reminder,
-            onChanged: (value) =>
-                onChanged(config.copyWith(reminder: value)),
-          ),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [

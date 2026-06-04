@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../../config/design_tokens.dart';
 
-/// Primary and secondary actions pinned above the keyboard. Icon-only buttons;
-/// [saveLabel] and [secondaryLabel] are used for tooltips and accessibility.
+/// Primary save action pinned above the keyboard.
+///
+/// Renders a single full-width gradient button by default. Set
+/// [showSaveAndAddAnother] for a secondary outlined action (settings forms).
 class StickyBottomCTA extends StatelessWidget {
   const StickyBottomCTA({
     super.key,
     required this.onSave,
-    required this.onSaveAndAddAnother,
+    this.onSaveAndAddAnother,
     this.saveLabel = 'Save Transaction',
     this.secondaryLabel = 'Save & Add Another',
     this.isBusy = false,
-    this.showSaveAndAddAnother = true,
+    this.showSaveAndAddAnother = false,
   });
 
   final VoidCallback onSave;
-  final VoidCallback onSaveAndAddAnother;
+  final VoidCallback? onSaveAndAddAnother;
   final String saveLabel;
   final String secondaryLabel;
   final bool isBusy;
@@ -26,76 +28,146 @@ class StickyBottomCTA extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Container(
+      minimum: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg,
-          AppSpacing.md,
+          AppSpacing.sm,
           AppSpacing.lg,
-          AppSpacing.md,
+          AppSpacing.sm,
         ),
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          border: Border(
-            top: BorderSide(color: AppColors.border),
-          ),
-          boxShadow: AppShadows.subtle,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Semantics(
+        child: showSaveAndAddAnother && onSaveAndAddAnother != null
+            ? Row(
+                children: [
+                  Expanded(
+                    child: _PrimarySaveButton(
+                      label: saveLabel,
+                      isBusy: isBusy,
+                      onTap: onSave,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _SecondaryButton(
+                      label: secondaryLabel,
+                      isBusy: isBusy,
+                      onTap: onSaveAndAddAnother!,
+                    ),
+                  ),
+                ],
+              )
+            : _PrimarySaveButton(
                 label: saveLabel,
-                button: true,
-                child: Tooltip(
-                  message: saveLabel,
-                  child: FilledButton(
-                    onPressed: isBusy ? null : onSave,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
+                isBusy: isBusy,
+                onTap: onSave,
+              ),
+      ),
+    );
+  }
+}
+
+class _PrimarySaveButton extends StatelessWidget {
+  const _PrimarySaveButton({
+    required this.label,
+    required this.isBusy,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isBusy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isBusy ? null : onTap,
+        borderRadius: AppRadii.buttonRadius,
+        child: Ink(
+          height: 52,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isBusy
+                  ? [
+                      AppColors.primary.withAlpha(140),
+                      AppColors.secondary.withAlpha(140),
+                    ]
+                  : const [AppColors.primary, AppColors.secondary],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: AppRadii.buttonRadius,
+            boxShadow: isBusy
+                ? null
+                : [
+                    BoxShadow(
+                      color: AppColors.primary.withAlpha(64),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+          ),
+          child: Center(
+            child: isBusy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFF003328),
                       ),
                     ),
-                    child: isBusy
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFF003328),
-                              ),
-                            ),
-                          )
-                        : const Icon(Icons.check_rounded, size: 22),
+                  )
+                : Text(
+                    label,
+                    style: AppTextStyles.button.copyWith(
+                      color: const Color(0xFF003328),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SecondaryButton extends StatelessWidget {
+  const _SecondaryButton({
+    required this.label,
+    required this.isBusy,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isBusy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isBusy ? null : onTap,
+        borderRadius: AppRadii.buttonRadius,
+        child: Ink(
+          height: 52,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceSecondary,
+            borderRadius: AppRadii.buttonRadius,
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: AppTextStyles.button.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            if (showSaveAndAddAnother) ...[
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Semantics(
-                  label: secondaryLabel,
-                  button: true,
-                  child: Tooltip(
-                    message: secondaryLabel,
-                    child: OutlinedButton(
-                      onPressed: isBusy ? null : onSaveAndAddAnother,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(48, 48),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                        ),
-                      ),
-                      child: const Icon(Icons.add_rounded, size: 22),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
