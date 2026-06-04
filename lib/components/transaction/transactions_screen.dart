@@ -1049,20 +1049,19 @@ class _TransactionsFilterFab extends StatelessWidget {
         color: AppColors.surface,
         elevation: 4,
         shadowColor: Colors.black26,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
+        shape: const CircleBorder(
+          side: BorderSide(color: AppColors.border),
         ),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          customBorder: const CircleBorder(),
           child: const SizedBox(
-            width: 56,
-            height: 56,
+            width: 60,
+            height: 60,
             child: Icon(
               Icons.tune_rounded,
               color: AppColors.primary,
-              size: 26,
+              size: 28,
             ),
           ),
         ),
