@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../config/feature_flags.dart';
+
 /// Display-oriented transaction kinds for filtering. Derived from persisted
 /// `kind` + `category` — see [displayTypeForTransaction] in
 /// `transaction_subtype_helpers.dart`.
@@ -14,10 +16,10 @@ enum TransactionDisplayType {
 
 /// Types shown in the Transactions screen Type filter.
 /// EMI, Subscription, and Refund are filtered via Category instead.
-const kTransactionTypeFilterOptions = [
+List<TransactionDisplayType> get kTransactionTypeFilterOptions => [
   TransactionDisplayType.expense,
   TransactionDisplayType.income,
-  TransactionDisplayType.transfer,
+  if (FeatureFlags.transferVisible) TransactionDisplayType.transfer,
 ];
 
 extension TransactionDisplayTypeLabel on TransactionDisplayType {

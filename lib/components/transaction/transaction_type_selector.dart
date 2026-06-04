@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../config/design_tokens.dart';
+import '../../config/feature_flags.dart';
 import '../../models/transaction_draft.dart';
 
-/// Two-way segmented control: Expense · Income.
+/// Segmented control for transaction kind (expense · income · optional transfer).
 ///
 /// The selected segment is the *only* coloured element so the eye is pulled
 /// to it instantly — important because category suggestions reshuffle off
@@ -13,13 +14,21 @@ class TransactionTypeSelector extends StatelessWidget {
     super.key,
     required this.selected,
     required this.onChanged,
+    this.includeTransfer = false,
   });
 
   final TransactionKind selected;
   final ValueChanged<TransactionKind> onChanged;
+  final bool includeTransfer;
+
+  List<TransactionKind> get _kinds {
+    if (includeTransfer) return TransactionKind.values;
+    return FeatureFlags.selectableTransactionKinds;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final kinds = _kinds;
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -29,17 +38,16 @@ class TransactionTypeSelector extends StatelessWidget {
       ),
       child: Row(
         children: [
-          for (final kind in TransactionKind.values) ...[
+          for (var i = 0; i < kinds.length; i++) ...[
             Expanded(
               child: _Segment(
-                icon: _iconFor(kind),
-                label: kind.label,
-                selected: selected == kind,
-                onTap: () => onChanged(kind),
+                icon: _iconFor(kinds[i]),
+                label: kinds[i].label,
+                selected: selected == kinds[i],
+                onTap: () => onChanged(kinds[i]),
               ),
             ),
-            if (kind != TransactionKind.values.last)
-              const SizedBox(width: 4),
+            if (i != kinds.length - 1) const SizedBox(width: 4),
           ],
         ],
       ),

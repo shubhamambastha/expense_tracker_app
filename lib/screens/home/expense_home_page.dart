@@ -11,6 +11,7 @@ import '../../components/home/transactions_content.dart';
 import '../../components/recurring/add_recurring_sheet.dart';
 import '../../components/transaction/transaction_detail_sheet.dart';
 import '../../config/design_tokens.dart';
+import '../../config/feature_flags.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
 import '../../models/transaction.dart';
@@ -297,13 +298,16 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     TransactionDraft? initialDraft,
     TransactionKind? kind,
   }) {
+    final resolvedKind = FeatureFlags.normalizeKind(
+      kind ?? initialDraft?.kind ?? TransactionKind.expense,
+    );
     final draft = initialDraft ??
         TransactionDraft(
-          kind: kind ?? TransactionKind.expense,
+          kind: resolvedKind,
           accountId: _accounts.isEmpty ? null : _accounts.first.id,
         );
     if (kind != null && initialDraft == null) {
-      draft.kind = kind;
+      draft.kind = resolvedKind;
     }
 
     _addTransactionRouteOpen = true;
@@ -542,7 +546,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
         _openAddTransactionPage(kind: TransactionKind.income);
         return;
       case QuickAction.transfer:
-        _openAddTransactionPage(kind: TransactionKind.transfer);
+        if (FeatureFlags.transferVisible) {
+          _openAddTransactionPage(kind: TransactionKind.transfer);
+        }
         return;
       case QuickAction.addEmi:
         final draft = TransactionDraft(

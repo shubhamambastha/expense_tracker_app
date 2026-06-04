@@ -10,6 +10,7 @@ import '../../components/transaction/transaction_app_bar.dart';
 import '../../components/transaction/transaction_primary_fields.dart';
 import '../../components/transaction/transaction_type_selector.dart';
 import '../../config/design_tokens.dart';
+import '../../config/feature_flags.dart';
 import '../../models/account.dart';
 import '../../models/expense.dart';
 import '../../models/transaction_draft.dart';
@@ -514,6 +515,8 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         child: TransactionTypeSelector(
           selected: _draft.kind,
           onChanged: _onKindChanged,
+          includeTransfer:
+              FeatureFlags.showTransferInTypeSelector(_draft.kind),
         ),
       ),
       TransactionPrimaryFields(

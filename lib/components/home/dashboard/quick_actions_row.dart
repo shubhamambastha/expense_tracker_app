@@ -1,34 +1,36 @@
 import 'package:flutter/material.dart';
 
 import '../../../config/design_tokens.dart';
+import '../../../config/feature_flags.dart';
 import 'dashboard_intents.dart';
 
-/// Four thumb-sized shortcuts: Add Expense, Add Income, Transfer, Add EMI.
+/// Thumb-sized shortcuts: expense, income, optional transfer, EMI.
 class QuickActionsRow extends StatelessWidget {
   const QuickActionsRow({super.key, required this.onAction});
 
   final void Function(QuickAction action) onAction;
 
-  static const List<_QuickActionSpec> _specs = [
-    _QuickActionSpec(
+  static List<_QuickActionSpec> get _specs => [
+    const _QuickActionSpec(
       action: QuickAction.addExpense,
       label: 'Expense',
       icon: Icons.south_west_rounded,
       tint: AppColors.danger,
     ),
-    _QuickActionSpec(
+    const _QuickActionSpec(
       action: QuickAction.addIncome,
       label: 'Income',
       icon: Icons.north_east_rounded,
       tint: AppColors.success,
     ),
-    _QuickActionSpec(
-      action: QuickAction.transfer,
-      label: 'Transfer',
-      icon: Icons.swap_horiz_rounded,
-      tint: AppColors.secondary,
-    ),
-    _QuickActionSpec(
+    if (FeatureFlags.transferVisible)
+      const _QuickActionSpec(
+        action: QuickAction.transfer,
+        label: 'Transfer',
+        icon: Icons.swap_horiz_rounded,
+        tint: AppColors.secondary,
+      ),
+    const _QuickActionSpec(
       action: QuickAction.addEmi,
       label: 'EMI',
       icon: Icons.event_repeat_rounded,
@@ -38,16 +40,17 @@ class QuickActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final specs = _specs;
     return Row(
       children: [
-        for (var i = 0; i < _specs.length; i++) ...[
+        for (var i = 0; i < specs.length; i++) ...[
           Expanded(
             child: _QuickActionChip(
-              spec: _specs[i],
-              onTap: () => onAction(_specs[i].action),
+              spec: specs[i],
+              onTap: () => onAction(specs[i].action),
             ),
           ),
-          if (i != _specs.length - 1) const SizedBox(width: AppSpacing.sm),
+          if (i != specs.length - 1) const SizedBox(width: AppSpacing.sm),
         ],
       ],
     );
