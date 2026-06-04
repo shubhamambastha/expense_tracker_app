@@ -25,6 +25,26 @@ class DashboardAggregations {
         .fold<double>(0.0, (sum, t) => sum + t.amount);
   }
 
+  /// Sum of income transactions dated `now`'s calendar day.
+  static double todayIncome(
+    List<Transaction> transactions, {
+    DateTime? now,
+  }) {
+    final clock = now ?? DateTime.now();
+    return transactions
+        .where((t) => t.isIncome && _isSameDay(t.date, clock))
+        .fold<double>(0.0, (sum, t) => sum + t.amount);
+  }
+
+  /// Net cash flow for `now`'s calendar day (income minus expenses).
+  static double todayBalance(
+    List<Transaction> transactions, {
+    DateTime? now,
+  }) {
+    return todayIncome(transactions, now: now) -
+        todaySpend(transactions, now: now);
+  }
+
   /// Sum of expense transactions in `now`'s current month.
   static double monthSpend(
     List<Transaction> transactions, {

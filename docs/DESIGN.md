@@ -254,7 +254,7 @@ Prefer existing shared widgets over one-off `Container` decorations. Each primit
 | `AnalyticsSectionCard` | `components/analytics/widgets/` | Analytics sections; set `useGradient: true` for hero cards |
 | `DetailSectionCard` | `components/transaction/detail/widgets/` | Nested panels on transaction detail (uses `surfaceSecondary`) |
 | `SettingsSection` | `components/settings/` | Grouped settings rows inside a single card |
-| `HeroOverviewCard` | `components/home/dashboard/` | Dashboard hero with budget progress semantics |
+| `HeroOverviewCard` | `components/home/dashboard/` | Minimal today balance, income, and expenses |
 
 Raw surface pattern (when no shared widget fits):
 

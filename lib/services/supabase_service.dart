@@ -39,7 +39,7 @@ class SupabaseService {
         }
         final creds = await AuthService.instance.credentials();
         final idToken = creds.idToken;
-        if (idToken == null || idToken.isEmpty) {
+        if (idToken.isEmpty) {
           throw Exception(
             'Auth0 ID token is missing. Sign in again via Continue with Auth0.',
           );

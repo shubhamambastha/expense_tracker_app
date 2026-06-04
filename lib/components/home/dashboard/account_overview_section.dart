@@ -32,9 +32,6 @@ class AccountOverviewSection extends StatelessWidget {
       children: [
         DashboardSectionHeader(
           title: 'Accounts',
-          subtitle: accounts.isEmpty
-              ? 'Add accounts to see balances here'
-              : null,
           actionLabel: accounts.isEmpty ? null : 'Manage',
           onActionTap: accounts.isEmpty ? null : onManage,
         ),
@@ -357,31 +354,8 @@ class _EmptyAccounts extends StatelessWidget {
         borderRadius: AppRadii.cardRadius,
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(28),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.account_balance_wallet_rounded,
-              color: AppColors.primary,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              'Add a bank, card, or cash wallet to track balances.',
-              style: AppTextStyles.caption,
-            ),
-          ),
-          TextButton(onPressed: onManage, child: const Text('Manage')),
-        ],
-      ),
+      alignment: Alignment.center,
+      child: TextButton(onPressed: onManage, child: const Text('Add account')),
     );
   }
 }

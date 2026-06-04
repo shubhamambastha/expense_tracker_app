@@ -54,9 +54,7 @@ class RecentTransactionsSection extends StatelessWidget {
           onActionTap: items.isEmpty ? null : onViewAll,
         ),
         const SizedBox(height: AppSpacing.md),
-        if (items.isEmpty)
-          const _EmptyRecent()
-        else
+        if (items.isNotEmpty)
           DecoratedBox(
             decoration: BoxDecoration(
               color: AppColors.surface,
@@ -237,50 +235,3 @@ class _RecentTransactionTile extends StatelessWidget {
   }
 }
 
-class _EmptyRecent extends StatelessWidget {
-  const _EmptyRecent();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xl,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadii.cardRadius,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(24),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.receipt_long_rounded,
-              color: AppColors.primary,
-              size: 22,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'No transactions yet',
-            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Add your first one to see it here.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.caption,
-          ),
-        ],
-      ),
-    );
-  }
-}

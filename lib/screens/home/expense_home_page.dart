@@ -515,7 +515,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
         return HomeContent(
           transactions: _transactions,
           accounts: _accounts,
-          monthlyLimit: SettingsPreferences.instance.monthlySpendingLimit,
           userEmail: AuthService.instance.currentSession?.email,
           isLoading: _isLoading,
           onRefresh: _refreshDashboard,
@@ -523,7 +522,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           onTapTransaction: _openTransactionDetail,
           onViewAllTransactions: () => _switchToTab(1),
           onManageAccounts: _openAccountsManager,
-          onOpenBudgetSettings: _openBudgetSettings,
           onTapAccount: _openAccountFromDashboard,
         );
       },

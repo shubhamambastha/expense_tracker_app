@@ -23,6 +23,13 @@ class ProfileIdentity {
     return local[0].toUpperCase() + local.substring(1);
   }
 
+  /// First token of a display name (e.g. "Shubham Ambastha" → "Shubham").
+  static String firstNameFrom(String displayName) {
+    final trimmed = displayName.trim();
+    if (trimmed.isEmpty) return '';
+    return trimmed.split(RegExp(r'\s+')).first;
+  }
+
   static String initialFor(String name, String email) {
     final source = name.trim().isNotEmpty ? name : email;
     if (source.isEmpty || source == 'Unknown user') return '?';

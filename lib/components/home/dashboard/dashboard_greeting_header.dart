@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:intl/intl.dart' as intl;
 
 import '../../../config/design_tokens.dart';
 import '../../../services/settings_preferences.dart';
 import '../../../utils/profile_identity.dart';
 
-/// Top-of-screen "Good morning, Shubham" + context subtitle + avatar shortcut.
+/// Top-of-screen time-based greeting, first name, and avatar shortcut.
 class DashboardGreetingHeader extends StatelessWidget {
   const DashboardGreetingHeader({
     super.key,
     required this.userEmail,
-    required this.subtitle,
     this.onAvatarTap,
     DateTime? now,
   }) : _now = now;
 
   final String? userEmail;
-  final String subtitle;
   final VoidCallback? onAvatarTap;
   final DateTime? _now;
 
@@ -30,11 +27,6 @@ class DashboardGreetingHeader extends StatelessWidget {
     return 'Good night';
   }
 
-  String get _dateLabel {
-    final n = _now ?? DateTime.now();
-    return intl.DateFormat('EEEE, d MMM').format(n);
-  }
-
   String get _displayName {
     final prefs = SettingsPreferences.instance;
     if (prefs.displayName.trim().isNotEmpty) return prefs.displayName.trim();
@@ -45,6 +37,8 @@ class DashboardGreetingHeader extends StatelessWidget {
     return ProfileIdentity.displayNameFromEmail(email);
   }
 
+  String get _firstName => ProfileIdentity.firstNameFrom(_displayName);
+
   String get _avatarInitial {
     return ProfileIdentity.initialFor(
       _displayName,
@@ -54,8 +48,7 @@ class DashboardGreetingHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = _displayName;
-    final fullGreeting = name.isEmpty ? _greeting : '$_greeting, $name';
+    final firstName = _firstName;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -64,20 +57,13 @@ class DashboardGreetingHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(_dateLabel, style: AppTextStyles.label),
-              const SizedBox(height: 4),
-              Text(
-                fullGreeting,
-                style: AppTextStyles.headingMedium,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (subtitle.isNotEmpty) ...[
+              Text(_greeting, style: AppTextStyles.label),
+              if (firstName.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
-                  subtitle,
-                  style: AppTextStyles.bodySmall,
-                  maxLines: 2,
+                  '$firstName 👋',
+                  style: AppTextStyles.headingMedium,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

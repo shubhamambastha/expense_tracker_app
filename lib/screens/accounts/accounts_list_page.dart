@@ -347,6 +347,11 @@ class _AccountsListPageState extends State<AccountsListPage> {
                         const SizedBox(height: AppSpacing.xl),
                         AccountsSection(
                           title: 'Bank accounts',
+                          emptyTitle: 'No bank accounts yet',
+                          emptyActionLabel: 'Add bank account',
+                          onEmptyAction: () => _openAddAccount(
+                            choice: AddAccountChoice.bank,
+                          ),
                           children: [
                             for (final account in banks)
                               Padding(
@@ -364,16 +369,16 @@ class _AccountsListPageState extends State<AccountsListPage> {
                                 ),
                               ),
                           ],
-                          emptyTitle: 'No bank accounts yet',
-                          emptyActionLabel: 'Add bank account',
-                          onEmptyAction: () => _openAddAccount(
-                            choice: AddAccountChoice.bank,
-                          ),
                         ),
                         const SizedBox(height: AppSpacing.xl),
                         AccountsSection(
                           title: 'Credit cards',
                           actionLabel: cards.isEmpty ? null : null,
+                          emptyTitle: 'No credit cards added',
+                          emptyActionLabel: 'Add credit card',
+                          onEmptyAction: () => _openAddAccount(
+                            choice: AddAccountChoice.creditCard,
+                          ),
                           children: [
                             for (final account in cards)
                               Padding(
@@ -396,15 +401,15 @@ class _AccountsListPageState extends State<AccountsListPage> {
                                 ),
                               ),
                           ],
-                          emptyTitle: 'No credit cards added',
-                          emptyActionLabel: 'Add credit card',
-                          onEmptyAction: () => _openAddAccount(
-                            choice: AddAccountChoice.creditCard,
-                          ),
                         ),
                         const SizedBox(height: AppSpacing.xl),
                         AccountsSection(
                           title: 'Wallets & cash',
+                          emptyTitle: 'No wallets or cash added',
+                          emptyActionLabel: 'Add wallet',
+                          onEmptyAction: () => _openAddAccount(
+                            choice: AddAccountChoice.wallet,
+                          ),
                           children: [
                             for (final account in wallets)
                               Padding(
@@ -422,11 +427,6 @@ class _AccountsListPageState extends State<AccountsListPage> {
                                 ),
                               ),
                           ],
-                          emptyTitle: 'No wallets or cash added',
-                          emptyActionLabel: 'Add wallet',
-                          onEmptyAction: () => _openAddAccount(
-                            choice: AddAccountChoice.wallet,
-                          ),
                         ),
                       ]),
                     ),

@@ -4,7 +4,6 @@ import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/transaction.dart';
 import '../../utils/dashboard_aggregations.dart';
-import '../../utils/upcoming_payments.dart';
 import 'dashboard/account_overview_section.dart';
 import 'dashboard/dashboard_greeting_header.dart';
 import 'dashboard/dashboard_intents.dart';
@@ -21,14 +20,12 @@ import 'dashboard/recent_transactions_section.dart';
 /// Budget progress, behavioural insights, and recurring/upcoming payment
 /// summaries live on the Analytics screen (`BudgetAnalyticsSection`,
 /// `BehavioralInsightsSection`, `SubscriptionsSection`) so home stays
-/// scannable and focused on today/this-month action. Only the upcoming-bills
-/// signal is surfaced here as the greeting subtitle.
+/// scannable and focused on today/this-month action.
 class HomeContent extends StatelessWidget {
   const HomeContent({
     super.key,
     required this.transactions,
     required this.accounts,
-    required this.monthlyLimit,
     required this.userEmail,
     required this.isLoading,
     required this.onRefresh,
@@ -36,13 +33,11 @@ class HomeContent extends StatelessWidget {
     required this.onTapTransaction,
     required this.onViewAllTransactions,
     required this.onManageAccounts,
-    required this.onOpenBudgetSettings,
     required this.onTapAccount,
   });
 
   final List<Transaction> transactions;
   final List<Account> accounts;
-  final double? monthlyLimit;
   final String? userEmail;
   final bool isLoading;
   final Future<void> Function() onRefresh;
@@ -50,7 +45,6 @@ class HomeContent extends StatelessWidget {
   final void Function(Transaction tx) onTapTransaction;
   final VoidCallback onViewAllTransactions;
   final VoidCallback onManageAccounts;
-  final VoidCallback onOpenBudgetSettings;
   final void Function(Account account) onTapAccount;
 
   @override
@@ -69,26 +63,12 @@ class HomeContent extends StatelessWidget {
     }
 
     final now = DateTime.now();
-    final todaySpend = DashboardAggregations.todaySpend(transactions, now: now);
-    final monthSpent = DashboardAggregations.monthSpend(transactions, now: now);
-    final daysRemaining = DashboardAggregations.daysRemainingInMonth(now: now);
-    final safeDaily = DashboardAggregations.safeDailySpend(
-      monthlyLimit: monthlyLimit,
-      monthSpent: monthSpent,
-      daysRemaining: daysRemaining,
-    );
-    final upcoming = upcomingPaymentsFor(
-      transactions,
-      accounts: accounts,
-      now: now,
-    );
-    final greetingSubtitle = _greetingSubtitle(
-      monthlyLimit: monthlyLimit,
-      monthSpent: monthSpent,
-      upcoming: upcoming,
-      safeDaily: safeDaily,
-    );
-
+    final todayBalance =
+        DashboardAggregations.todayBalance(transactions, now: now);
+    final todayIncome =
+        DashboardAggregations.todayIncome(transactions, now: now);
+    final todayExpenses =
+        DashboardAggregations.todaySpend(transactions, now: now);
     final isOnboarding = transactions.isEmpty && accounts.isEmpty;
 
     return RefreshIndicator(
@@ -111,12 +91,9 @@ class HomeContent extends StatelessWidget {
               children: isOnboarding
                   ? _onboarding(context)
                   : _sections(
-                      context: context,
-                      todaySpend: todaySpend,
-                      monthSpent: monthSpent,
-                      safeDaily: safeDaily,
-                      daysRemaining: daysRemaining,
-                      greetingSubtitle: greetingSubtitle,
+                      todayBalance: todayBalance,
+                      todayIncome: todayIncome,
+                      todayExpenses: todayExpenses,
                     ),
             ),
           ),
@@ -126,27 +103,20 @@ class HomeContent extends StatelessWidget {
   }
 
   List<Widget> _sections({
-    required BuildContext context,
-    required double todaySpend,
-    required double monthSpent,
-    required double? safeDaily,
-    required int daysRemaining,
-    required String greetingSubtitle,
+    required double todayBalance,
+    required double todayIncome,
+    required double todayExpenses,
   }) {
     return [
       DashboardGreetingHeader(
         userEmail: userEmail,
-        subtitle: greetingSubtitle,
         onAvatarTap: onManageAccounts,
       ),
       const SizedBox(height: AppSpacing.lg),
       HeroOverviewCard(
-        todaySpend: todaySpend,
-        monthSpent: monthSpent,
-        monthlyLimit: monthlyLimit,
-        safeDailySpend: safeDaily,
-        daysRemaining: daysRemaining,
-        onSetBudgetTap: onOpenBudgetSettings,
+        todayBalance: todayBalance,
+        todayIncome: todayIncome,
+        todayExpenses: todayExpenses,
       ),
       const SizedBox(height: AppSpacing.xxl),
       QuickActionsRow(onAction: onQuickAction),
@@ -171,7 +141,6 @@ class HomeContent extends StatelessWidget {
     return [
       DashboardGreetingHeader(
         userEmail: userEmail,
-        subtitle: 'Let\'s set up your financial cockpit.',
         onAvatarTap: onManageAccounts,
       ),
       const SizedBox(height: AppSpacing.lg),
@@ -184,25 +153,6 @@ class HomeContent extends StatelessWidget {
     ];
   }
 
-  String _greetingSubtitle({
-    required double? monthlyLimit,
-    required double monthSpent,
-    required List<UpcomingPayment> upcoming,
-    required double? safeDaily,
-  }) {
-    if (monthlyLimit != null && monthSpent > monthlyLimit) {
-      return 'You\'re over your monthly limit — ease off if you can.';
-    }
-    final dueSoon =
-        upcoming.where((u) => u.daysUntil <= 7).toList(growable: false);
-    if (dueSoon.isNotEmpty) {
-      return '${dueSoon.length} payment${dueSoon.length == 1 ? '' : 's'} due this week';
-    }
-    if (monthlyLimit != null && safeDaily != null && safeDaily > 0) {
-      return 'You\'re doing well this month';
-    }
-    return 'Here\'s how your money\'s looking today';
-  }
 }
 
 class _OnboardingHero extends StatelessWidget {
@@ -259,13 +209,8 @@ class _OnboardingHero extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            'Start tracking expenses to see insights',
+            'Start tracking expenses',
             style: AppTextStyles.headingSmall,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Add your first transaction and the dashboard will light up with daily spend, safe daily spend, budgets, and upcoming payments.',
-            style: AppTextStyles.bodySmall,
           ),
           const SizedBox(height: AppSpacing.lg),
           Row(
