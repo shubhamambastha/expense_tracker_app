@@ -108,7 +108,8 @@ lib/
 ├── main.dart
 ├── config/
 │   ├── design_tokens.dart          # Colors, spacing, typography tokens
-│   └── theme.dart                  # AppTheme.darkTheme (Material 3)
+│   ├── theme.dart                  # AppTheme.darkTheme (Material 3)
+│   └── feature_flags.dart          # Compile-time UI toggles (see Feature flags)
 ├── models/                         # Domain types & Supabase row mappers
 ├── services/                       # Singletons: auth, sync, preferences
 ├── screens/                        # Full pages & navigation owners
@@ -193,6 +194,18 @@ Pure functions and small helpers — no Flutter widget trees except where UI-adj
 | Aggregations | `dashboard_aggregations.dart`, `analytics_aggregations.dart`, `financial_insights.dart` |
 | Domain | `recurring_management.dart`, `upcoming_payments.dart`, `account_management.dart`, `transaction_filter_logic.dart`, `transaction_grouping.dart`, `transaction_subtype_helpers.dart`, `income_flow_helpers.dart` |
 | Formatting | `transaction_date_format.dart`, `timezone_options.dart`, `profile_identity.dart` |
+
+---
+
+## Feature flags
+
+`lib/config/feature_flags.dart` holds compile-time UI toggles — no remote config, just a static class flipped in source. Current flag:
+
+| Flag | Default | Effect |
+| --- | --- | --- |
+| `FeatureFlags.transferVisible` | `false` | Hides `transfer` from the quick actions, type selector, and filters. Existing transfer transactions still display/edit normally; `normalizeKind()` downgrades new transfers to `expense`. |
+
+Screens read flags directly (e.g. `expense_home_page.dart` guards the transfer quick action) rather than threading a config object through the widget tree. Add new flags as additional static `const bool` fields plus any derived helper methods, following the same pattern.
 
 ---
 
@@ -341,6 +354,7 @@ main.dart
 | Recurring timeline | `utils/upcoming_payments.dart`, `recurring_management.dart` |
 | Widget deep link | `deep_link_service.dart`, `app_launch_intent.dart`, `expense_home_page.dart` |
 | Visual inconsistency | [DESIGN.md](./DESIGN.md), `design_tokens.dart` |
+| Feature hidden/showing unexpectedly | `config/feature_flags.dart` |
 
 ---
 
