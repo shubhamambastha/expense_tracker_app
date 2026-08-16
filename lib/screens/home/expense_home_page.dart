@@ -110,19 +110,17 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _onNavItemTapped(int index) {
-    if (index == 2) {
-      _openAddTransactionPage();
-      return;
-    }
-
     setState(() {
       _selectedIndex = index;
     });
   }
 
+  /// A tab bar item is a navigation destination, never an action — the
+  /// add-transaction control lives outside this row (see [_AddExpenseFab])
+  /// so tapping it can never be confused with switching tabs.
   Widget _buildBottomBarItem({
     required IconData icon,
-    required String semanticsLabel,
+    required String label,
     required int index,
   }) {
     final isSelected = _selectedIndex == index;
@@ -132,21 +130,42 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     return Expanded(
       child: Semantics(
         button: true,
-        label: semanticsLabel,
+        label: label,
         selected: isSelected,
         child: InkWell(
           onTap: () => _onNavItemTapped(index),
           borderRadius: AppRadii.buttonRadius,
           child: SizedBox(
-            height: 52,
-            child: Center(
-              child: Icon(
-                icon,
-                size: 28,
-                color: fg,
-                fill: isSelected ? 1.0 : 0.0,
-                weight: isSelected ? 600 : 400,
-              ),
+            height: 60,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 24,
+                  color: fg,
+                  fill: isSelected ? 1.0 : 0.0,
+                  weight: isSelected ? 600 : 400,
+                ),
+                const SizedBox(height: 2),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      style: AppTextStyles.caption.copyWith(
+                        color: fg,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -518,7 +537,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _switchToTab(int index) {
-    if (index < 0 || index > 4 || index == 2) return;
+    if (index < 0 || index > 3) return;
     setState(() => _selectedIndex = index);
   }
 
@@ -790,9 +809,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     switch (_selectedIndex) {
       case 1:
         return _buildTransactionsContent(context);
-      case 3:
+      case 2:
         return _buildAnalyticsContent(context);
-      case 4:
+      case 3:
         return _buildSettingsContent(context);
       case 0:
       default:
@@ -846,11 +865,13 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           alignment: Alignment.topCenter,
           children: [
             Container(
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadii.card),
-                border: Border.all(color: AppColors.border),
-                boxShadow: AppShadows.card,
+                shape: ContinuousRectangleBorder(
+                  borderRadius: AppRadii.cardRadius,
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                shadows: AppShadows.card,
               ),
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
               child: Row(
@@ -860,12 +881,12 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                       children: [
                         _buildBottomBarItem(
                           icon: Icons.dashboard_rounded,
-                          semanticsLabel: 'Home',
+                          label: 'Home',
                           index: 0,
                         ),
                         _buildBottomBarItem(
                           icon: Icons.list_alt_rounded,
-                          semanticsLabel: 'Transactions',
+                          label: 'Transactions',
                           index: 1,
                         ),
                       ],
@@ -878,13 +899,13 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                       children: [
                         _buildBottomBarItem(
                           icon: Icons.insights_rounded,
-                          semanticsLabel: 'Analytics',
-                          index: 3,
+                          label: 'Analytics',
+                          index: 2,
                         ),
                         _buildBottomBarItem(
                           icon: Icons.settings_rounded,
-                          semanticsLabel: 'Settings',
-                          index: 4,
+                          label: 'Settings',
+                          index: 3,
                         ),
                       ],
                     ),

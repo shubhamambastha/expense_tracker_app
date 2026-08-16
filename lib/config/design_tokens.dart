@@ -50,6 +50,20 @@ class AppRadii {
   static const inputRadius = BorderRadius.all(Radius.circular(input));
   static const pillRadius = BorderRadius.all(Radius.circular(pill));
   static const chipRadius = BorderRadius.all(Radius.circular(chip));
+
+  /// iOS-style continuous (superellipse) corner shapes — prefer these over
+  /// hand-rolled `RoundedRectangleBorder`s for Material `shape:` params so
+  /// corners match native UIKit/SwiftUI curvature instead of a true arc.
+  static const OutlinedBorder cardBorder =
+      ContinuousRectangleBorder(borderRadius: cardRadius);
+  static const OutlinedBorder buttonBorder =
+      ContinuousRectangleBorder(borderRadius: buttonRadius);
+  static const OutlinedBorder inputBorder =
+      ContinuousRectangleBorder(borderRadius: inputRadius);
+  static const OutlinedBorder pillBorder =
+      ContinuousRectangleBorder(borderRadius: pillRadius);
+  static const OutlinedBorder chipBorder =
+      ContinuousRectangleBorder(borderRadius: chipRadius);
 }
 
 class AppShadows {

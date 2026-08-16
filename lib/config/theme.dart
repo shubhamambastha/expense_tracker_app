@@ -97,14 +97,14 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: const RoundedRectangleBorder(borderRadius: AppRadii.cardRadius),
+        shape: AppRadii.cardBorder,
         shadowColor: Colors.black.withAlpha(80),
       ),
       dialogTheme: const DialogThemeData(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: AppRadii.cardRadius),
+        shape: AppRadii.cardBorder,
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.surface,
@@ -114,7 +114,7 @@ class AppTheme {
         elevation: 0,
         showDragHandle: true,
         dragHandleColor: AppColors.border,
-        shape: RoundedRectangleBorder(
+        shape: ContinuousRectangleBorder(
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(AppRadii.card),
           ),
@@ -136,9 +136,7 @@ class AppTheme {
           textStyle: AppTextStyles.button,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           minimumSize: const Size(0, 48),
-          shape: const RoundedRectangleBorder(
-            borderRadius: AppRadii.buttonRadius,
-          ),
+          shape: AppRadii.buttonBorder,
           elevation: 0,
         ),
       ),
@@ -149,9 +147,7 @@ class AppTheme {
           textStyle: AppTextStyles.button,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           minimumSize: const Size(0, 48),
-          shape: const RoundedRectangleBorder(
-            borderRadius: AppRadii.buttonRadius,
-          ),
+          shape: AppRadii.buttonBorder,
           elevation: 0,
         ),
       ),
@@ -162,9 +158,7 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           minimumSize: const Size(0, 48),
           side: const BorderSide(color: AppColors.border, width: 1.2),
-          shape: const RoundedRectangleBorder(
-            borderRadius: AppRadii.buttonRadius,
-          ),
+          shape: AppRadii.buttonBorder,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -172,17 +166,13 @@ class AppTheme {
           foregroundColor: AppColors.primary,
           textStyle: AppTextStyles.button,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          shape: const RoundedRectangleBorder(
-            borderRadius: AppRadii.buttonRadius,
-          ),
+          shape: AppRadii.buttonBorder,
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           foregroundColor: AppColors.textPrimary,
-          shape: const RoundedRectangleBorder(
-            borderRadius: AppRadii.buttonRadius,
-          ),
+          shape: AppRadii.buttonBorder,
         ),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
@@ -207,9 +197,7 @@ class AppTheme {
                   : AppColors.border,
             );
           }),
-          shape: const WidgetStatePropertyAll(
-            RoundedRectangleBorder(borderRadius: AppRadii.buttonRadius),
-          ),
+          shape: const WidgetStatePropertyAll(AppRadii.buttonBorder),
         ),
       ),
       chipTheme: ChipThemeData(
@@ -227,7 +215,7 @@ class AppTheme {
         ),
         side: const BorderSide(color: AppColors.border),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        shape: const RoundedRectangleBorder(borderRadius: AppRadii.chipRadius),
+        shape: AppRadii.chipBorder,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -279,7 +267,7 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
         subtitleTextStyle: AppTextStyles.bodySmall,
-        shape: const RoundedRectangleBorder(borderRadius: AppRadii.chipRadius),
+        shape: AppRadii.chipBorder,
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppColors.primary,
@@ -314,7 +302,7 @@ class AppTheme {
         focusElevation: 6,
         hoverElevation: 8,
         highlightElevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: AppRadii.buttonRadius),
+        shape: AppRadii.buttonBorder,
       ),
       bottomAppBarTheme: const BottomAppBarThemeData(
         color: AppColors.surface,
@@ -334,15 +322,13 @@ class AppTheme {
         backgroundColor: AppColors.surfaceSecondary,
         contentTextStyle: AppTextStyles.bodyMedium,
         behavior: SnackBarBehavior.floating,
-        shape: const RoundedRectangleBorder(
-          borderRadius: AppRadii.chipRadius,
-        ),
+        shape: AppRadii.chipBorder,
         elevation: 6,
       ),
       tooltipTheme: const TooltipThemeData(
-        decoration: BoxDecoration(
+        decoration: ShapeDecoration(
           color: AppColors.surfaceSecondary,
-          borderRadius: AppRadii.chipRadius,
+          shape: AppRadii.chipBorder,
         ),
         textStyle: TextStyle(
           fontFamily: AppTextStyles.fontFamily,
@@ -356,7 +342,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         headerBackgroundColor: AppColors.surfaceSecondary,
         headerForegroundColor: AppColors.textPrimary,
-        shape: const RoundedRectangleBorder(borderRadius: AppRadii.cardRadius),
+        shape: AppRadii.cardBorder,
         todayBackgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return AppColors.primary;
           return Colors.transparent;
