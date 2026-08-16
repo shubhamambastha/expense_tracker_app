@@ -151,6 +151,8 @@ All text styles are exposed from `AppTextStyles`. Use them directly or via `Them
 
 Helper `BorderRadius` constants exist for each (e.g. `AppRadii.cardRadius`). Use these in `BoxDecoration`, `RoundedRectangleBorder`, etc.
 
+For anything that takes a `shape:` (buttons, cards, dialogs, sheets, chips, snackbars, FAB, list tiles, date picker) or a raw `Container` you're converting to `ShapeDecoration`, prefer the continuous-corner variants — `AppRadii.cardBorder`, `AppRadii.buttonBorder`, `AppRadii.inputBorder`, `AppRadii.chipBorder`, `AppRadii.pillBorder` — over `RoundedRectangleBorder`. These use `ContinuousRectangleBorder`, which matches iOS's native superellipse ("squircle") corner curvature instead of a true circular arc; already wired into `AppTheme.darkTheme` for every Material shape. (`InputDecorationTheme`'s `OutlineInputBorder` has no continuous equivalent in Flutter, so text fields keep circular corners.)
+
 > **Don't** hand-roll `BorderRadius.circular(20)` — use `AppRadii.cardRadius` so a future refactor is one-line.
 
 ---
@@ -346,7 +348,7 @@ Minimum height: 48. Default padding: `22 × 14`.
 
 ### Bottom navigation
 
-Implemented inline in `screens/home/expense_home_page.dart` (not `BottomNavigationBar`): rounded `card`-radius surface container, five slots (Home · Transactions · **+ FAB** · Analytics · Settings), items use `AnimatedContainer` with accent-tinted fill when selected. The centre `_AddExpenseFab` uses a teal→cyan gradient with a soft primary glow and a breathing scale animation.
+Implemented inline in `screens/home/expense_home_page.dart` (not `BottomNavigationBar`): rounded (continuous-corner) `card`-radius surface container with icon **+ label** items for the four real destinations — Home · Transactions · Analytics · Settings (`_selectedIndex` 0–3). The centre `_AddExpenseFab` is a separate floating control, not a tab slot: it always opens the add-transaction flow directly and never participates in `_selectedIndex`, so a tab bar item never doubles as an action trigger. It uses a teal→cyan gradient with a soft primary glow and a breathing scale animation.
 
 Tab content switches via `AnimatedSwitcher` + `AppDurations.page` + `AppCurves.emphasized` in the same file.
 
