@@ -314,12 +314,11 @@ import 'package:expense_tracker_app/components/common/states/states.dart';
 | --- | --- |
 | `TransactionTypeSelector` | Expense / income / transfer kind |
 | `TransactionFormRow` / `TransactionPrimaryFields` | Compact dropdown rows for merchant, category, account, date |
-| `TransactionAdvancedSection` | Collapsed note, recurring, subtypes, suggestions, quick entry |
+| `TransactionAdvancedSection` | Collapsed note, recurring, subtypes — see [BACKLOG.md](./BACKLOG.md) for recent-suggestions/quick-entry/attachments/custom-metadata rows removed from here |
 | `CategoryPillsSelector` / `IncomeCategoryPillsSelector` | Category pickers (budget sheet; legacy horizontal chips) |
 | `AccountChipsSelector` | Account selection (legacy horizontal chips) |
 | `AmountSection` | Hero amount input (`displaySmall`) |
 | `AmountNumericKeypad` | In-app numeric keypad for amount entry — avoids iOS decimal-pad dismiss/TUIKeyplane issues |
-| `QuickAiInput` | Free-form quick-entry pill (e.g. `240 swiggy using hdfc`) that parses text into structured draft fields |
 | `StickyBottomCTA` | Single primary save pinned above keyboard; optional secondary row |
 | `TransactionListItem` | Unified row in home + transactions tab |
 

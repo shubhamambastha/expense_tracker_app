@@ -18,6 +18,8 @@ class RecurringPaymentSection extends StatelessWidget {
     this.reminderHint,
     this.compact = false,
     this.showReminder = true,
+    this.showFrequency = true,
+    this.showDates = true,
   });
 
   final RecurringConfig config;
@@ -28,6 +30,8 @@ class RecurringPaymentSection extends StatelessWidget {
   final String? reminderHint;
   final bool compact;
   final bool showReminder;
+  final bool showFrequency;
+  final bool showDates;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +61,8 @@ class RecurringPaymentSection extends StatelessWidget {
                   reminderHint: reminderHint,
                   compact: compact,
                   showReminder: showReminder,
+                  showFrequency: showFrequency,
+                  showDates: showDates,
                 )
               : const SizedBox(width: double.infinity),
         ),
@@ -97,16 +103,17 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        enabled ? AppColors.secondary : AppColors.textSecondary;
+    final accent = enabled ? AppColors.secondary : AppColors.textSecondary;
 
     return InkWell(
       onTap: () => onToggle(!enabled),
       borderRadius: compact
           ? null
           : (enabled
-              ? const BorderRadius.vertical(top: Radius.circular(AppRadii.card))
-              : AppRadii.cardRadius),
+                ? const BorderRadius.vertical(
+                    top: Radius.circular(AppRadii.card),
+                  )
+                : AppRadii.cardRadius),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           compact ? 0 : AppSpacing.lg,
@@ -126,11 +133,7 @@ class _Header extends StatelessWidget {
                   color: accent.withAlpha(enabled ? 48 : 28),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(
-                  Icons.autorenew_rounded,
-                  size: 18,
-                  color: accent,
-                ),
+                child: Icon(Icons.autorenew_rounded, size: 18, color: accent),
               ),
               const SizedBox(width: AppSpacing.md),
             ],
@@ -142,10 +145,7 @@ class _Header extends StatelessWidget {
                 ),
               ),
             ),
-            Switch.adaptive(
-              value: enabled,
-              onChanged: onToggle,
-            ),
+            Switch.adaptive(value: enabled, onChanged: onToggle),
           ],
         ),
       ),
@@ -163,6 +163,8 @@ class _ExpandedBody extends StatelessWidget {
     this.reminderHint,
     this.compact = false,
     this.showReminder = true,
+    this.showFrequency = true,
+    this.showDates = true,
   });
 
   final RecurringConfig config;
@@ -173,6 +175,8 @@ class _ExpandedBody extends StatelessWidget {
   final String? reminderHint;
   final bool compact;
   final bool showReminder;
+  final bool showFrequency;
+  final bool showDates;
 
   @override
   Widget build(BuildContext context) {
@@ -189,14 +193,16 @@ class _ExpandedBody extends StatelessWidget {
           if (!compact)
             const Divider(height: 1, thickness: 1, color: AppColors.border),
           if (!compact) const SizedBox(height: AppSpacing.md),
-          const _SectionLabel(label: 'Frequency'),
-          const SizedBox(height: AppSpacing.sm),
-          _FrequencyWrap(
-            selected: config.frequency,
-            isIncome: isIncome,
-            onChanged: (value) =>
-                onChanged(config.copyWith(frequency: value)),
-          ),
+          if (showFrequency) ...[
+            const _SectionLabel(label: 'Frequency'),
+            const SizedBox(height: AppSpacing.sm),
+            _FrequencyWrap(
+              selected: config.frequency,
+              isIncome: isIncome,
+              onChanged: (value) =>
+                  onChanged(config.copyWith(frequency: value)),
+            ),
+          ],
           if (showReminder) ...[
             const SizedBox(height: AppSpacing.md),
             const _SectionLabel(label: 'Reminder'),
@@ -207,51 +213,52 @@ class _ExpandedBody extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             _ReminderWrap(
               selected: config.reminder,
-              onChanged: (value) =>
-                  onChanged(config.copyWith(reminder: value)),
+              onChanged: (value) => onChanged(config.copyWith(reminder: value)),
             ),
           ],
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: _DatePickerTile(
-                  label: 'Start',
-                  value: DateFormat.MMMd().format(config.startDate),
-                  icon: Icons.event_available_rounded,
-                  accent: AppColors.primary,
-                  onTap: onPickStartDate,
+          if (showDates) ...[
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: _DatePickerTile(
+                    label: 'Start',
+                    value: DateFormat.MMMd().format(config.startDate),
+                    icon: Icons.event_available_rounded,
+                    accent: AppColors.primary,
+                    onTap: onPickStartDate,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _DatePickerTile(
-                  label: 'Ends',
-                  value: config.endDate == null
-                      ? 'Optional'
-                      : DateFormat.MMMd().format(config.endDate!),
-                  icon: Icons.event_busy_rounded,
-                  accent: AppColors.textSecondary,
-                  onTap: onPickEndDate,
-                  trailing: config.endDate == null
-                      ? null
-                      : InkWell(
-                          onTap: () =>
-                              onChanged(config.copyWith(clearEndDate: true)),
-                          borderRadius: BorderRadius.circular(10),
-                          child: const Padding(
-                            padding: EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.close_rounded,
-                              size: 16,
-                              color: AppColors.textSecondary,
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _DatePickerTile(
+                    label: 'Ends',
+                    value: config.endDate == null
+                        ? 'Optional'
+                        : DateFormat.MMMd().format(config.endDate!),
+                    icon: Icons.event_busy_rounded,
+                    accent: AppColors.textSecondary,
+                    onTap: onPickEndDate,
+                    trailing: config.endDate == null
+                        ? null
+                        : InkWell(
+                            onTap: () =>
+                                onChanged(config.copyWith(clearEndDate: true)),
+                            borderRadius: BorderRadius.circular(10),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.close_rounded,
+                                size: 16,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ),
-                        ),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -284,8 +291,8 @@ class _FrequencyWrap extends StatelessWidget {
   Widget build(BuildContext context) {
     final frequencies = isIncome
         ? RecurrenceFrequency.values
-            .where((f) => f != RecurrenceFrequency.daily)
-            .toList()
+              .where((f) => f != RecurrenceFrequency.daily)
+              .toList()
         : RecurrenceFrequency.values;
 
     return Wrap(

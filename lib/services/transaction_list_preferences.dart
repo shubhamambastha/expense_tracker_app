@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/transaction_filters.dart';
@@ -59,8 +57,4 @@ class TransactionListPreferences {
     state.category = prefs.getString(_kCategory);
     state.accountId = prefs.getInt(_kAccountId);
   }
-
-  /// Debug helper — not used in UI.
-  String snapshotJson(TransactionFilterState state) =>
-      jsonEncode({'sort': state.sort.name});
 }

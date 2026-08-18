@@ -7,29 +7,6 @@ import 'currency_settings.dart';
 import 'auth_service.dart';
 import 'supabase_service.dart';
 
-/// Fiscal year boundary used for analytics & budgeting roll-ups.
-enum FinancialYear { janDec, aprMar }
-
-extension FinancialYearLabel on FinancialYear {
-  String get label {
-    switch (this) {
-      case FinancialYear.janDec:
-        return 'Jan – Dec';
-      case FinancialYear.aprMar:
-        return 'Apr – Mar';
-    }
-  }
-
-  String get short {
-    switch (this) {
-      case FinancialYear.janDec:
-        return 'Jan–Dec';
-      case FinancialYear.aprMar:
-        return 'Apr–Mar';
-    }
-  }
-}
-
 /// Persistent default for the Add Transaction screen.
 enum DefaultTransactionType { expense, income }
 
@@ -40,80 +17,6 @@ extension DefaultTransactionTypeLabel on DefaultTransactionType {
         return 'Expense';
       case DefaultTransactionType.income:
         return 'Income';
-    }
-  }
-}
-
-/// When notifications fire relative to the event date.
-enum NotificationTiming { sameDay, oneDayBefore, threeDaysBefore }
-
-extension NotificationTimingLabel on NotificationTiming {
-  String get label {
-    switch (this) {
-      case NotificationTiming.sameDay:
-        return 'Same day';
-      case NotificationTiming.oneDayBefore:
-        return '1 day before';
-      case NotificationTiming.threeDaysBefore:
-        return '3 days before';
-    }
-  }
-}
-
-/// Theme preference. Stored only — rendering stays dark for this iteration.
-enum ThemeModePref { system, light, dark }
-
-extension ThemeModePrefLabel on ThemeModePref {
-  String get label {
-    switch (this) {
-      case ThemeModePref.system:
-        return 'System';
-      case ThemeModePref.light:
-        return 'Light';
-      case ThemeModePref.dark:
-        return 'Dark';
-    }
-  }
-}
-
-/// Output format for "Export Data".
-enum ExportFormat { csv, json }
-
-extension ExportFormatLabel on ExportFormat {
-  String get label {
-    switch (this) {
-      case ExportFormat.csv:
-        return 'CSV';
-      case ExportFormat.json:
-        return 'JSON';
-    }
-  }
-}
-
-/// Regional date display preference.
-enum DateFormatPref { ddMMyyyy, mmDDyyyy }
-
-extension DateFormatPrefLabel on DateFormatPref {
-  String get label {
-    switch (this) {
-      case DateFormatPref.ddMMyyyy:
-        return 'DD/MM/YYYY';
-      case DateFormatPref.mmDDyyyy:
-        return 'MM/DD/YYYY';
-    }
-  }
-}
-
-/// First day of the week for analytics and calendar roll-ups.
-enum WeekStartDay { monday, sunday }
-
-extension WeekStartDayLabel on WeekStartDay {
-  String get label {
-    switch (this) {
-      case WeekStartDay.monday:
-        return 'Monday';
-      case WeekStartDay.sunday:
-        return 'Sunday';
     }
   }
 }
@@ -133,22 +36,18 @@ class SettingsPreferences extends ChangeNotifier {
 
   // --- Preference keys (also JSON keys in user_settings.preferences) ---
   static const _kMultiCurrencyEnabled = 'pref.multi_currency_enabled';
-  static const _kFinancialYear = 'pref.financial_year';
   static const _kDefaultExpenseAccountId = 'pref.default_expense_account_id';
   static const _kDefaultIncomeAccountId = 'pref.default_income_account_id';
   static const _kDefaultTransactionType = 'pref.default_transaction_type';
   static const _kMonthlySpendingLimit = 'pref.monthly_spending_limit';
   static const _kSafeDailySpendEnabled = 'pref.safe_daily_spend_enabled';
-  static const _kOverspendingAlertsEnabled =
-      'pref.overspending_alerts_enabled';
+  static const _kOverspendingAlertsEnabled = 'pref.overspending_alerts_enabled';
   static const _kNotifRecurringEnabled = 'pref.notif_recurring_enabled';
   static const _kNotifSalaryEnabled = 'pref.notif_salary_enabled';
   static const _kNotifBudgetEnabled = 'pref.notif_budget_enabled';
   static const _kNotifInsightsEnabled = 'pref.notif_insights_enabled';
-  static const _kNotifTiming = 'pref.notif_timing';
   static const _kAiAssistantEnabled = 'pref.ai_assistant_enabled';
   static const _kAiInsightsEnabled = 'pref.ai_insights_enabled';
-  static const _kThemeModePref = 'pref.theme_mode_pref';
   static const _kAppLockEnabled = 'pref.app_lock_enabled';
   static const _kHapticEnabled = 'pref.haptic_enabled';
   static const _kAnimationsEnabled = 'pref.animations_enabled';
@@ -156,9 +55,6 @@ class SettingsPreferences extends ChangeNotifier {
   static const _kDisplayName = 'pref.display_name';
   static const _kPhoneNumber = 'pref.phone_number';
   static const _kTimezoneId = 'pref.timezone_id';
-  static const _kDateFormatPref = 'pref.date_format_pref';
-  static const _kWeekStartDay = 'pref.week_start_day';
-  static const _kExportFormatPref = 'pref.export_format_pref';
   static const _kAvatarRemoved = 'pref.avatar_removed';
 
   /// Sentinel stored in [_timezoneId] to follow the device timezone.
@@ -166,7 +62,6 @@ class SettingsPreferences extends ChangeNotifier {
 
   // --- In-memory state with defaults ---
   bool _multiCurrencyEnabled = false;
-  FinancialYear _financialYear = FinancialYear.janDec;
   int? _defaultExpenseAccountId;
   int? _defaultIncomeAccountId;
   DefaultTransactionType _defaultTransactionType =
@@ -178,10 +73,8 @@ class SettingsPreferences extends ChangeNotifier {
   bool _notifSalaryEnabled = true;
   bool _notifBudgetEnabled = true;
   bool _notifInsightsEnabled = false;
-  NotificationTiming _notifTiming = NotificationTiming.oneDayBefore;
   bool _aiAssistantEnabled = true;
   bool _aiInsightsEnabled = true;
-  ThemeModePref _themeModePref = ThemeModePref.dark;
   bool _appLockEnabled = false;
   bool _hapticEnabled = true;
   bool _animationsEnabled = true;
@@ -189,9 +82,6 @@ class SettingsPreferences extends ChangeNotifier {
   String _displayName = '';
   String _phoneNumber = '';
   String _timezoneId = deviceTimezoneId;
-  DateFormatPref _dateFormatPref = DateFormatPref.ddMMyyyy;
-  WeekStartDay _weekStartDay = WeekStartDay.monday;
-  ExportFormat _exportFormatPref = ExportFormat.csv;
   bool _avatarRemoved = false;
 
   bool _loaded = false;
@@ -201,7 +91,6 @@ class SettingsPreferences extends ChangeNotifier {
 
   // --- Public getters ---
   bool get multiCurrencyEnabled => _multiCurrencyEnabled;
-  FinancialYear get financialYear => _financialYear;
   int? get defaultExpenseAccountId => _defaultExpenseAccountId;
   int? get defaultIncomeAccountId => _defaultIncomeAccountId;
   DefaultTransactionType get defaultTransactionType => _defaultTransactionType;
@@ -212,10 +101,8 @@ class SettingsPreferences extends ChangeNotifier {
   bool get notifSalaryEnabled => _notifSalaryEnabled;
   bool get notifBudgetEnabled => _notifBudgetEnabled;
   bool get notifInsightsEnabled => _notifInsightsEnabled;
-  NotificationTiming get notifTiming => _notifTiming;
   bool get aiAssistantEnabled => _aiAssistantEnabled;
   bool get aiInsightsEnabled => _aiInsightsEnabled;
-  ThemeModePref get themeModePref => _themeModePref;
   bool get appLockEnabled => _appLockEnabled;
   bool get hapticEnabled => _hapticEnabled;
   bool get animationsEnabled => _animationsEnabled;
@@ -223,9 +110,6 @@ class SettingsPreferences extends ChangeNotifier {
   String get displayName => _displayName;
   String get phoneNumber => _phoneNumber;
   String get timezoneId => _timezoneId;
-  DateFormatPref get dateFormatPref => _dateFormatPref;
-  WeekStartDay get weekStartDay => _weekStartDay;
-  ExportFormat get exportFormatPref => _exportFormatPref;
   bool get avatarRemoved => _avatarRemoved;
 
   /// Pulls remote `preferences` after sign-in (must run after
@@ -262,11 +146,6 @@ class SettingsPreferences extends ChangeNotifier {
 
     _multiCurrencyEnabled =
         prefs.getBool(_kMultiCurrencyEnabled) ?? _multiCurrencyEnabled;
-    _financialYear = _readEnum(
-      prefs.getString(_kFinancialYear),
-      FinancialYear.values,
-      _financialYear,
-    );
     _defaultExpenseAccountId = prefs.getInt(_kDefaultExpenseAccountId);
     _defaultIncomeAccountId = prefs.getInt(_kDefaultIncomeAccountId);
     _defaultTransactionType = _readEnum(
@@ -277,7 +156,8 @@ class SettingsPreferences extends ChangeNotifier {
     _monthlySpendingLimit = prefs.getDouble(_kMonthlySpendingLimit);
     _safeDailySpendEnabled =
         prefs.getBool(_kSafeDailySpendEnabled) ?? _safeDailySpendEnabled;
-    _overspendingAlertsEnabled = prefs.getBool(_kOverspendingAlertsEnabled) ??
+    _overspendingAlertsEnabled =
+        prefs.getBool(_kOverspendingAlertsEnabled) ??
         _overspendingAlertsEnabled;
     _notifRecurringEnabled =
         prefs.getBool(_kNotifRecurringEnabled) ?? _notifRecurringEnabled;
@@ -287,20 +167,10 @@ class SettingsPreferences extends ChangeNotifier {
         prefs.getBool(_kNotifBudgetEnabled) ?? _notifBudgetEnabled;
     _notifInsightsEnabled =
         prefs.getBool(_kNotifInsightsEnabled) ?? _notifInsightsEnabled;
-    _notifTiming = _readEnum(
-      prefs.getString(_kNotifTiming),
-      NotificationTiming.values,
-      _notifTiming,
-    );
     _aiAssistantEnabled =
         prefs.getBool(_kAiAssistantEnabled) ?? _aiAssistantEnabled;
     _aiInsightsEnabled =
         prefs.getBool(_kAiInsightsEnabled) ?? _aiInsightsEnabled;
-    _themeModePref = _readEnum(
-      prefs.getString(_kThemeModePref),
-      ThemeModePref.values,
-      _themeModePref,
-    );
     _appLockEnabled = prefs.getBool(_kAppLockEnabled) ?? _appLockEnabled;
     _hapticEnabled = prefs.getBool(_kHapticEnabled) ?? _hapticEnabled;
     _animationsEnabled =
@@ -310,21 +180,6 @@ class SettingsPreferences extends ChangeNotifier {
     _displayName = prefs.getString(_kDisplayName) ?? _displayName;
     _phoneNumber = prefs.getString(_kPhoneNumber) ?? _phoneNumber;
     _timezoneId = prefs.getString(_kTimezoneId) ?? _timezoneId;
-    _dateFormatPref = _readEnum(
-      prefs.getString(_kDateFormatPref),
-      DateFormatPref.values,
-      _dateFormatPref,
-    );
-    _weekStartDay = _readEnum(
-      prefs.getString(_kWeekStartDay),
-      WeekStartDay.values,
-      _weekStartDay,
-    );
-    _exportFormatPref = _readEnum(
-      prefs.getString(_kExportFormatPref),
-      ExportFormat.values,
-      _exportFormatPref,
-    );
     _avatarRemoved = prefs.getBool(_kAvatarRemoved) ?? _avatarRemoved;
 
     _loaded = true;
@@ -333,11 +188,11 @@ class SettingsPreferences extends ChangeNotifier {
 
   // --- Setters (persist + notify) ---
 
-  Future<void> setMultiCurrencyEnabled(bool value) =>
-      _writeBool(_kMultiCurrencyEnabled, value, (v) => _multiCurrencyEnabled = v);
-
-  Future<void> setFinancialYear(FinancialYear value) =>
-      _writeEnum(_kFinancialYear, value, (v) => _financialYear = v);
+  Future<void> setMultiCurrencyEnabled(bool value) => _writeBool(
+    _kMultiCurrencyEnabled,
+    value,
+    (v) => _multiCurrencyEnabled = v,
+  );
 
   Future<void> setDefaultExpenseAccountId(int? value) async {
     if (_defaultExpenseAccountId == value) return;
@@ -366,8 +221,11 @@ class SettingsPreferences extends ChangeNotifier {
   }
 
   Future<void> setDefaultTransactionType(DefaultTransactionType value) =>
-      _writeEnum(_kDefaultTransactionType, value,
-          (v) => _defaultTransactionType = v);
+      _writeEnum(
+        _kDefaultTransactionType,
+        value,
+        (v) => _defaultTransactionType = v,
+      );
 
   Future<void> setMonthlySpendingLimit(double? value) async {
     if (_monthlySpendingLimit == value) return;
@@ -383,22 +241,22 @@ class SettingsPreferences extends ChangeNotifier {
   }
 
   Future<void> setSafeDailySpendEnabled(bool value) => _writeBool(
-        _kSafeDailySpendEnabled,
-        value,
-        (v) => _safeDailySpendEnabled = v,
-      );
+    _kSafeDailySpendEnabled,
+    value,
+    (v) => _safeDailySpendEnabled = v,
+  );
 
   Future<void> setOverspendingAlertsEnabled(bool value) => _writeBool(
-        _kOverspendingAlertsEnabled,
-        value,
-        (v) => _overspendingAlertsEnabled = v,
-      );
+    _kOverspendingAlertsEnabled,
+    value,
+    (v) => _overspendingAlertsEnabled = v,
+  );
 
   Future<void> setNotifRecurringEnabled(bool value) => _writeBool(
-        _kNotifRecurringEnabled,
-        value,
-        (v) => _notifRecurringEnabled = v,
-      );
+    _kNotifRecurringEnabled,
+    value,
+    (v) => _notifRecurringEnabled = v,
+  );
 
   Future<void> setNotifSalaryEnabled(bool value) =>
       _writeBool(_kNotifSalaryEnabled, value, (v) => _notifSalaryEnabled = v);
@@ -407,22 +265,16 @@ class SettingsPreferences extends ChangeNotifier {
       _writeBool(_kNotifBudgetEnabled, value, (v) => _notifBudgetEnabled = v);
 
   Future<void> setNotifInsightsEnabled(bool value) => _writeBool(
-        _kNotifInsightsEnabled,
-        value,
-        (v) => _notifInsightsEnabled = v,
-      );
-
-  Future<void> setNotifTiming(NotificationTiming value) =>
-      _writeEnum(_kNotifTiming, value, (v) => _notifTiming = v);
+    _kNotifInsightsEnabled,
+    value,
+    (v) => _notifInsightsEnabled = v,
+  );
 
   Future<void> setAiAssistantEnabled(bool value) =>
       _writeBool(_kAiAssistantEnabled, value, (v) => _aiAssistantEnabled = v);
 
   Future<void> setAiInsightsEnabled(bool value) =>
       _writeBool(_kAiInsightsEnabled, value, (v) => _aiInsightsEnabled = v);
-
-  Future<void> setThemeModePref(ThemeModePref value) =>
-      _writeEnum(_kThemeModePref, value, (v) => _themeModePref = v);
 
   Future<void> setAppLockEnabled(bool value) =>
       _writeBool(_kAppLockEnabled, value, (v) => _appLockEnabled = v);
@@ -467,15 +319,6 @@ class SettingsPreferences extends ChangeNotifier {
   Future<void> setTimezoneId(String value) =>
       _writeString(_kTimezoneId, value, (v) => _timezoneId = v);
 
-  Future<void> setDateFormatPref(DateFormatPref value) =>
-      _writeEnum(_kDateFormatPref, value, (v) => _dateFormatPref = v);
-
-  Future<void> setWeekStartDay(WeekStartDay value) =>
-      _writeEnum(_kWeekStartDay, value, (v) => _weekStartDay = v);
-
-  Future<void> setExportFormatPref(ExportFormat value) =>
-      _writeEnum(_kExportFormatPref, value, (v) => _exportFormatPref = v);
-
   Future<void> setAvatarRemoved(bool value) =>
       _writeBool(_kAvatarRemoved, value, (v) => _avatarRemoved = v);
 
@@ -484,7 +327,6 @@ class SettingsPreferences extends ChangeNotifier {
   Map<String, dynamic> preferencesToJson() {
     final m = <String, dynamic>{
       _kMultiCurrencyEnabled: _multiCurrencyEnabled,
-      _kFinancialYear: _financialYear.name,
       _kDefaultExpenseAccountId: _defaultExpenseAccountId,
       _kDefaultIncomeAccountId: _defaultIncomeAccountId,
       _kDefaultTransactionType: _defaultTransactionType.name,
@@ -495,10 +337,8 @@ class SettingsPreferences extends ChangeNotifier {
       _kNotifSalaryEnabled: _notifSalaryEnabled,
       _kNotifBudgetEnabled: _notifBudgetEnabled,
       _kNotifInsightsEnabled: _notifInsightsEnabled,
-      _kNotifTiming: _notifTiming.name,
       _kAiAssistantEnabled: _aiAssistantEnabled,
       _kAiInsightsEnabled: _aiInsightsEnabled,
-      _kThemeModePref: _themeModePref.name,
       _kAppLockEnabled: _appLockEnabled,
       _kHapticEnabled: _hapticEnabled,
       _kAnimationsEnabled: _animationsEnabled,
@@ -506,9 +346,6 @@ class SettingsPreferences extends ChangeNotifier {
       _kDisplayName: _displayName,
       _kPhoneNumber: _phoneNumber,
       _kTimezoneId: _timezoneId,
-      _kDateFormatPref: _dateFormatPref.name,
-      _kWeekStartDay: _weekStartDay.name,
-      _kExportFormatPref: _exportFormatPref.name,
       _kAvatarRemoved: _avatarRemoved,
     };
     return m;
@@ -518,13 +355,6 @@ class SettingsPreferences extends ChangeNotifier {
     if (json.containsKey(_kMultiCurrencyEnabled)) {
       final v = json[_kMultiCurrencyEnabled];
       if (v is bool) _multiCurrencyEnabled = v;
-    }
-    if (json.containsKey(_kFinancialYear)) {
-      _financialYear = _readEnum(
-        json[_kFinancialYear]?.toString(),
-        FinancialYear.values,
-        _financialYear,
-      );
     }
     if (json.containsKey(_kDefaultExpenseAccountId)) {
       final v = json[_kDefaultExpenseAccountId];
@@ -585,13 +415,6 @@ class SettingsPreferences extends ChangeNotifier {
       final v = json[_kNotifInsightsEnabled];
       if (v is bool) _notifInsightsEnabled = v;
     }
-    if (json.containsKey(_kNotifTiming)) {
-      _notifTiming = _readEnum(
-        json[_kNotifTiming]?.toString(),
-        NotificationTiming.values,
-        _notifTiming,
-      );
-    }
     if (json.containsKey(_kAiAssistantEnabled)) {
       final v = json[_kAiAssistantEnabled];
       if (v is bool) _aiAssistantEnabled = v;
@@ -599,13 +422,6 @@ class SettingsPreferences extends ChangeNotifier {
     if (json.containsKey(_kAiInsightsEnabled)) {
       final v = json[_kAiInsightsEnabled];
       if (v is bool) _aiInsightsEnabled = v;
-    }
-    if (json.containsKey(_kThemeModePref)) {
-      _themeModePref = _readEnum(
-        json[_kThemeModePref]?.toString(),
-        ThemeModePref.values,
-        _themeModePref,
-      );
     }
     if (json.containsKey(_kAppLockEnabled)) {
       final v = json[_kAppLockEnabled];
@@ -635,27 +451,6 @@ class SettingsPreferences extends ChangeNotifier {
       final v = json[_kTimezoneId];
       if (v is String && v.isNotEmpty) _timezoneId = v;
     }
-    if (json.containsKey(_kDateFormatPref)) {
-      _dateFormatPref = _readEnum(
-        json[_kDateFormatPref]?.toString(),
-        DateFormatPref.values,
-        _dateFormatPref,
-      );
-    }
-    if (json.containsKey(_kWeekStartDay)) {
-      _weekStartDay = _readEnum(
-        json[_kWeekStartDay]?.toString(),
-        WeekStartDay.values,
-        _weekStartDay,
-      );
-    }
-    if (json.containsKey(_kExportFormatPref)) {
-      _exportFormatPref = _readEnum(
-        json[_kExportFormatPref]?.toString(),
-        ExportFormat.values,
-        _exportFormatPref,
-      );
-    }
     if (json.containsKey(_kAvatarRemoved)) {
       final v = json[_kAvatarRemoved];
       if (v is bool) _avatarRemoved = v;
@@ -665,7 +460,6 @@ class SettingsPreferences extends ChangeNotifier {
   Future<void> _persistAllToSharedPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kMultiCurrencyEnabled, _multiCurrencyEnabled);
-    await prefs.setString(_kFinancialYear, _financialYear.name);
     if (_defaultExpenseAccountId == null) {
       await prefs.remove(_kDefaultExpenseAccountId);
     } else {
@@ -676,22 +470,26 @@ class SettingsPreferences extends ChangeNotifier {
     } else {
       await prefs.setInt(_kDefaultIncomeAccountId, _defaultIncomeAccountId!);
     }
-    await prefs.setString(_kDefaultTransactionType, _defaultTransactionType.name);
+    await prefs.setString(
+      _kDefaultTransactionType,
+      _defaultTransactionType.name,
+    );
     if (_monthlySpendingLimit == null) {
       await prefs.remove(_kMonthlySpendingLimit);
     } else {
       await prefs.setDouble(_kMonthlySpendingLimit, _monthlySpendingLimit!);
     }
     await prefs.setBool(_kSafeDailySpendEnabled, _safeDailySpendEnabled);
-    await prefs.setBool(_kOverspendingAlertsEnabled, _overspendingAlertsEnabled);
+    await prefs.setBool(
+      _kOverspendingAlertsEnabled,
+      _overspendingAlertsEnabled,
+    );
     await prefs.setBool(_kNotifRecurringEnabled, _notifRecurringEnabled);
     await prefs.setBool(_kNotifSalaryEnabled, _notifSalaryEnabled);
     await prefs.setBool(_kNotifBudgetEnabled, _notifBudgetEnabled);
     await prefs.setBool(_kNotifInsightsEnabled, _notifInsightsEnabled);
-    await prefs.setString(_kNotifTiming, _notifTiming.name);
     await prefs.setBool(_kAiAssistantEnabled, _aiAssistantEnabled);
     await prefs.setBool(_kAiInsightsEnabled, _aiInsightsEnabled);
-    await prefs.setString(_kThemeModePref, _themeModePref.name);
     await prefs.setBool(_kAppLockEnabled, _appLockEnabled);
     await prefs.setBool(_kHapticEnabled, _hapticEnabled);
     await prefs.setBool(_kAnimationsEnabled, _animationsEnabled);
@@ -707,9 +505,6 @@ class SettingsPreferences extends ChangeNotifier {
       await prefs.setString(_kPhoneNumber, _phoneNumber);
     }
     await prefs.setString(_kTimezoneId, _timezoneId);
-    await prefs.setString(_kDateFormatPref, _dateFormatPref.name);
-    await prefs.setString(_kWeekStartDay, _weekStartDay.name);
-    await prefs.setString(_kExportFormatPref, _exportFormatPref.name);
     await prefs.setBool(_kAvatarRemoved, _avatarRemoved);
   }
 

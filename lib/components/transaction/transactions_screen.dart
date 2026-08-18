@@ -350,13 +350,19 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Future<void> _openCategoryFilter() async {
-    final categories = CategoryCatalog.instance.names;
+    final catalog = CategoryCatalog.instance;
+    final categories = catalog.names;
     final picked = await selectFromList<String?>(
       context: context,
       title: 'Category',
       current: _filters.category,
       options: [null, ...categories],
       labelFor: (c) => c ?? 'All categories',
+      iconFor: (c) => c == null
+          ? Icons.apps_rounded
+          : catalog.iconForName(c),
+      colorFor: (c) =>
+          c == null ? AppColors.textSecondary : catalog.colorForName(c),
     );
     if (picked != null || _filters.category != null) {
       _applyFilters(() => _filters.category = picked);

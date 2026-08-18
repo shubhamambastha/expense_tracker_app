@@ -46,7 +46,6 @@ class AddTransactionPage extends StatefulWidget {
     super.key,
     required this.accounts,
     required this.onSave,
-    this.recentSuggestions = const [],
     this.recentCategoryNames = const [],
     this.recentIncomeSuggestions = const [],
     this.recentIncomeCategoryNames = const [],
@@ -60,9 +59,6 @@ class AddTransactionPage extends StatefulWidget {
   /// Called when the user taps Save. Returns once persistence is done so the
   /// screen can show a busy state.
   final Future<void> Function(TransactionDraft draft) onSave;
-
-  /// Optional autofill suggestions (recent merchants / payers).
-  final List<RecentSuggestion> recentSuggestions;
 
   /// Category names to bubble to the front of the pill list.
   final List<String> recentCategoryNames;
@@ -296,60 +292,6 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-  void _applySuggestion(RecentSuggestion suggestion) {
-    setState(() {
-      _merchantController.text = suggestion.merchant;
-      _draft.merchant = suggestion.merchant;
-      _draft.categoryName = suggestion.category;
-      if (suggestion.accountId != null) {
-        _draft.accountId = suggestion.accountId;
-      }
-      if (suggestion.amount != null) {
-        _amountController.text = suggestion.amount!.toStringAsFixed(
-          CurrencySettings.instance.decimalDigits,
-        );
-        _draft.amount = suggestion.amount;
-      }
-      if (suggestion.recurring != null) {
-        _draft.recurring = suggestion.recurring!;
-      }
-    });
-    final label = _draft.isIncome
-        ? IncomeFlowHelpers.suggestionDisplayLabel(
-            category: suggestion.category,
-            payer: suggestion.merchant,
-          )
-        : suggestion.merchant;
-    SnackbarHelper.showMessage(context, 'Filled from $label');
-  }
-
-  void _handleQuickParse(String raw) {
-    final result = _QuickParser.parse(
-      raw,
-      accounts: widget.accounts,
-      catalog: CategoryCatalog.instance,
-    );
-
-    setState(() {
-      if (result.amount != null) {
-        _amountController.text = result.amount!.toStringAsFixed(
-          CurrencySettings.instance.decimalDigits,
-        );
-        _draft.amount = result.amount;
-      }
-      if (result.merchant != null) {
-        _merchantController.text = result.merchant!;
-        _draft.merchant = result.merchant!;
-      }
-      if (result.accountId != null) _draft.accountId = result.accountId;
-      if (result.categoryName != null) {
-        _draft.categoryName = result.categoryName;
-      }
-    });
-
-    SnackbarHelper.showSuccess(context, 'Parsed: $raw');
-  }
-
   void _setAmountKeypadOpen(bool open) {
     if (_amountKeypadOpen == open) return;
     setState(() => _amountKeypadOpen = open);
@@ -542,7 +484,6 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
             setState(() => _advancedExpanded = !_advancedExpanded),
         kind: _draft.kind,
         categoryName: _draft.categoryName,
-        amount: _draft.amount,
         recurring: _draft.recurring,
         noteController: _noteController,
         onRecurringChanged: _onRecurringChanged,
@@ -569,11 +510,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
             );
           });
         },
-        onQuickParse: _handleQuickParse,
         onSaveAndAddAnother: () => _onSave(addAnother: true),
-        onSuggestionTap: _applySuggestion,
-        recentSuggestions: widget.recentSuggestions,
-        recentIncomeSuggestions: widget.recentIncomeSuggestions,
         isBusy: _isBusy,
         showSaveAndAddAnother: !_draft.isEditing,
         noteHintText: isIncome
@@ -678,71 +615,4 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
       ),
     );
   }
-}
-
-class _QuickParser {
-  static _QuickParseResult parse(
-    String raw, {
-    required List<Account> accounts,
-    required CategoryCatalog catalog,
-  }) {
-    final amountMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(raw);
-    final amount = amountMatch == null
-        ? null
-        : double.tryParse(amountMatch.group(1)!);
-
-    final accountTokens = const ['using', 'via', 'with', 'on'];
-    int? accountId;
-    String working = raw;
-    for (final token in accountTokens) {
-      final idx = working.toLowerCase().indexOf(' $token ');
-      if (idx == -1) continue;
-      final tail = working.substring(idx + token.length + 2).trim();
-      final match = accounts.firstWhere(
-        (a) => tail.toLowerCase().contains(a.name.toLowerCase()),
-        orElse: () => Account(name: '__none__', type: AccountType.bank),
-      );
-      if (match.name != '__none__' && match.id != null) {
-        accountId = match.id;
-      }
-      working = working.substring(0, idx);
-      break;
-    }
-
-    final merchantRaw = working
-        .replaceFirst(amountMatch?.group(1) ?? '', '')
-        .trim();
-    final merchant = merchantRaw.isEmpty ? null : merchantRaw;
-
-    String? categoryName;
-    if (merchant != null) {
-      for (final c in catalog.categories) {
-        if (merchant.toLowerCase().contains(c.name.toLowerCase())) {
-          categoryName = c.name;
-          break;
-        }
-      }
-    }
-
-    return _QuickParseResult(
-      amount: amount,
-      merchant: merchant,
-      accountId: accountId,
-      categoryName: categoryName,
-    );
-  }
-}
-
-class _QuickParseResult {
-  const _QuickParseResult({
-    this.amount,
-    this.merchant,
-    this.accountId,
-    this.categoryName,
-  });
-
-  final double? amount;
-  final String? merchant;
-  final int? accountId;
-  final String? categoryName;
 }

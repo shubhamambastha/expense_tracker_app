@@ -3,11 +3,8 @@ import 'package:intl/intl.dart';
 
 import '../../config/design_tokens.dart';
 import '../../models/transaction_draft.dart';
-import '../../services/currency_settings.dart';
 import '../../utils/emi_schedule_helpers.dart';
 import '../../utils/transaction_subtype_helpers.dart';
-import 'quick_ai_input.dart';
-import 'recent_suggestions_section.dart';
 import 'recurring_payment_section.dart';
 import 'transaction_subtype_chips.dart';
 
@@ -19,7 +16,6 @@ class TransactionAdvancedSection extends StatelessWidget {
     required this.onExpandToggle,
     required this.kind,
     required this.categoryName,
-    required this.amount,
     required this.recurring,
     required this.noteController,
     required this.onRecurringChanged,
@@ -27,11 +23,7 @@ class TransactionAdvancedSection extends StatelessWidget {
     required this.onPickEndDate,
     required this.onSubtypeSelected,
     required this.onIncomeRefundSelected,
-    required this.onQuickParse,
     required this.onSaveAndAddAnother,
-    this.onSuggestionTap,
-    this.recentSuggestions = const [],
-    this.recentIncomeSuggestions = const [],
     this.isBusy = false,
     this.showSaveAndAddAnother = true,
     this.noteHintText = 'Add a note (optional)',
@@ -42,7 +34,6 @@ class TransactionAdvancedSection extends StatelessWidget {
   final VoidCallback onExpandToggle;
   final TransactionKind kind;
   final String? categoryName;
-  final double? amount;
   final RecurringConfig recurring;
   final TextEditingController noteController;
   final ValueChanged<RecurringConfig> onRecurringChanged;
@@ -50,19 +41,13 @@ class TransactionAdvancedSection extends StatelessWidget {
   final Future<void> Function() onPickEndDate;
   final ValueChanged<String> onSubtypeSelected;
   final VoidCallback onIncomeRefundSelected;
-  final ValueChanged<String> onQuickParse;
   final VoidCallback onSaveAndAddAnother;
-  final ValueChanged<RecentSuggestion>? onSuggestionTap;
-  final List<RecentSuggestion> recentSuggestions;
-  final List<RecentSuggestion> recentIncomeSuggestions;
   final bool isBusy;
   final bool showSaveAndAddAnother;
   final String noteHintText;
   final String? reminderHint;
 
   bool get _isEmi => TransactionSubtypeHelpers.isEmiCategory(categoryName);
-  bool get _isSubscription =>
-      TransactionSubtypeHelpers.isSubscriptionCategory(categoryName);
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +139,6 @@ class TransactionAdvancedSection extends StatelessWidget {
                       ],
                       if (_isEmi) ...[
                         _EmiDetailsBlock(
-                          amount: amount,
                           recurring: recurring,
                           onRecurringChanged: onRecurringChanged,
                           onPickStartDate: onPickStartDate,
@@ -169,37 +153,8 @@ class TransactionAdvancedSection extends StatelessWidget {
                         isIncome: kind == TransactionKind.income,
                         reminderHint: reminderHint,
                         compact: true,
-                        showReminder: !_isSubscription,
-                      ),
-                      if (recentSuggestions.isNotEmpty &&
-                          kind == TransactionKind.expense) ...[
-                        const SizedBox(height: AppSpacing.lg),
-                        RecentSuggestionsSection(
-                          suggestions: recentSuggestions,
-                          onTap: onSuggestionTap ?? (_) {},
-                        ),
-                      ],
-                      if (recentIncomeSuggestions.isNotEmpty &&
-                          kind == TransactionKind.income) ...[
-                        const SizedBox(height: AppSpacing.lg),
-                        RecentSuggestionsSection(
-                          suggestions: recentIncomeSuggestions,
-                          title: 'Recent income',
-                          showCategoryPrefix: true,
-                          onTap: onSuggestionTap ?? (_) {},
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.lg),
-                      QuickAiInput(onParse: onQuickParse),
-                      const SizedBox(height: AppSpacing.lg),
-                      _SoonRow(
-                        icon: Icons.attach_file_rounded,
-                        title: 'Attachments',
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _SoonRow(
-                        icon: Icons.data_object_rounded,
-                        title: 'Custom Metadata',
+                        showFrequency: !_isEmi,
+                        showDates: !_isEmi,
                       ),
                       if (showSaveAndAddAnother) ...[
                         const SizedBox(height: AppSpacing.lg),
@@ -235,63 +190,13 @@ class _AdvancedFieldLabel extends StatelessWidget {
   }
 }
 
-class _SoonRow extends StatelessWidget {
-  const _SoonRow({required this.icon, required this.title});
-
-  final IconData icon;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.7,
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppColors.textSecondary),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              title,
-              style: AppTextStyles.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.secondary.withAlpha(28),
-              borderRadius: AppRadii.pillRadius,
-              border: Border.all(color: AppColors.secondary.withAlpha(70)),
-            ),
-            child: Text(
-              'Soon',
-              style: AppTextStyles.label.copyWith(
-                color: AppColors.secondary,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _EmiDetailsBlock extends StatelessWidget {
   const _EmiDetailsBlock({
-    required this.amount,
     required this.recurring,
     required this.onRecurringChanged,
     required this.onPickStartDate,
   });
 
-  final double? amount;
   final RecurringConfig recurring;
   final ValueChanged<RecurringConfig> onRecurringChanged;
   final Future<void> Function() onPickStartDate;
@@ -311,12 +216,12 @@ class _EmiDetailsBlock extends StatelessWidget {
     return EmiScheduleHelpers.remainingInstallments(endDate: end);
   }
 
-  String get _amountLabel {
-    final value = amount;
-    if (value == null || value <= 0) return 'Uses amount above';
-    final currency = CurrencySettings.instance;
-    return '${currency.symbol}${value.toStringAsFixed(currency.decimalDigits)} / month';
-  }
+  DateTime get _endDate =>
+      recurring.endDate ??
+      EmiScheduleHelpers.endDateFromTenure(
+        startDate: recurring.startDate,
+        tenureMonths: _tenureMonths,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -325,47 +230,18 @@ class _EmiDetailsBlock extends StatelessWidget {
       children: [
         const _AdvancedFieldLabel(label: 'EMI Details'),
         const SizedBox(height: AppSpacing.sm),
-        _EmiInfoRow(label: 'EMI amount', value: _amountLabel),
-        const SizedBox(height: AppSpacing.sm),
-        InkWell(
-          onTap: onPickStartDate,
-          borderRadius: AppRadii.inputRadius,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceSecondary,
-              borderRadius: AppRadii.inputRadius,
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Text('Start date', style: AppTextStyles.label),
-                const Spacer(),
-                Text(
-                  DateFormat.MMMd().format(recurring.startDate),
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: AppColors.textSecondary,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             Expanded(
+              child: _EmiDateTile(
+                value: DateFormat.MMMd().format(recurring.startDate),
+                onTap: onPickStartDate,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
               child: _TenureStepper(
-                label: 'Total tenure',
+                label: 'Tenure',
                 value: _tenureMonths,
                 suffix: 'mo',
                 onChanged: (months) {
@@ -381,50 +257,52 @@ class _EmiDetailsBlock extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _EmiInfoRow(
-                label: 'Remaining',
-                value: '$_remaining mo',
-              ),
-            ),
           ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '$_remaining mo remaining · ends ${DateFormat.MMMd().format(_endDate)}',
+          style: AppTextStyles.caption,
         ),
       ],
     );
   }
 }
 
-class _EmiInfoRow extends StatelessWidget {
-  const _EmiInfoRow({required this.label, required this.value});
+class _EmiDateTile extends StatelessWidget {
+  const _EmiDateTile({required this.value, required this.onTap});
 
-  final String label;
   final String value;
+  final Future<void> Function() onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceSecondary,
-        borderRadius: AppRadii.inputRadius,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AppTextStyles.label),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: AppTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.w700,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadii.inputRadius,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceSecondary,
+          borderRadius: AppRadii.inputRadius,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Start', style: AppTextStyles.label),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

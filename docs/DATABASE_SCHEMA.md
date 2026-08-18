@@ -403,7 +403,7 @@ Run in Supabase SQL editor (fresh project → existing project):
 | Budgets | `category_budgets` | `CategoryBudgetService` |
 | Analytics | `transactions` (aggregated) | `analytics_aggregations.dart` |
 | Recurring manager | `transactions`, `recurring_events` | `recurring_management.dart`, `upcoming_payments.dart` |
-| Autofill chips | `counterparties`, `transactions` | `SourcePayerField`, `RecentSuggestionsSection` |
+| Autofill chips | `counterparties`, `transactions` | `SourcePayerField` |
 | App preferences | `user_settings` | `SettingsPreferences`, `CurrencySettings` |
 
 ---

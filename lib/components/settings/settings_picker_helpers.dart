@@ -17,6 +17,8 @@ Future<T?> selectFromList<T>({
   required T? current,
   required List<T> options,
   required String Function(T) labelFor,
+  IconData Function(T)? iconFor,
+  Color Function(T)? colorFor,
 }) {
   return showModalBottomSheet<T>(
     context: context,
@@ -65,6 +67,8 @@ Future<T?> selectFromList<T>({
                     return SettingsSelectableRow(
                       label: labelFor(option),
                       selected: selected,
+                      icon: iconFor?.call(option),
+                      iconColor: colorFor?.call(option),
                       onTap: () => Navigator.of(sheetContext).pop(option),
                     );
                   },
@@ -87,6 +91,8 @@ Future<void> showSettingsOptionSheet<T>({
   required T current,
   required List<T> options,
   required String Function(T) labelFor,
+  IconData Function(T)? iconFor,
+  Color Function(T)? colorFor,
   required Future<void> Function(T) onPicked,
 }) async {
   final picked = await selectFromList<T>(
@@ -96,6 +102,8 @@ Future<void> showSettingsOptionSheet<T>({
     current: current,
     options: options,
     labelFor: labelFor,
+    iconFor: iconFor,
+    colorFor: colorFor,
   );
   if (picked != null) {
     await onPicked(picked);
@@ -123,14 +131,22 @@ class SettingsSelectableRow extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.icon,
+    this.iconColor,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
+  /// Optional leading icon avatar — used by category pickers so each option
+  /// carries its own icon/color instead of reading as plain text.
+  final IconData? icon;
+  final Color? iconColor;
+
   @override
   Widget build(BuildContext context) {
+    final tint = iconColor ?? AppColors.primary;
     return Material(
       color: selected
           ? AppColors.primary.withAlpha(28)
@@ -154,6 +170,18 @@ class SettingsSelectableRow extends StatelessWidget {
           ),
           child: Row(
             children: [
+              if (icon != null) ...[
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: tint.withAlpha(selected ? 48 : 28),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: tint, size: 17),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+              ],
               Expanded(
                 child: Text(
                   label,

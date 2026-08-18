@@ -62,118 +62,110 @@ class SettingsPage extends StatelessWidget {
         final prefs = SettingsPreferences.instance;
 
         return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            AppSpacing.xxxl,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ProfileHeaderCard(
-                initial: _profileInitial(),
-                displayName: _displayName(),
-                email: _email(),
-                currencyCode: currency.currencyCode,
-                monthSummary:
-                    '${currency.format(_monthSpent())} spent this month',
-                subscriptionsSummary:
-                    '${_recurringCount()} subscriptions active',
-                onCurrencyTap: () => showCurrencyPickerSheet(context),
-                onEditProfile: () => _open(
-                  context,
-                  EditProfilePage(accounts: accounts),
-                ),
-                onManageAccount: () => _stub(context, 'Manage Account'),
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.xxxl,
               ),
-              const SizedBox(height: AppSpacing.lg),
-              SettingsSection(
-                title: 'Settings',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SettingsTile(
-                    icon: Icons.payments_rounded,
-                    title: 'Financial Preferences',
-                    subtitle:
-                        'Currency, fiscal year, transaction defaults',
-                    valueLabel: currency.currencyCode,
-                    onTap: () => _open(
-                      context,
-                      FinancialPreferencesPage(accounts: accounts),
-                    ),
+                  ProfileHeaderCard(
+                    initial: _profileInitial(),
+                    displayName: _displayName(),
+                    email: _email(),
+                    currencyCode: currency.currencyCode,
+                    monthSummary:
+                        '${currency.format(_monthSpent())} spent this month',
+                    subscriptionsSummary:
+                        '${_recurringCount()} subscriptions active',
+                    onCurrencyTap: () => showCurrencyPickerSheet(context),
+                    onEditProfile: () =>
+                        _open(context, EditProfilePage(accounts: accounts)),
+                    onManageAccount: () => _stub(context, 'Manage Account'),
                   ),
-                  SettingsTile(
-                    icon: Icons.category_rounded,
-                    title: 'Categories',
-                    subtitle: 'Expense and income labels',
-                    valueLabel: _categoriesSummary(),
-                    onTap: () => _open(context, const CategoriesPage()),
-                  ),
-                  SettingsTile(
-                    icon: Icons.account_balance_wallet_rounded,
-                    title: 'Accounts & Cards',
-                    subtitle:
-                        'Banks, credit cards, wallets, and cash',
-                    valueLabel: _accountsSummary(),
-                    onTap: () => _open(
-                      context,
-                      AccountsAndCardsPage(
-                        accounts: accounts,
-                        onAddAccount: onAddAccount,
+                  const SizedBox(height: AppSpacing.lg),
+                  SettingsSection(
+                    title: 'Settings',
+                    children: [
+                      SettingsTile(
+                        icon: Icons.payments_rounded,
+                        title: 'Financial Preferences',
+                        subtitle: 'Currency and transaction defaults',
+                        valueLabel: currency.currencyCode,
+                        onTap: () => _open(
+                          context,
+                          FinancialPreferencesPage(accounts: accounts),
+                        ),
                       ),
-                    ),
+                      SettingsTile(
+                        icon: Icons.category_rounded,
+                        title: 'Categories',
+                        subtitle: 'Expense and income labels',
+                        valueLabel: _categoriesSummary(),
+                        onTap: () => _open(context, const CategoriesPage()),
+                      ),
+                      SettingsTile(
+                        icon: Icons.account_balance_wallet_rounded,
+                        title: 'Accounts & Cards',
+                        subtitle: 'Banks, credit cards, wallets, and cash',
+                        valueLabel: _accountsSummary(),
+                        onTap: () => _open(
+                          context,
+                          AccountsAndCardsPage(
+                            accounts: accounts,
+                            onAddAccount: onAddAccount,
+                          ),
+                        ),
+                      ),
+                      SettingsTile(
+                        icon: Icons.donut_small_rounded,
+                        title: 'Budgets & Spending',
+                        subtitle: 'Monthly cap, category budgets, alerts',
+                        valueLabel: prefs.monthlySpendingLimit == null
+                            ? 'No cap'
+                            : currency.format(prefs.monthlySpendingLimit!),
+                        onTap: () =>
+                            _open(context, const BudgetsAndSpendingPage()),
+                      ),
+                      SettingsTile(
+                        icon: Icons.notifications_rounded,
+                        title: 'Notifications & Reminders',
+                        subtitle: 'Recurring, salary, budget alerts & timing',
+                        valueLabel: _notifSummary(prefs),
+                        onTap: () => _open(context, const NotificationsPage()),
+                      ),
+                      SettingsTile(
+                        icon: Icons.psychology_rounded,
+                        title: 'AI Assistant',
+                        subtitle:
+                            'Insights, suggestions, chat history controls',
+                        valueLabel: prefs.aiAssistantEnabled ? 'On' : 'Off',
+                        onTap: () => _open(context, const AiAssistantPage()),
+                      ),
+                      SettingsTile(
+                        icon: Icons.tune_rounded,
+                        title: 'App Preferences',
+                        subtitle: 'Lock, haptics, density',
+                        onTap: () => _open(context, const AppPreferencesPage()),
+                      ),
+                      SettingsTile(
+                        icon: Icons.support_agent_rounded,
+                        title: 'Support & Feedback',
+                        subtitle:
+                            'Feedback, data & privacy, legal, account removal',
+                        onTap: () =>
+                            _open(context, const SupportAndFeedbackPage()),
+                      ),
+                    ],
                   ),
-                  SettingsTile(
-                    icon: Icons.donut_small_rounded,
-                    title: 'Budgets & Spending',
-                    subtitle: 'Monthly cap, category budgets, alerts',
-                    valueLabel: prefs.monthlySpendingLimit == null
-                        ? 'No cap'
-                        : currency.format(prefs.monthlySpendingLimit!),
-                    onTap: () =>
-                        _open(context, const BudgetsAndSpendingPage()),
-                  ),
-                  SettingsTile(
-                    icon: Icons.notifications_rounded,
-                    title: 'Notifications & Reminders',
-                    subtitle:
-                        'Recurring, salary, budget alerts & timing',
-                    valueLabel: _notifSummary(prefs),
-                    onTap: () => _open(context, const NotificationsPage()),
-                  ),
-                  SettingsTile(
-                    icon: Icons.psychology_rounded,
-                    title: 'AI Assistant',
-                    subtitle:
-                        'Insights, suggestions, chat history controls',
-                    valueLabel:
-                        prefs.aiAssistantEnabled ? 'On' : 'Off',
-                    onTap: () => _open(context, const AiAssistantPage()),
-                  ),
-                  SettingsTile(
-                    icon: Icons.tune_rounded,
-                    title: 'App Preferences',
-                    subtitle: 'Theme, lock, haptics, density',
-                    valueLabel: prefs.themeModePref.label,
-                    onTap: () =>
-                        _open(context, const AppPreferencesPage()),
-                  ),
-                  SettingsTile(
-                    icon: Icons.support_agent_rounded,
-                    title: 'Support & Feedback',
-                    subtitle:
-                        'Feedback, data & privacy, legal, account removal',
-                    onTap: () =>
-                        _open(context, const SupportAndFeedbackPage()),
-                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  SettingsDangerSection(onLogout: onSignOut),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xl),
-              SettingsDangerSection(onLogout: onSignOut),
-            ],
-          ),
-        )
+            )
             .animate()
             .fadeIn(duration: AppDurations.page)
             .slideY(
@@ -191,9 +183,7 @@ class SettingsPage extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   void _open(BuildContext context, Widget page) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => page),
-    );
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
   }
 
   void _stub(BuildContext context, String label) {
@@ -205,7 +195,8 @@ class SettingsPage extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   String _categoriesSummary() {
-    final total = CategoryCatalog.instance.categories.length +
+    final total =
+        CategoryCatalog.instance.categories.length +
         IncomeCategoryCatalog.instance.categories.length;
     if (total == 0) return 'None yet';
     if (total == 1) return '1 label';
@@ -252,13 +243,14 @@ class SettingsPage extends StatelessWidget {
   double _monthSpent() {
     final now = DateTime.now();
     return transactions
-        .where((t) =>
-            t.isExpense &&
-            t.date.year == now.year &&
-            t.date.month == now.month)
+        .where(
+          (t) =>
+              t.isExpense &&
+              t.date.year == now.year &&
+              t.date.month == now.month,
+        )
         .fold<double>(0, (sum, t) => sum + t.amount);
   }
 
-  int _recurringCount() =>
-      transactions.where((t) => t.isRecurring).length;
+  int _recurringCount() => transactions.where((t) => t.isRecurring).length;
 }

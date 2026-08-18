@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../components/settings/settings_picker_helpers.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_switch_tile.dart';
-import '../../../components/settings/settings_tile.dart';
-import '../../../config/design_tokens.dart';
 import '../../../services/settings_preferences.dart';
 
 /// Reminders, alerts, and insight pings — plus when they fire.
@@ -21,9 +18,7 @@ class NotificationsPage extends StatelessWidget {
 
         return SettingsSubpageScaffold(
           title: 'Notifications & Reminders',
-          subtitle:
-              'Pick which pings you want. Timing applies to recurring and '
-              'budget reminders.',
+          subtitle: 'Pick which pings you want.',
           children: [
             SettingsSection(
               title: 'Pings',
@@ -58,36 +53,9 @@ class NotificationsPage extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.lg),
-            SettingsSection(
-              title: 'Timing',
-              children: [
-                SettingsTile(
-                  icon: Icons.alarm_rounded,
-                  title: 'Notification Timing',
-                  subtitle: 'When reminders fire',
-                  valueLabel: prefs.notifTiming.label,
-                  onTap: () => _pickTiming(context, prefs),
-                ),
-              ],
-            ),
           ],
         );
       },
     );
   }
-
-  Future<void> _pickTiming(
-    BuildContext context,
-    SettingsPreferences prefs,
-  ) =>
-      showSettingsOptionSheet<NotificationTiming>(
-        context: context,
-        title: 'Notification timing',
-        subtitle: 'When recurring & budget reminders fire.',
-        current: prefs.notifTiming,
-        options: NotificationTiming.values,
-        labelFor: (v) => v.label,
-        onPicked: prefs.setNotifTiming,
-      );
 }

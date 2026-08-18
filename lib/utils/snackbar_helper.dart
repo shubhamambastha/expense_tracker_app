@@ -16,6 +16,23 @@ class SnackbarHelper {
   static Timer? _activeUndoTimer;
   static AnimationController? _activeUndoController;
 
+  static const _errorStyle = (
+    accent: AppColors.danger,
+    icon: Icons.error_outline_rounded,
+  );
+  static const _successStyle = (
+    accent: AppColors.success,
+    icon: Icons.check_circle_outline_rounded,
+  );
+  static const _warningStyle = (
+    accent: AppColors.warning,
+    icon: Icons.warning_amber_rounded,
+  );
+  static const _messageStyle = (
+    accent: AppColors.secondary,
+    icon: Icons.info_outline_rounded,
+  );
+
   static void showError(BuildContext context, Object error) {
     final message = switch (error) {
       AuthLoginCancelledException() => 'Login was cancelled',
@@ -23,40 +40,17 @@ class SnackbarHelper {
       AuthException(:final message) => message,
       _ => error.toString(),
     };
-    _showTopSnackBar(
-      context,
-      message,
-      accent: AppColors.danger,
-      icon: Icons.error_outline_rounded,
-    );
+    _showTopSnackBar(context, message, style: _errorStyle);
   }
 
-  static void showSuccess(BuildContext context, String message) {
-    _showTopSnackBar(
-      context,
-      message,
-      accent: AppColors.success,
-      icon: Icons.check_circle_outline_rounded,
-    );
-  }
+  static void showSuccess(BuildContext context, String message) =>
+      _showTopSnackBar(context, message, style: _successStyle);
 
-  static void showWarning(BuildContext context, String message) {
-    _showTopSnackBar(
-      context,
-      message,
-      accent: AppColors.warning,
-      icon: Icons.warning_amber_rounded,
-    );
-  }
+  static void showWarning(BuildContext context, String message) =>
+      _showTopSnackBar(context, message, style: _warningStyle);
 
-  static void showMessage(BuildContext context, String message) {
-    _showTopSnackBar(
-      context,
-      message,
-      accent: AppColors.secondary,
-      icon: Icons.info_outline_rounded,
-    );
-  }
+  static void showMessage(BuildContext context, String message) =>
+      _showTopSnackBar(context, message, style: _messageStyle);
 
   /// Success snackbar with an Undo action. Stays visible for [duration],
   /// then auto-dismisses. Replaces any previously visible undo snackbar.
@@ -84,9 +78,10 @@ class SnackbarHelper {
       end: Offset.zero,
     ).chain(CurveTween(curve: AppCurves.spring)).animate(controller);
 
-    final opacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeOut),
-    );
+    final opacity = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
 
     void dismiss({bool animate = true}) {
       if (_activeUndoEntry == null) return;
@@ -205,9 +200,10 @@ class SnackbarHelper {
   static void _showTopSnackBar(
     BuildContext context,
     String message, {
-    required Color accent,
-    required IconData icon,
+    required ({Color accent, IconData icon}) style,
   }) {
+    final accent = style.accent;
+    final icon = style.icon;
     final overlayState = Overlay.of(context);
 
     final tickerProvider = _SnackbarTickerProvider();
@@ -218,17 +214,18 @@ class SnackbarHelper {
 
     final animation = TweenSequence<Offset>([
       TweenSequenceItem(
-        tween: Tween(begin: const Offset(0, -1), end: Offset.zero)
-            .chain(CurveTween(curve: AppCurves.spring)),
+        tween: Tween(
+          begin: const Offset(0, -1),
+          end: Offset.zero,
+        ).chain(CurveTween(curve: AppCurves.spring)),
         weight: 18,
       ),
+      TweenSequenceItem(tween: ConstantTween<Offset>(Offset.zero), weight: 64),
       TweenSequenceItem(
-        tween: ConstantTween<Offset>(Offset.zero),
-        weight: 64,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: Offset.zero, end: const Offset(0, -1.4))
-            .chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween(
+          begin: Offset.zero,
+          end: const Offset(0, -1.4),
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 18,
       ),
     ]).animate(controller);

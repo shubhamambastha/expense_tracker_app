@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../components/settings/settings_delete_account_tile.dart';
 import '../../../components/settings/settings_info_tile.dart';
-import '../../../components/settings/settings_picker_helpers.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_tile.dart';
 import '../../../config/design_tokens.dart';
-import '../../../services/settings_preferences.dart';
 import '../../../utils/snackbar_helper.dart';
 
 /// Feedback channels, data & privacy, legal links, and account deletion.
@@ -18,8 +16,7 @@ class SupportAndFeedbackPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return SettingsSubpageScaffold(
       title: 'Support & Feedback',
-      subtitle:
-          'Tell us what works, what does not, and what you wish existed.',
+      subtitle: 'Tell us what works, what does not, and what you wish existed.',
       children: [
         SettingsSection(
           title: 'Talk to us',
@@ -52,7 +49,7 @@ class SupportAndFeedbackPage extends StatelessWidget {
               icon: Icons.file_download_rounded,
               title: 'Export Data',
               subtitle: 'Download transactions as CSV or JSON',
-              onTap: () => _pickExportFormat(context),
+              onTap: () => _stub(context, 'Export data'),
             ),
             const SettingsInfoTile(
               icon: Icons.cloud_done_rounded,
@@ -63,8 +60,7 @@ class SupportAndFeedbackPage extends StatelessWidget {
             const SettingsInfoTile(
               icon: Icons.cloud_off_rounded,
               title: 'Offline Mode',
-              subtitle:
-                  'Reads/writes work without internet — synced later',
+              subtitle: 'Reads/writes work without internet — synced later',
               statusPill: 'Local-first',
             ),
           ],
@@ -96,20 +92,6 @@ class SupportAndFeedbackPage extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  Future<void> _pickExportFormat(BuildContext context) async {
-    final picked = await selectFromList<ExportFormat>(
-      context: context,
-      title: 'Export data',
-      subtitle: 'Choose the file format to download.',
-      current: null,
-      options: ExportFormat.values,
-      labelFor: (v) => v.label,
-    );
-    if (picked != null && context.mounted) {
-      _stub(context, '${picked.label} export');
-    }
   }
 
   void _stub(BuildContext context, String label) {

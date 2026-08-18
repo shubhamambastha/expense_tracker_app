@@ -55,7 +55,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final storedName = prefs.displayName.trim().isNotEmpty
         ? prefs.displayName.trim()
         : (ProfileIdentity.sessionDisplayName(session) ??
-            ProfileIdentity.displayNameFromEmail(email));
+              ProfileIdentity.displayNameFromEmail(email));
     final phone = prefs.phoneNumber.trim();
 
     _nameController.text = storedName;
@@ -65,19 +65,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _draft = _ProfileDraft(
       currencyCode: currency.currencyCode,
       multiCurrencyEnabled: prefs.multiCurrencyEnabled,
-      financialYear: prefs.financialYear,
       defaultExpenseAccountId: prefs.defaultExpenseAccountId,
       defaultIncomeAccountId: prefs.defaultIncomeAccountId,
       defaultTransactionType: prefs.defaultTransactionType,
       timezoneId: prefs.timezoneId,
-      dateFormatPref: prefs.dateFormatPref,
-      weekStartDay: prefs.weekStartDay,
-      themeModePref: prefs.themeModePref,
       compactModeEnabled: prefs.compactModeEnabled,
       animationsEnabled: prefs.animationsEnabled,
       hapticEnabled: prefs.hapticEnabled,
       appLockEnabled: prefs.appLockEnabled,
-      exportFormatPref: prefs.exportFormatPref,
       avatarRemoved: prefs.avatarRemoved,
     );
     _baseline = _draft.copyWith();
@@ -200,9 +195,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     CurrencySettings currency,
     SettingsPreferences prefs,
   ) {
-    final lines = <String>[
-      'Primary Currency: ${_draft.currencyCode}',
-    ];
+    final lines = <String>['Primary Currency: ${_draft.currencyCode}'];
     if (prefs.monthlySpendingLimit != null) {
       lines.add('Monthly Budget Active');
     }
@@ -251,8 +244,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget _financialPreferencesSection() {
     return SettingsSection(
       title: 'Financial Preferences',
-      footnote:
-          'Defaults that shape analytics, budgets, and Add Transaction.',
+      footnote: 'Defaults that shape analytics, budgets, and Add Transaction.',
       children: [
         SettingsTile(
           icon: Icons.payments_rounded,
@@ -269,22 +261,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
           onChanged: (v) {
             setState(() => _draft = _draft.copyWith(multiCurrencyEnabled: v));
           },
-        ),
-        SettingsTile(
-          icon: Icons.calendar_view_month_rounded,
-          title: 'Financial Year',
-          subtitle: 'Yearly analytics & budgeting boundary',
-          valueLabel: _draft.financialYear.short,
-          onTap: () => showSettingsOptionSheet<FinancialYear>(
-            context: context,
-            title: 'Financial year',
-            current: _draft.financialYear,
-            options: FinancialYear.values,
-            labelFor: (v) => v.label,
-            onPicked: (v) async {
-              setState(() => _draft = _draft.copyWith(financialYear: v));
-            },
-          ),
         ),
         SettingsTile(
           icon: Icons.outbox_rounded,
@@ -338,7 +314,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final deviceTz = DateTime.now().timeZoneName;
     return SettingsSection(
       title: 'Localization',
-      footnote: 'How dates and weeks are formatted across the app.',
+      footnote: 'Used to group activity by day across the app.',
       children: [
         SettingsTile(
           icon: Icons.schedule_rounded,
@@ -353,45 +329,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
             title: 'Timezone',
             subtitle: 'Used when grouping activity by day.',
             current: _draft.timezoneId,
-            options: TimezoneOptions.all(deviceLabel: deviceTz)
-                .map((o) => o.id)
-                .toList(),
+            options: TimezoneOptions.all(
+              deviceLabel: deviceTz,
+            ).map((o) => o.id).toList(),
             labelFor: (id) =>
                 TimezoneOptions.labelFor(id, deviceLabel: deviceTz),
             onPicked: (v) async {
               setState(() => _draft = _draft.copyWith(timezoneId: v));
-            },
-          ),
-        ),
-        SettingsTile(
-          icon: Icons.event_rounded,
-          title: 'Date Format',
-          subtitle: 'Displayed on lists and details',
-          valueLabel: _draft.dateFormatPref.label,
-          onTap: () => showSettingsOptionSheet<DateFormatPref>(
-            context: context,
-            title: 'Date format',
-            current: _draft.dateFormatPref,
-            options: DateFormatPref.values,
-            labelFor: (v) => v.label,
-            onPicked: (v) async {
-              setState(() => _draft = _draft.copyWith(dateFormatPref: v));
-            },
-          ),
-        ),
-        SettingsTile(
-          icon: Icons.view_week_rounded,
-          title: 'Week Start Day',
-          subtitle: 'Analytics & calendar behavior',
-          valueLabel: _draft.weekStartDay.label,
-          onTap: () => showSettingsOptionSheet<WeekStartDay>(
-            context: context,
-            title: 'Week start day',
-            current: _draft.weekStartDay,
-            options: WeekStartDay.values,
-            labelFor: (v) => v.label,
-            onPicked: (v) async {
-              setState(() => _draft = _draft.copyWith(weekStartDay: v));
             },
           ),
         ),
@@ -403,41 +347,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return SettingsSection(
       title: 'App Personalization',
       children: [
-        SettingsTile(
-          icon: Icons.dark_mode_rounded,
-          title: 'Theme Mode',
-          subtitle: 'Dark is the default experience',
-          valueLabel: _draft.themeModePref.label,
-          onTap: () => showSettingsOptionSheet<ThemeModePref>(
-            context: context,
-            title: 'Theme mode',
-            subtitle:
-                'Your choice is saved. Light & System rendering coming soon.',
-            current: _draft.themeModePref,
-            options: ThemeModePref.values,
-            labelFor: (v) => v.label,
-            onPicked: (v) async {
-              setState(() => _draft = _draft.copyWith(themeModePref: v));
-            },
-          ),
-        ),
         SettingsSwitchTile(
           icon: Icons.density_small_rounded,
           title: 'Compact Mode',
           subtitle: 'Denser transaction list',
           value: _draft.compactModeEnabled,
-          onChanged: (v) => setState(
-            () => _draft = _draft.copyWith(compactModeEnabled: v),
-          ),
+          onChanged: (v) =>
+              setState(() => _draft = _draft.copyWith(compactModeEnabled: v)),
         ),
         SettingsSwitchTile(
           icon: Icons.animation_rounded,
           title: 'Animations',
           subtitle: 'Turn off to reduce motion',
           value: _draft.animationsEnabled,
-          onChanged: (v) => setState(
-            () => _draft = _draft.copyWith(animationsEnabled: v),
-          ),
+          onChanged: (v) =>
+              setState(() => _draft = _draft.copyWith(animationsEnabled: v)),
         ),
         SettingsSwitchTile(
           icon: Icons.vibration_rounded,
@@ -471,10 +395,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           title: 'App PIN',
           subtitle: 'Optional secondary lock',
           futureReady: true,
-          onTap: () => SnackbarHelper.showMessage(
-            context,
-            'App PIN is coming soon',
-          ),
+          onTap: () =>
+              SnackbarHelper.showMessage(context, 'App PIN is coming soon'),
         ),
         SettingsInfoTile(
           icon: Icons.devices_rounded,
@@ -497,18 +419,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
               icon: Icons.file_download_rounded,
               title: 'Export Data',
               subtitle: 'Download your transactions',
-              valueLabel: _draft.exportFormatPref.label,
-              onTap: () => showSettingsOptionSheet<ExportFormat>(
-                context: context,
-                title: 'Export format',
-                current: _draft.exportFormatPref,
-                options: ExportFormat.values,
-                labelFor: (v) => v.label,
-                onPicked: (v) async {
-                  setState(
-                    () => _draft = _draft.copyWith(exportFormatPref: v),
-                  );
-                },
+              futureReady: true,
+              onTap: () => SnackbarHelper.showMessage(
+                context,
+                'Export data is coming soon',
               ),
             ),
             const SettingsInfoTile(
@@ -602,8 +516,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       const SizedBox(height: AppSpacing.sm),
                       ...widget.accounts.map(
                         (account) => Padding(
-                          padding:
-                              const EdgeInsets.only(bottom: AppSpacing.sm),
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                           child: SettingsAccountPickerRow(
                             title: account.name,
                             subtitle: account.type.label,
@@ -736,19 +649,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
       await prefs.setDisplayName(name);
       await prefs.setPhoneNumber(phone);
       await prefs.setMultiCurrencyEnabled(_draft.multiCurrencyEnabled);
-      await prefs.setFinancialYear(_draft.financialYear);
       await prefs.setDefaultExpenseAccountId(_draft.defaultExpenseAccountId);
       await prefs.setDefaultIncomeAccountId(_draft.defaultIncomeAccountId);
       await prefs.setDefaultTransactionType(_draft.defaultTransactionType);
       await prefs.setTimezoneId(_draft.timezoneId);
-      await prefs.setDateFormatPref(_draft.dateFormatPref);
-      await prefs.setWeekStartDay(_draft.weekStartDay);
-      await prefs.setThemeModePref(_draft.themeModePref);
       await prefs.setCompactModeEnabled(_draft.compactModeEnabled);
       await prefs.setAnimationsEnabled(_draft.animationsEnabled);
       await prefs.setHapticEnabled(_draft.hapticEnabled);
       await prefs.setAppLockEnabled(_draft.appLockEnabled);
-      await prefs.setExportFormatPref(_draft.exportFormatPref);
       await prefs.setAvatarRemoved(_draft.avatarRemoved);
 
       if (_draft.currencyCode != currency.currencyCode &&
@@ -837,64 +745,47 @@ class _ProfileDraft {
   const _ProfileDraft({
     required this.currencyCode,
     required this.multiCurrencyEnabled,
-    required this.financialYear,
     required this.defaultExpenseAccountId,
     required this.defaultIncomeAccountId,
     required this.defaultTransactionType,
     required this.timezoneId,
-    required this.dateFormatPref,
-    required this.weekStartDay,
-    required this.themeModePref,
     required this.compactModeEnabled,
     required this.animationsEnabled,
     required this.hapticEnabled,
     required this.appLockEnabled,
-    required this.exportFormatPref,
     required this.avatarRemoved,
   });
 
   final String currencyCode;
   final bool multiCurrencyEnabled;
-  final FinancialYear financialYear;
   final int? defaultExpenseAccountId;
   final int? defaultIncomeAccountId;
   final DefaultTransactionType defaultTransactionType;
   final String timezoneId;
-  final DateFormatPref dateFormatPref;
-  final WeekStartDay weekStartDay;
-  final ThemeModePref themeModePref;
   final bool compactModeEnabled;
   final bool animationsEnabled;
   final bool hapticEnabled;
   final bool appLockEnabled;
-  final ExportFormat exportFormatPref;
   final bool avatarRemoved;
 
   _ProfileDraft copyWith({
     String? currencyCode,
     bool? multiCurrencyEnabled,
-    FinancialYear? financialYear,
     int? defaultExpenseAccountId,
     bool clearDefaultExpenseAccountId = false,
     int? defaultIncomeAccountId,
     bool clearDefaultIncomeAccountId = false,
     DefaultTransactionType? defaultTransactionType,
     String? timezoneId,
-    DateFormatPref? dateFormatPref,
-    WeekStartDay? weekStartDay,
-    ThemeModePref? themeModePref,
     bool? compactModeEnabled,
     bool? animationsEnabled,
     bool? hapticEnabled,
     bool? appLockEnabled,
-    ExportFormat? exportFormatPref,
     bool? avatarRemoved,
   }) {
     return _ProfileDraft(
       currencyCode: currencyCode ?? this.currencyCode,
-      multiCurrencyEnabled:
-          multiCurrencyEnabled ?? this.multiCurrencyEnabled,
-      financialYear: financialYear ?? this.financialYear,
+      multiCurrencyEnabled: multiCurrencyEnabled ?? this.multiCurrencyEnabled,
       defaultExpenseAccountId: clearDefaultExpenseAccountId
           ? null
           : (defaultExpenseAccountId ?? this.defaultExpenseAccountId),
@@ -904,14 +795,10 @@ class _ProfileDraft {
       defaultTransactionType:
           defaultTransactionType ?? this.defaultTransactionType,
       timezoneId: timezoneId ?? this.timezoneId,
-      dateFormatPref: dateFormatPref ?? this.dateFormatPref,
-      weekStartDay: weekStartDay ?? this.weekStartDay,
-      themeModePref: themeModePref ?? this.themeModePref,
       compactModeEnabled: compactModeEnabled ?? this.compactModeEnabled,
       animationsEnabled: animationsEnabled ?? this.animationsEnabled,
       hapticEnabled: hapticEnabled ?? this.hapticEnabled,
       appLockEnabled: appLockEnabled ?? this.appLockEnabled,
-      exportFormatPref: exportFormatPref ?? this.exportFormatPref,
       avatarRemoved: avatarRemoved ?? this.avatarRemoved,
     );
   }
@@ -921,39 +808,29 @@ class _ProfileDraft {
     return other is _ProfileDraft &&
         other.currencyCode == currencyCode &&
         other.multiCurrencyEnabled == multiCurrencyEnabled &&
-        other.financialYear == financialYear &&
         other.defaultExpenseAccountId == defaultExpenseAccountId &&
         other.defaultIncomeAccountId == defaultIncomeAccountId &&
         other.defaultTransactionType == defaultTransactionType &&
         other.timezoneId == timezoneId &&
-        other.dateFormatPref == dateFormatPref &&
-        other.weekStartDay == weekStartDay &&
-        other.themeModePref == themeModePref &&
         other.compactModeEnabled == compactModeEnabled &&
         other.animationsEnabled == animationsEnabled &&
         other.hapticEnabled == hapticEnabled &&
         other.appLockEnabled == appLockEnabled &&
-        other.exportFormatPref == exportFormatPref &&
         other.avatarRemoved == avatarRemoved;
   }
 
   @override
   int get hashCode => Object.hashAll([
-        currencyCode,
-        multiCurrencyEnabled,
-        financialYear,
-        defaultExpenseAccountId,
-        defaultIncomeAccountId,
-        defaultTransactionType,
-        timezoneId,
-        dateFormatPref,
-        weekStartDay,
-        themeModePref,
-        compactModeEnabled,
-        animationsEnabled,
-        hapticEnabled,
-        appLockEnabled,
-        exportFormatPref,
-        avatarRemoved,
-      ]);
+    currencyCode,
+    multiCurrencyEnabled,
+    defaultExpenseAccountId,
+    defaultIncomeAccountId,
+    defaultTransactionType,
+    timezoneId,
+    compactModeEnabled,
+    animationsEnabled,
+    hapticEnabled,
+    appLockEnabled,
+    avatarRemoved,
+  ]);
 }

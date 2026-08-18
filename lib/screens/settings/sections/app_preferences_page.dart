@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../components/settings/settings_picker_helpers.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_switch_tile.dart';
@@ -28,17 +27,7 @@ class AppPreferencesPage extends StatelessWidget {
           children: [
             SettingsSection(
               title: 'Look & feel',
-              footnote:
-                  'Light & System themes are coming soon — Dark stays the '
-                  'default.',
               children: [
-                SettingsTile(
-                  icon: Icons.dark_mode_rounded,
-                  title: 'Theme',
-                  subtitle: 'Pick a global appearance',
-                  valueLabel: prefs.themeModePref.label,
-                  onTap: () => _pickThemeMode(context, prefs),
-                ),
                 SettingsSwitchTile(
                   icon: Icons.density_small_rounded,
                   title: 'Compact Mode',
@@ -86,22 +75,6 @@ class AppPreferencesPage extends StatelessWidget {
       },
     );
   }
-
-  Future<void> _pickThemeMode(
-    BuildContext context,
-    SettingsPreferences prefs,
-  ) =>
-      showSettingsOptionSheet<ThemeModePref>(
-        context: context,
-        title: 'Theme',
-        subtitle:
-            'Currently the app renders in Dark. Other themes are coming '
-            'soon — your choice is saved.',
-        current: prefs.themeModePref,
-        options: ThemeModePref.values,
-        labelFor: (v) => v.label,
-        onPicked: prefs.setThemeModePref,
-      );
 
   void _stub(BuildContext context, String label) {
     SnackbarHelper.showMessage(context, '$label is coming soon');

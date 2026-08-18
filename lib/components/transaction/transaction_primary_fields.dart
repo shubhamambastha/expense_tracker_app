@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../components/dialogs/add_account_dialog.dart';
+import '../../components/dialogs/add_category_sheet.dart';
 import '../../components/settings/settings_picker_helpers.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
@@ -128,14 +129,17 @@ class _ExpenseFields extends StatelessWidget {
   Future<void> _pickCategory(BuildContext context) async {
     final catalog = CategoryCatalog.instance;
     final names = _orderedExpenseNames(catalog.categories, recentCategoryNames);
-    if (names.isEmpty) return;
 
-    final picked = await selectFromList<String>(
+    final picked = await _showCategoryPicker(
       context: context,
       title: 'Category',
-      current: categoryName,
-      options: names,
-      labelFor: (n) => n,
+      categories: names,
+      selected: categoryName,
+      addCategoryTitle: 'Add category',
+      iconFor: catalog.iconForName,
+      colorFor: catalog.colorForName,
+      onAddCategory: (name, iconKey) =>
+          catalog.addCategory(name: name, iconKey: iconKey),
     );
     if (picked != null) onCategoryChanged(picked);
   }
@@ -241,14 +245,17 @@ class _IncomeFields extends StatelessWidget {
     final catalog = IncomeCategoryCatalog.instance;
     final names =
         _orderedIncomeNames(catalog.categories, recentIncomeCategoryNames);
-    if (names.isEmpty) return;
 
-    final picked = await selectFromList<String>(
+    final picked = await _showCategoryPicker(
       context: context,
       title: 'Income category',
-      current: categoryName,
-      options: names,
-      labelFor: (n) => n,
+      categories: names,
+      selected: categoryName,
+      addCategoryTitle: 'Add income category',
+      iconFor: catalog.iconForName,
+      colorFor: catalog.colorForName,
+      onAddCategory: (name, iconKey) =>
+          catalog.addCategory(name: name, iconKey: iconKey),
     );
     if (picked != null) onCategoryChanged(picked);
   }
@@ -452,6 +459,144 @@ String _dateLabel(DateTime date) {
   if (selectedDay == today) return 'Today';
   if (selectedDay == yesterday) return 'Yesterday';
   return DateFormat.MMMd().format(date);
+}
+
+/// Category picker sheet with a trailing "Add category" row. Tapping it
+/// opens [showAddCategorySheet] as a stacked overlay; on success both sheets
+/// close and the picker resolves with the newly created category name, so
+/// the caller can select it straight into the form field.
+Future<String?> _showCategoryPicker({
+  required BuildContext context,
+  required String title,
+  required List<String> categories,
+  required String? selected,
+  required String addCategoryTitle,
+  required IconData Function(String name) iconFor,
+  required Color Function(String name) colorFor,
+  required Future<void> Function(String name, String iconKey) onAddCategory,
+}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: AppColors.surface,
+    builder: (sheetContext) {
+      final maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.75;
+      return SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.xs,
+                  AppSpacing.xl,
+                  AppSpacing.sm,
+                ),
+                child: Text(title, style: AppTextStyles.headingSmall),
+              ),
+              Flexible(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
+                  itemCount: categories.length + 1,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    if (index == categories.length) {
+                      return _AddCategoryRow(
+                        onTap: () async {
+                          String? createdName;
+                          final saved = await showAddCategorySheet(
+                            sheetContext,
+                            title: addCategoryTitle,
+                            onSave: (name, iconKey) async {
+                              await onAddCategory(name, iconKey);
+                              createdName = name.trim();
+                            },
+                          );
+                          if (saved == true &&
+                              createdName != null &&
+                              sheetContext.mounted) {
+                            Navigator.of(sheetContext).pop(createdName);
+                          }
+                        },
+                      );
+                    }
+                    final name = categories[index];
+                    final isSelected = name == selected;
+                    return SettingsSelectableRow(
+                      label: name,
+                      selected: isSelected,
+                      icon: iconFor(name),
+                      iconColor: colorFor(name),
+                      onTap: () => Navigator.of(sheetContext).pop(name),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Trailing row in the category picker that opens the add-category overlay.
+/// Styled distinctly from the plain [SettingsSelectableRow] options above it
+/// — accent-colored text and a leading plus icon — so it reads as an action
+/// rather than another category to pick.
+class _AddCategoryRow extends StatelessWidget {
+  const _AddCategoryRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primary.withAlpha(28),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.primary.withAlpha(110)),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.add_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'Add category',
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Future<void> _showAccountPicker({

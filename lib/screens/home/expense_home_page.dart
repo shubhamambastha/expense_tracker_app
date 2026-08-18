@@ -320,7 +320,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           MaterialPageRoute(
             builder: (context) => AddTransactionPage(
               accounts: _accounts,
-              recentSuggestions: _buildRecentSuggestions(),
               recentCategoryNames: _buildRecentCategoryNames(),
               recentIncomeSuggestions: _buildRecentIncomeSuggestions(),
               recentIncomeCategoryNames: _buildRecentIncomeCategoryNames(),
@@ -361,25 +360,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     } else {
       await _insertTransaction(tx);
     }
-  }
-
-  /// Build "Recent" merchant suggestions from the local expense cache.
-  /// Returns the 5 most-recent unique merchants for fast autofill.
-  List<RecentSuggestion> _buildRecentSuggestions() {
-    final seen = <String>{};
-    final out = <RecentSuggestion>[];
-    for (final t in _transactions.where((t) => t.isExpense)) {
-      final key = t.counterpartyName.toLowerCase();
-      if (key.isEmpty || !seen.add(key)) continue;
-      out.add(RecentSuggestion(
-        merchant: t.counterpartyName,
-        category: t.category ?? 'Other',
-        accountId: t.accountId,
-        amount: t.amount,
-      ));
-      if (out.length >= 5) break;
-    }
-    return out;
   }
 
   /// Prioritise the 6 most-used categories so they land first in the pills.

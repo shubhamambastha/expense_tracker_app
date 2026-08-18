@@ -34,8 +34,8 @@ class FinancialPreferencesPage extends StatelessWidget {
         return SettingsSubpageScaffold(
           title: 'Financial Preferences',
           subtitle:
-              'Currency, fiscal year, and the defaults the app uses when '
-              'you add a new transaction.',
+              'Currency and the defaults the app uses when you add a new '
+              'transaction.',
           children: [
             SettingsSection(
               title: 'Currency',
@@ -50,8 +50,7 @@ class FinancialPreferencesPage extends StatelessWidget {
                 SettingsSwitchTile(
                   icon: Icons.swap_horiz_rounded,
                   title: 'Multi-Currency',
-                  subtitle:
-                      'Track foreign currencies on individual entries',
+                  subtitle: 'Track foreign currencies on individual entries',
                   value: prefs.multiCurrencyEnabled,
                   onChanged: prefs.setMultiCurrencyEnabled,
                 ),
@@ -62,19 +61,11 @@ class FinancialPreferencesPage extends StatelessWidget {
               title: 'Defaults',
               children: [
                 SettingsTile(
-                  icon: Icons.calendar_view_month_rounded,
-                  title: 'Financial Year',
-                  subtitle: 'Boundary for analytics & budgets',
-                  valueLabel: prefs.financialYear.short,
-                  onTap: () => _pickFinancialYear(context, prefs),
-                ),
-                SettingsTile(
                   icon: Icons.outbox_rounded,
                   title: 'Default Expense Account',
                   subtitle: 'Preselected for new expenses',
-                  valueLabel: _accountNameForId(
-                        prefs.defaultExpenseAccountId,
-                      ) ??
+                  valueLabel:
+                      _accountNameForId(prefs.defaultExpenseAccountId) ??
                       'Auto',
                   onTap: () => _pickDefaultAccount(
                     context,
@@ -88,8 +79,7 @@ class FinancialPreferencesPage extends StatelessWidget {
                   title: 'Default Income Account',
                   subtitle: 'Preselected for new income',
                   valueLabel:
-                      _accountNameForId(prefs.defaultIncomeAccountId) ??
-                          'Auto',
+                      _accountNameForId(prefs.defaultIncomeAccountId) ?? 'Auto',
                   onTap: () => _pickDefaultAccount(
                     context,
                     currentId: prefs.defaultIncomeAccountId,
@@ -112,33 +102,18 @@ class FinancialPreferencesPage extends StatelessWidget {
     );
   }
 
-  Future<void> _pickFinancialYear(
-    BuildContext context,
-    SettingsPreferences prefs,
-  ) =>
-      showSettingsOptionSheet<FinancialYear>(
-        context: context,
-        title: 'Financial year',
-        subtitle: 'Used for analytics, budgets, and year-over-year views.',
-        current: prefs.financialYear,
-        options: FinancialYear.values,
-        labelFor: (v) => v.label,
-        onPicked: prefs.setFinancialYear,
-      );
-
   Future<void> _pickDefaultTransactionType(
     BuildContext context,
     SettingsPreferences prefs,
-  ) =>
-      showSettingsOptionSheet<DefaultTransactionType>(
-        context: context,
-        title: 'Default transaction type',
-        subtitle: 'The Add Transaction screen will open on this tab.',
-        current: prefs.defaultTransactionType,
-        options: DefaultTransactionType.values,
-        labelFor: (v) => v.label,
-        onPicked: prefs.setDefaultTransactionType,
-      );
+  ) => showSettingsOptionSheet<DefaultTransactionType>(
+    context: context,
+    title: 'Default transaction type',
+    subtitle: 'The Add Transaction screen will open on this tab.',
+    current: prefs.defaultTransactionType,
+    options: DefaultTransactionType.values,
+    labelFor: (v) => v.label,
+    onPicked: prefs.setDefaultTransactionType,
+  );
 
   Future<void> _pickDefaultAccount(
     BuildContext context, {
@@ -171,8 +146,9 @@ class FinancialPreferencesPage extends StatelessWidget {
                   child: Text(title, style: AppTextStyles.headingSmall),
                 ),
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
                   child: Text(
                     'Preselected when you open Add Transaction.',
                     style: AppTextStyles.caption,
@@ -213,8 +189,9 @@ class FinancialPreferencesPage extends StatelessWidget {
                       else
                         ...accounts.map(
                           (account) => Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: AppSpacing.sm),
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.sm,
+                            ),
                             child: SettingsAccountPickerRow(
                               title: account.name,
                               subtitle: account.type.label,
