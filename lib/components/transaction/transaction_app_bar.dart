@@ -4,20 +4,13 @@ import '../../config/design_tokens.dart';
 
 /// Minimal top app bar for the Add Transaction screen.
 ///
-/// Left = back, centre = title, right = mic placeholder for future voice
-/// input. Kept inside [SafeArea] so the host page can scroll cleanly under
-/// it without dealing with status-bar padding.
+/// Left = back, centre = title. Kept inside [SafeArea] so the host page can
+/// scroll cleanly under it without dealing with status-bar padding.
 class TransactionAppBar extends StatelessWidget {
-  const TransactionAppBar({
-    super.key,
-    this.title = 'Add Transaction',
-    this.onBack,
-    this.onMic,
-  });
+  const TransactionAppBar({super.key, this.title = 'Add Transaction', this.onBack});
 
   final String title;
   final VoidCallback? onBack;
-  final VoidCallback? onMic;
 
   @override
   Widget build(BuildContext context) {
@@ -46,12 +39,7 @@ class TransactionAppBar extends StatelessWidget {
                     ),
                   ),
                 ),
-                _AppBarIconButton(
-                  icon: Icons.mic_none_rounded,
-                  tooltip: 'Voice entry (soon)',
-                  onTap: onMic,
-                  muted: onMic == null,
-                ),
+                const SizedBox(width: 40),
               ],
             ),
           ),
@@ -66,17 +54,14 @@ class _AppBarIconButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
-    this.muted = false,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback? onTap;
-  final bool muted;
 
   @override
   Widget build(BuildContext context) {
-    final fg = muted ? AppColors.textSecondary : AppColors.textPrimary;
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -91,7 +76,7 @@ class _AppBarIconButton extends StatelessWidget {
             borderRadius: AppRadii.buttonRadius,
             border: Border.all(color: AppColors.border),
           ),
-          child: Icon(icon, color: fg, size: 20),
+          child: Icon(icon, color: AppColors.textPrimary, size: 20),
         ),
       ),
     );

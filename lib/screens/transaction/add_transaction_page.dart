@@ -555,7 +555,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
       resizeToAvoidBottomInset: true,
       body: Column(
         children: [
-          TransactionAppBar(title: _appBarTitle, onMic: null),
+          TransactionAppBar(title: _appBarTitle),
           Expanded(
             child:
                 ListenableBuilder(
