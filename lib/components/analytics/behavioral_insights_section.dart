@@ -47,14 +47,14 @@ class BehavioralInsightsSection extends StatelessWidget {
                     color: AppColors.primary.withAlpha(22),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.psychology_alt_rounded,
                     color: AppColors.primary,
                     size: 20,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Log a few weeks of transactions and we\'ll surface habits, weekday patterns, and lifestyle shifts here.',
                     style: AppTextStyles.bodySmall,
@@ -91,7 +91,7 @@ class BehavioralInsightsSection extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Weekday rhythm',
                           style: AppTextStyles.bodyMedium,

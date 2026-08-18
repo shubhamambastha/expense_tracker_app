@@ -37,7 +37,7 @@ class _TrendLineChartState extends State<TrendLineChart> {
   Widget build(BuildContext context) {
     final buckets = widget.buckets;
     if (buckets.length < 2) {
-      return const Center(
+      return Center(
         child: Text(
           'Add a few more months to unlock the trend view.',
           style: AppTextStyles.bodySmall,

@@ -49,14 +49,14 @@ class BudgetAnalyticsSection extends StatelessWidget {
                     color: AppColors.primary.withAlpha(24),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.donut_small_rounded,
                     color: AppColors.primary,
                     size: 20,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'You haven\'t set any budgets yet. Add a cap to surface usage and remaining headroom here.',
                     style: AppTextStyles.bodySmall,
@@ -79,7 +79,7 @@ class BudgetAnalyticsSection extends StatelessWidget {
                     spent: spendByCategory[budgets[i].categoryName] ?? 0,
                   ),
                   if (i != budgets.length - 1)
-                    const Divider(
+                    Divider(
                       height: 1,
                       thickness: 1,
                       color: AppColors.border,
@@ -100,11 +100,11 @@ class _BudgetState {
   final Color color;
 
   static _BudgetState from(double ratio) {
-    if (ratio >= 1.0) return const _BudgetState('Exceeded', AppColors.danger);
+    if (ratio >= 1.0) return _BudgetState('Exceeded', AppColors.danger);
     if (ratio >= 0.85) {
-      return const _BudgetState('Near limit', AppColors.warning);
+      return _BudgetState('Near limit', AppColors.warning);
     }
-    return const _BudgetState('Healthy', AppColors.success);
+    return _BudgetState('Healthy', AppColors.success);
   }
 }
 

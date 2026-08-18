@@ -163,7 +163,7 @@ class MonthlyAnalyticsCard extends StatelessWidget {
                       color: AppColors.primary.withAlpha(60),
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.insights_rounded,
                     color: AppColors.primary,
                     size: 22,
@@ -264,7 +264,7 @@ class _EmptyAnalyticsState extends StatelessWidget {
               color: AppColors.primary.withAlpha(24),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.pie_chart_outline_rounded,
               color: AppColors.primary,
               size: 30,

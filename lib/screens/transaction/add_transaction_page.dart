@@ -337,7 +337,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                 ),
                 subtitle: Text(option.code, style: AppTextStyles.caption),
                 trailing: selected
-                    ? const Icon(
+                    ? Icon(
                         Icons.check_circle_rounded,
                         color: AppColors.primary,
                       )

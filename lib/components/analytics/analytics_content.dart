@@ -109,7 +109,7 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
     if (widget.isLoading &&
         widget.transactions.isEmpty &&
         widget.accounts.isEmpty) {
-      return const Center(
+      return Center(
         child: SizedBox(
           width: 32,
           height: 32,
@@ -157,6 +157,7 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
       AnalyticsHeader(
         range: _range,
         resolvedRange: resolved,
+        onAddTransaction: widget.onAddTransaction,
       ),
       const SizedBox(height: AppSpacing.lg),
       TimeRangeSelector(
@@ -208,6 +209,7 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
       AnalyticsHeader(
         range: _range,
         resolvedRange: resolved,
+        onAddTransaction: widget.onAddTransaction,
       ),
       const SizedBox(height: AppSpacing.lg),
       TimeRangeSelector(

@@ -75,7 +75,7 @@ Future<AccountSortMode?> showAccountsManageSheet(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Sort accounts', style: AppTextStyles.headingSmall),
+              Text('Sort accounts', style: AppTextStyles.headingSmall),
               const SizedBox(height: AppSpacing.md),
               _SortOption(
                 label: 'Name',
@@ -127,7 +127,7 @@ class _SortOption extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       title: Text(label),
       trailing: selected
-          ? const Icon(Icons.check_rounded, color: AppColors.primary)
+          ? Icon(Icons.check_rounded, color: AppColors.primary)
           : null,
       onTap: onTap,
     );

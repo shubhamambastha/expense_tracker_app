@@ -253,7 +253,6 @@ class _TransactionListItemState extends State<TransactionListItem>
                             _CategoryAvatar(
                               color: _categoryColor,
                               icon: _leadingIcon,
-                              showRecurring: _showRecurringBadge,
                             ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
@@ -269,11 +268,21 @@ class _TransactionListItemState extends State<TransactionListItem>
                                     ),
                                   ),
                                   const SizedBox(height: 3),
-                                  Text(
-                                    _subtitle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.caption,
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          _subtitle,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppTextStyles.caption,
+                                        ),
+                                      ),
+                                      if (_showRecurringBadge) ...[
+                                        const SizedBox(width: 6),
+                                        const _RecurringPill(),
+                                      ],
+                                    ],
                                   ),
                                 ],
                               ),
@@ -323,50 +332,47 @@ class _TransactionListItemState extends State<TransactionListItem>
 }
 
 class _CategoryAvatar extends StatelessWidget {
-  const _CategoryAvatar({
-    required this.color,
-    required this.icon,
-    required this.showRecurring,
-  });
+  const _CategoryAvatar({required this.color, required this.icon});
 
   final Color color;
   final IconData icon;
-  final bool showRecurring;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: color.withAlpha(32),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 20),
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: color.withAlpha(32),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: color, size: 20),
+    );
+  }
+}
+
+/// Small uppercase "RECURRING" tag, matching the iOS redesign's text-pill
+/// treatment (was previously an icon badge on the category avatar).
+class _RecurringPill extends StatelessWidget {
+  const _RecurringPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.secondary.withAlpha(32),
+        borderRadius: AppRadii.pillRadius,
+      ),
+      child: Text(
+        'RECURRING',
+        style: AppTextStyles.label.copyWith(
+          fontSize: 9,
+          color: AppColors.secondary,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
         ),
-        if (showRecurring)
-          Positioned(
-            right: -2,
-            bottom: -2,
-            child: Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceSecondary,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: const Icon(
-                Icons.autorenew_rounded,
-                size: 10,
-                color: AppColors.secondary,
-              ),
-            ),
-          ),
-      ],
+      ),
     );
   }
 }

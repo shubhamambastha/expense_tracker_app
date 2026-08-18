@@ -55,7 +55,7 @@ class TransactionAdvancedSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: AppSpacing.sm),
-        const Divider(height: 1, thickness: 1, color: AppColors.border),
+        Divider(height: 1, thickness: 1, color: AppColors.border),
         InkWell(
           onTap: onExpandToggle,
           child: Padding(
@@ -77,7 +77,7 @@ class TransactionAdvancedSection extends StatelessWidget {
                   duration: AppDurations.micro,
                   curve: AppCurves.spring,
                   turns: expanded ? 0.5 : 0,
-                  child: const Icon(
+                  child: Icon(
                     Icons.keyboard_arrow_down_rounded,
                     color: AppColors.textSecondary,
                   ),
@@ -111,7 +111,7 @@ class TransactionAdvancedSection extends StatelessWidget {
                         style: AppTextStyles.bodyMedium,
                         decoration: InputDecoration(
                           hintText: noteHintText,
-                          prefixIcon: const Icon(
+                          prefixIcon: Icon(
                             Icons.notes_rounded,
                             size: 18,
                             color: AppColors.textSecondary,

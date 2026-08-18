@@ -32,7 +32,7 @@ class AnalyticsSectionCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: useGradient
-            ? const LinearGradient(
+            ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [AppColors.surface, AppColors.surfaceSecondary],

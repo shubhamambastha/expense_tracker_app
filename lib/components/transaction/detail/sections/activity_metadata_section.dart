@@ -74,7 +74,7 @@ class _ActivityMetadataSectionState extends State<ActivityMetadataSection> {
                     padding: const EdgeInsets.only(top: AppSpacing.sm),
                     child: Column(
                       children: [
-                        const Divider(height: 1, color: AppColors.border),
+                        Divider(height: 1, color: AppColors.border),
                         const SizedBox(height: AppSpacing.sm),
                         if (hasCreated)
                           DetailInfoRow(

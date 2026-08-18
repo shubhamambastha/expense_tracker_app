@@ -176,7 +176,7 @@ class OfflineSavedNotice extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.cloud_upload_outlined,
             color: AppColors.primary,
             size: 20,

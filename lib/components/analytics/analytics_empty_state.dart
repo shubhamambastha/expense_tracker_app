@@ -45,7 +45,7 @@ class AnalyticsEmptyState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: AppColors.primary.withAlpha(60)),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.insights_rounded,
                   color: AppColors.primary,
                   size: 28,
@@ -57,7 +57,7 @@ class AnalyticsEmptyState extends StatelessWidget {
                 style: AppTextStyles.headingSmall,
               ),
               const SizedBox(height: AppSpacing.xs),
-              const Text(
+              Text(
                 'Analytics improve with more spending history. Once you log a few weeks, you\'ll see category breakdowns, behavioural patterns, and savings trends.',
                 style: AppTextStyles.bodySmall,
               ),

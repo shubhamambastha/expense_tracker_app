@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Chart / list accent colors (premium dark palette).
-/// Designed to harmonise with [AppColors.primary] (#00C896) and
-/// [AppColors.secondary] (#00B8D9) on dark surfaces.
+/// Chart / list accent colors — true iOS system hues (matches the category
+/// palette used for Food/Shopping/Transport/Bills/Entertainment/Health/Other
+/// in the design handoff), assigned positionally by [CategoryIcons.colorAtIndex].
 const kCategoryColors = <Color>[
-  Color(0xFF00C896),
-  Color(0xFF00B8D9),
-  Color(0xFFFFB547),
-  Color(0xFFFF5C7A),
-  Color(0xFF8E5AF7),
-  Color(0xFF4F8EF7),
-  Color(0xFFF88D42),
-  Color(0xFF6BD4B0),
+  Color(0xFFFF9F0A), // Food (orange)
+  Color(0xFFFF375F), // Shopping (pink)
+  Color(0xFF64D2FF), // Transport (cyan)
+  Color(0xFFFFD60A), // Bills (yellow)
+  Color(0xFFBF5AF2), // Entertainment (purple)
+  Color(0xFF30D158), // Health (green)
+  Color(0xFF8E8E93), // Other (gray)
+  Color(0xFF5E5CE6), // Indigo
 ];
 
 /// Material icon keys stored in Supabase (`icon` column).

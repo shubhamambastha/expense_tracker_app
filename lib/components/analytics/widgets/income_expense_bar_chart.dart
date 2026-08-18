@@ -33,7 +33,7 @@ class _IncomeExpenseBarChartState extends State<IncomeExpenseBarChart> {
     if (buckets.isEmpty) {
       return SizedBox(
         height: widget.height,
-        child: const Center(
+        child: Center(
           child: Text(
             'No income or expenses in this range yet.',
             style: AppTextStyles.bodySmall,

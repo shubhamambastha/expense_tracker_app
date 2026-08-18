@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/design_tokens.dart';
 import 'currency_settings.dart';
 import 'auth_service.dart';
 import 'supabase_service.dart';
@@ -56,6 +58,8 @@ class SettingsPreferences extends ChangeNotifier {
   static const _kPhoneNumber = 'pref.phone_number';
   static const _kTimezoneId = 'pref.timezone_id';
   static const _kAvatarRemoved = 'pref.avatar_removed';
+  static const _kThemeMode = 'pref.theme_mode';
+  static const _kAccentColor = 'pref.accent_color';
 
   /// Sentinel stored in [_timezoneId] to follow the device timezone.
   static const deviceTimezoneId = 'device';
@@ -83,6 +87,8 @@ class SettingsPreferences extends ChangeNotifier {
   String _phoneNumber = '';
   String _timezoneId = deviceTimezoneId;
   bool _avatarRemoved = false;
+  ThemeMode _themeMode = ThemeMode.dark;
+  AppAccent _accentColor = AppAccent.teal;
 
   bool _loaded = false;
   Timer? _remoteSyncTimer;
@@ -111,6 +117,8 @@ class SettingsPreferences extends ChangeNotifier {
   String get phoneNumber => _phoneNumber;
   String get timezoneId => _timezoneId;
   bool get avatarRemoved => _avatarRemoved;
+  ThemeMode get themeMode => _themeMode;
+  AppAccent get accentColor => _accentColor;
 
   /// Pulls remote `preferences` after sign-in (must run after
   /// [CurrencySettings.syncForUser] so `user_settings` exists). Keeps
@@ -181,6 +189,16 @@ class SettingsPreferences extends ChangeNotifier {
     _phoneNumber = prefs.getString(_kPhoneNumber) ?? _phoneNumber;
     _timezoneId = prefs.getString(_kTimezoneId) ?? _timezoneId;
     _avatarRemoved = prefs.getBool(_kAvatarRemoved) ?? _avatarRemoved;
+    _themeMode = _readEnum(
+      prefs.getString(_kThemeMode),
+      ThemeMode.values,
+      _themeMode,
+    );
+    _accentColor = _readEnum(
+      prefs.getString(_kAccentColor),
+      AppAccent.values,
+      _accentColor,
+    );
 
     _loaded = true;
     notifyListeners();
@@ -322,6 +340,12 @@ class SettingsPreferences extends ChangeNotifier {
   Future<void> setAvatarRemoved(bool value) =>
       _writeBool(_kAvatarRemoved, value, (v) => _avatarRemoved = v);
 
+  Future<void> setThemeMode(ThemeMode value) =>
+      _writeEnum(_kThemeMode, value, (v) => _themeMode = v);
+
+  Future<void> setAccentColor(AppAccent value) =>
+      _writeEnum(_kAccentColor, value, (v) => _accentColor = v);
+
   // --- Remote sync ---
 
   Map<String, dynamic> preferencesToJson() {
@@ -347,6 +371,8 @@ class SettingsPreferences extends ChangeNotifier {
       _kPhoneNumber: _phoneNumber,
       _kTimezoneId: _timezoneId,
       _kAvatarRemoved: _avatarRemoved,
+      _kThemeMode: _themeMode.name,
+      _kAccentColor: _accentColor.name,
     };
     return m;
   }
@@ -455,6 +481,20 @@ class SettingsPreferences extends ChangeNotifier {
       final v = json[_kAvatarRemoved];
       if (v is bool) _avatarRemoved = v;
     }
+    if (json.containsKey(_kThemeMode)) {
+      _themeMode = _readEnum(
+        json[_kThemeMode]?.toString(),
+        ThemeMode.values,
+        _themeMode,
+      );
+    }
+    if (json.containsKey(_kAccentColor)) {
+      _accentColor = _readEnum(
+        json[_kAccentColor]?.toString(),
+        AppAccent.values,
+        _accentColor,
+      );
+    }
   }
 
   Future<void> _persistAllToSharedPrefs() async {
@@ -506,6 +546,8 @@ class SettingsPreferences extends ChangeNotifier {
     }
     await prefs.setString(_kTimezoneId, _timezoneId);
     await prefs.setBool(_kAvatarRemoved, _avatarRemoved);
+    await prefs.setString(_kThemeMode, _themeMode.name);
+    await prefs.setString(_kAccentColor, _accentColor.name);
   }
 
   Future<void> _pushFullRemote() async {

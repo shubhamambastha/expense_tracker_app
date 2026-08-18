@@ -186,7 +186,7 @@ class SubscriptionCard extends StatelessWidget {
                       color: AppColors.success,
                     ),
                   if (paused)
-                    const _StatusChip(
+                    _StatusChip(
                       label: 'Paused',
                       color: AppColors.textSecondary,
                     )
@@ -298,7 +298,7 @@ class _CardOverflowMenu extends StatelessWidget {
     final close = _closeMeta;
     return PopupMenuButton<RecurringQuickAction>(
       tooltip: 'More actions',
-      icon: const Icon(
+      icon: Icon(
         Icons.more_vert_rounded,
         size: 18,
         color: AppColors.textSecondary,

@@ -8,7 +8,11 @@ import '../../../components/settings/settings_tile.dart';
 import '../../../config/design_tokens.dart';
 import '../../../utils/snackbar_helper.dart';
 
-/// Feedback channels, data & privacy, legal links, and account deletion.
+/// Feedback channels, offline behaviour, and account deletion.
+///
+/// Export Data lives in Settings' Data group, Backup & Sync in Security,
+/// and legal/version links in the About page — this page keeps the
+/// feedback channels and the one destructive action.
 class SupportAndFeedbackPage extends StatelessWidget {
   const SupportAndFeedbackPage({super.key});
 
@@ -43,46 +47,13 @@ class SupportAndFeedbackPage extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         SettingsSection(
-          title: 'Data & Privacy',
-          children: [
-            SettingsTile(
-              icon: Icons.file_download_rounded,
-              title: 'Export Data',
-              subtitle: 'Download transactions as CSV or JSON',
-              onTap: () => _stub(context, 'Export data'),
-            ),
-            const SettingsInfoTile(
-              icon: Icons.cloud_done_rounded,
-              title: 'Backup & Sync',
-              subtitle: 'Last sync: just now',
-              statusPill: 'Synced',
-            ),
-            const SettingsInfoTile(
+          title: 'Data',
+          children: const [
+            SettingsInfoTile(
               icon: Icons.cloud_off_rounded,
               title: 'Offline Mode',
               subtitle: 'Reads/writes work without internet — synced later',
               statusPill: 'Local-first',
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        SettingsSection(
-          title: 'Legal',
-          children: [
-            SettingsTile(
-              icon: Icons.policy_rounded,
-              title: 'Privacy Policy',
-              onTap: () => _stub(context, 'Privacy policy'),
-            ),
-            SettingsTile(
-              icon: Icons.gavel_rounded,
-              title: 'Terms of Service',
-              onTap: () => _stub(context, 'Terms of service'),
-            ),
-            const SettingsInfoTile(
-              icon: Icons.info_outline_rounded,
-              title: 'App Version',
-              valueLabel: 'v1.0.0 (1)',
             ),
           ],
         ),

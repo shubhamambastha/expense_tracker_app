@@ -138,7 +138,7 @@ class SettingsTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          const Icon(
+          Icon(
             Icons.chevron_right_rounded,
             color: AppColors.textSecondary,
             size: 20,
@@ -147,7 +147,7 @@ class SettingsTile extends StatelessWidget {
       );
     }
 
-    return const Icon(
+    return Icon(
       Icons.chevron_right_rounded,
       color: AppColors.textSecondary,
       size: 20,

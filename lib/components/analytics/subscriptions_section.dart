@@ -70,7 +70,7 @@ class SubscriptionsSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'No recurring expenses yet. Add bills, EMIs, or subscriptions to surface them here.',
                     style: AppTextStyles.bodySmall,
@@ -94,7 +94,7 @@ class SubscriptionsSection extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 _InsightLine(summary: summary),
                 const SizedBox(height: AppSpacing.md),
-                const Divider(
+                Divider(
                   height: 1,
                   thickness: 1,
                   color: AppColors.border,
@@ -112,7 +112,7 @@ class SubscriptionsSection extends StatelessWidget {
                         onTapItem(summary.commitments[i].transaction),
                   ),
                   if (i != summary.commitments.length - 1)
-                    const Divider(
+                    Divider(
                       height: 1,
                       thickness: 1,
                       color: AppColors.border,

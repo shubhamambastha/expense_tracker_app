@@ -45,8 +45,8 @@ class IncomeVsExpenseSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!hasData)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                   child: Text(
                     'No income or expenses recorded for this window.',
                     style: AppTextStyles.bodySmall,

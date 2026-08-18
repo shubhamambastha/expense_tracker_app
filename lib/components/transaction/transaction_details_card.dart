@@ -176,7 +176,7 @@ class _Header extends StatelessWidget {
               duration: AppDurations.micro,
               curve: AppCurves.spring,
               turns: expanded ? 0.5 : 0,
-              child: const Icon(
+              child: Icon(
                 Icons.keyboard_arrow_down_rounded,
                 color: AppColors.textSecondary,
               ),
@@ -215,7 +215,7 @@ class _ExpandedBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Divider(height: 1, thickness: 1, color: AppColors.border),
+          Divider(height: 1, thickness: 1, color: AppColors.border),
           const SizedBox(height: AppSpacing.md),
           const _FieldLabel(label: 'Date'),
           const SizedBox(height: AppSpacing.sm),
@@ -237,7 +237,7 @@ class _ExpandedBody extends StatelessWidget {
             style: AppTextStyles.bodyMedium,
             decoration: InputDecoration(
               hintText: noteHintText,
-              prefixIcon: const Icon(
+              prefixIcon: Icon(
                 Icons.notes_rounded,
                 size: 18,
                 color: AppColors.textSecondary,

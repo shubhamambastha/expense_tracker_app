@@ -10,7 +10,7 @@ class AmountNumericKeypad extends StatelessWidget {
     required this.controller,
     required this.maxDecimalDigits,
     required this.onDone,
-    this.accent = AppColors.primary,
+    required this.accent,
   });
 
   final TextEditingController controller;
@@ -39,7 +39,7 @@ class AmountNumericKeypad extends StatelessWidget {
           Container(
             height: 44,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.border)),
             ),
             child: Row(
@@ -168,7 +168,7 @@ class _KeyButton extends StatelessWidget {
           height: 52,
           child: Center(
             child: isBackspace
-                ? const Icon(
+                ? Icon(
                     Icons.backspace_outlined,
                     color: AppColors.textPrimary,
                     size: 22,

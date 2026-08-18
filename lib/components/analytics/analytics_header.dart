@@ -14,11 +14,13 @@ class AnalyticsHeader extends StatelessWidget {
     required this.range,
     required this.resolvedRange,
     this.onCompareTap,
+    this.onAddTransaction,
   });
 
   final AnalyticsRange range;
   final ResolvedRange resolvedRange;
   final VoidCallback? onCompareTap;
+  final VoidCallback? onAddTransaction;
 
   String _formatPeriod() {
     final start = resolvedRange.start;
@@ -61,6 +63,10 @@ class AnalyticsHeader extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.md),
         _CompareButton(onTap: onCompareTap),
+        if (onAddTransaction != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          _AddButton(onTap: onAddTransaction!),
+        ],
       ],
     )
         .animate()
@@ -71,6 +77,37 @@ class AnalyticsHeader extends StatelessWidget {
           duration: AppDurations.reveal,
           curve: AppCurves.spring,
         );
+  }
+}
+
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadii.pillRadius,
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.add_rounded,
+            size: 20,
+            color: AppColors.onPrimary,
+          ),
+        ),
+      ),
+    );
   }
 }
 

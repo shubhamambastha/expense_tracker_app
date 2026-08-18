@@ -82,14 +82,14 @@ class _TrendAnalysisSectionState extends State<TrendAnalysisSection> {
                     color: AppColors.primary.withAlpha(22),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.show_chart_rounded,
                     color: AppColors.primary,
                     size: 20,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'A few months of activity unlocks the long-term trend view.',
                     style: AppTextStyles.bodySmall,

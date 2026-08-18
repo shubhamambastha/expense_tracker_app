@@ -71,7 +71,7 @@ class SettingsSection extends StatelessWidget {
     for (var i = 0; i < rows.length; i++) {
       out.add(rows[i]);
       if (i != rows.length - 1) {
-        out.add(const Divider(
+        out.add(Divider(
           height: 1,
           thickness: 1,
           color: AppColors.border,

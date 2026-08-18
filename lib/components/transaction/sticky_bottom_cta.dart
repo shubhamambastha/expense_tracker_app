@@ -93,7 +93,7 @@ class _PrimarySaveButton extends StatelessWidget {
                       AppColors.primary.withAlpha(140),
                       AppColors.secondary.withAlpha(140),
                     ]
-                  : const [AppColors.primary, AppColors.secondary],
+                  : [AppColors.primary, AppColors.secondary],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),

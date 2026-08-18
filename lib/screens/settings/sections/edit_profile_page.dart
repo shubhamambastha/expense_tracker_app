@@ -215,7 +215,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           textInputAction: TextInputAction.next,
           onChanged: (_) => _markDirty(),
         ),
-        const Divider(height: 1, thickness: 1, color: AppColors.border),
+        Divider(height: 1, thickness: 1, color: AppColors.border),
         ProfileFormField(
           label: 'Email Address',
           hint: 'you@domain.com',
@@ -226,7 +226,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           helperText: 'Managed by Auth0 — update in your Auth0 account.',
           onChanged: (_) {},
         ),
-        const Divider(height: 1, thickness: 1, color: AppColors.border),
+        Divider(height: 1, thickness: 1, color: AppColors.border),
         ProfileFormField(
           label: 'Phone Number',
           hint: '+91 98765 43210',
@@ -712,7 +712,7 @@ class _EditProfileAppBar extends StatelessWidget {
                         borderRadius: AppRadii.buttonRadius,
                         border: Border.all(color: AppColors.border),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.arrow_back_rounded,
                         color: AppColors.textPrimary,
                         size: 20,

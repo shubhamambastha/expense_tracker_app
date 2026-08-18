@@ -178,7 +178,7 @@ class _SeeAllPill extends StatelessWidget {
                 color: AppColors.primary.withAlpha(28),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.more_horiz_rounded,
                 size: 18,
                 color: AppColors.primary,
@@ -217,7 +217,7 @@ class _EmptyHint extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.info_outline_rounded,
               size: 18,
               color: AppColors.textSecondary,

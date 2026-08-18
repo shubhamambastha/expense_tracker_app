@@ -103,7 +103,7 @@ Future<void> showCurrencyPickerSheet(BuildContext context) {
                             style: AppTextStyles.caption,
                           ),
                           trailing: selected
-                              ? const Icon(
+                              ? Icon(
                                   Icons.check_circle_rounded,
                                   color: AppColors.primary,
                                 )

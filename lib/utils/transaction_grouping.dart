@@ -21,6 +21,18 @@ class TransactionGroup {
   final TransactionGroupKey key;
   final String label;
   final List<Transaction> items;
+
+  /// Income minus expenses for the group (transfers excluded, since they
+  /// don't change net worth). Shown next to the group label, matching the
+  /// iOS redesign's per-day/period net total.
+  double get netTotal {
+    var net = 0.0;
+    for (final t in items) {
+      if (t.isIncome) net += t.amount;
+      if (t.isExpense) net -= t.amount;
+    }
+    return net;
+  }
 }
 
 DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);

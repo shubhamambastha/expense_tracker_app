@@ -75,7 +75,7 @@ class TransactionFormRow extends StatelessWidget {
                     ),
                     if (child == null && showChevron && onTap != null) ...[
                       const SizedBox(width: 4),
-                      const Icon(
+                      Icon(
                         Icons.keyboard_arrow_down_rounded,
                         size: 20,
                         color: AppColors.textSecondary,
@@ -88,7 +88,7 @@ class TransactionFormRow extends StatelessWidget {
           ),
         ),
         if (showDivider)
-          const Divider(
+          Divider(
             height: 1,
             thickness: 1,
             indent: AppSpacing.lg,

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../components/home/dashboard/budget_edit_sheet.dart';
 import '../../../components/settings/settings_section.dart';
-import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_switch_tile.dart';
 import '../../../components/settings/settings_tile.dart';
 import '../../../config/design_tokens.dart';
@@ -12,15 +11,19 @@ import '../../../services/currency_settings.dart';
 import '../../../services/settings_preferences.dart';
 import '../../../utils/snackbar_helper.dart';
 
-/// Caps, category-level budgets, and the soft warnings that go with them.
-class BudgetsAndSpendingPage extends StatefulWidget {
-  const BudgetsAndSpendingPage({super.key});
+/// Body of the Budgets & Spending screen — caps, category-level budgets,
+/// and the soft warnings that go with them. No scaffold/header of its own;
+/// rendered under the Budgets tab's large-title header.
+class BudgetsAndSpendingContent extends StatefulWidget {
+  const BudgetsAndSpendingContent({super.key});
 
   @override
-  State<BudgetsAndSpendingPage> createState() => _BudgetsAndSpendingPageState();
+  State<BudgetsAndSpendingContent> createState() =>
+      _BudgetsAndSpendingContentState();
 }
 
-class _BudgetsAndSpendingPageState extends State<BudgetsAndSpendingPage> {
+class _BudgetsAndSpendingContentState
+    extends State<BudgetsAndSpendingContent> {
   @override
   void initState() {
     super.initState();
@@ -41,11 +44,8 @@ class _BudgetsAndSpendingPageState extends State<BudgetsAndSpendingPage> {
         final limit = prefs.monthlySpendingLimit;
         final budgets = CategoryBudgetService.instance.budgets;
 
-        return SettingsSubpageScaffold(
-          title: 'Budgets & Spending',
-          subtitle:
-              'Set a monthly cap and pick how aggressive the app should be '
-              'when you approach it.',
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SettingsSection(
               title: 'Limits',
@@ -229,7 +229,7 @@ class _MonthlyLimitSheetState extends State<_MonthlyLimitSheet> {
                         Navigator.of(context).pop(true);
                       },
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.border),
+                        side: BorderSide(color: AppColors.border),
                         foregroundColor: AppColors.textPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),

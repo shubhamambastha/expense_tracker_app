@@ -191,7 +191,7 @@ class _ExpandedBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!compact)
-            const Divider(height: 1, thickness: 1, color: AppColors.border),
+            Divider(height: 1, thickness: 1, color: AppColors.border),
           if (!compact) const SizedBox(height: AppSpacing.md),
           if (showFrequency) ...[
             const _SectionLabel(label: 'Frequency'),
@@ -245,8 +245,8 @@ class _ExpandedBody extends StatelessWidget {
                             onTap: () =>
                                 onChanged(config.copyWith(clearEndDate: true)),
                             borderRadius: BorderRadius.circular(10),
-                            child: const Padding(
-                              padding: EdgeInsets.all(4),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
                               child: Icon(
                                 Icons.close_rounded,
                                 size: 16,
@@ -436,7 +436,7 @@ class _DatePickerTile extends StatelessWidget {
               ),
             ),
             trailing ??
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
                   size: 18,
                   color: AppColors.textSecondary,

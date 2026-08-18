@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_switch_tile.dart';
-import '../../../components/settings/settings_tile.dart';
 import '../../../config/design_tokens.dart';
 import '../../../services/settings_preferences.dart';
-import '../../../utils/snackbar_helper.dart';
 
-/// Theme, biometric lock, haptics, and motion / density toggles.
+/// Haptics and motion / density toggles.
+///
+/// Theme lives in the Appearance page and app lock in the root Security
+/// group — this page is just the remaining interaction feel settings.
 class AppPreferencesPage extends StatelessWidget {
   const AppPreferencesPage({super.key});
 
@@ -21,9 +22,7 @@ class AppPreferencesPage extends StatelessWidget {
 
         return SettingsSubpageScaffold(
           title: 'App Preferences',
-          subtitle:
-              'Theme, lock, haptics, and how dense the transaction list '
-              'feels.',
+          subtitle: 'Haptics and how dense the transaction list feels.',
           children: [
             SettingsSection(
               title: 'Look & feel',
@@ -57,26 +56,9 @@ class AppPreferencesPage extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.lg),
-            SettingsSection(
-              title: 'Security',
-              children: [
-                SettingsTile(
-                  icon: Icons.lock_rounded,
-                  title: 'App Lock',
-                  subtitle: 'Biometrics or PIN on launch',
-                  futureReady: true,
-                  onTap: () => _stub(context, 'App lock'),
-                ),
-              ],
-            ),
           ],
         );
       },
     );
-  }
-
-  void _stub(BuildContext context, String label) {
-    SnackbarHelper.showMessage(context, '$label is coming soon');
   }
 }

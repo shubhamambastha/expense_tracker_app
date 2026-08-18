@@ -72,7 +72,7 @@ class RecentTransactionsSection extends StatelessWidget {
                     onTap: () => onTap(items[i]),
                   ),
                   if (i != items.length - 1)
-                    const Divider(
+                    Divider(
                       height: 1,
                       thickness: 1,
                       color: AppColors.border,

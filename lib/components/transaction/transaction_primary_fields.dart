@@ -578,7 +578,7 @@ class _AddCategoryRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.add_rounded,
                 color: AppColors.primary,
                 size: 20,

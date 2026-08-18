@@ -6,37 +6,52 @@ import 'design_tokens.dart';
 
 /// App theme configuration.
 ///
-/// Builds the premium dark theme described in the design spec on top of
+/// Builds the iOS-native theme described in the design spec on top of
 /// Material 3, wiring tokens from [AppColors], [AppRadii], and [AppTextStyles].
 class AppTheme {
   AppTheme._();
 
-  /// System overlay style matching the dark background.
-  static const SystemUiOverlayStyle systemOverlay = SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.background,
-    systemNavigationBarIconBrightness: Brightness.light,
-  );
+  /// System overlay style matching the active background/brightness.
+  /// Reflects [AppColors]'s currently configured brightness — call after
+  /// `AppColors.configure(...)`, same as `darkTheme`/`lightTheme`.
+  static SystemUiOverlayStyle get systemOverlay {
+    final dark = AppColors.brightness == Brightness.dark;
+    return SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+      systemNavigationBarColor: AppColors.background,
+      systemNavigationBarIconBrightness: dark
+          ? Brightness.light
+          : Brightness.dark,
+    );
+  }
 
-  static ThemeData get darkTheme {
-    const colorScheme = ColorScheme(
-      brightness: Brightness.dark,
+  /// Built for whichever brightness [AppColors] is currently configured
+  /// for — callers must call `AppColors.configure(...)` first (see
+  /// `main.dart`). The app never shows both themes at once (no
+  /// `ThemeMode.system`), so `theme:`/`darkTheme:` are always fed the same
+  /// freshly-built [ThemeData] and Flutter's internal pick is moot.
+  static ThemeData get darkTheme => _build(Brightness.dark);
+  static ThemeData get lightTheme => _build(Brightness.light);
+
+  static ThemeData _build(Brightness brightness) {
+    final colorScheme = ColorScheme(
+      brightness: brightness,
       primary: AppColors.primary,
-      onPrimary: Color(0xFF003328),
+      onPrimary: AppColors.onPrimary,
       primaryContainer: AppColors.primarySoft,
       onPrimaryContainer: AppColors.primary,
       secondary: AppColors.secondary,
-      onSecondary: Color(0xFF002633),
+      onSecondary: AppColors.onPrimary,
       secondaryContainer: AppColors.secondarySoft,
       onSecondaryContainer: AppColors.secondary,
       tertiary: AppColors.secondary,
-      onTertiary: Color(0xFF002633),
+      onTertiary: AppColors.onPrimary,
       tertiaryContainer: AppColors.secondarySoft,
       onTertiaryContainer: AppColors.secondary,
       error: AppColors.danger,
-      onError: Color(0xFF35030D),
+      onError: AppColors.onPrimary,
       errorContainer: AppColors.dangerSoft,
       onErrorContainer: AppColors.danger,
       surface: AppColors.surface,
@@ -53,15 +68,15 @@ class AppTheme {
       inverseSurface: AppColors.textPrimary,
       onInverseSurface: AppColors.background,
       inversePrimary: AppColors.primarySoft,
-      scrim: Color(0xCC000000),
-      shadow: Color(0xFF000000),
+      scrim: const Color(0xCC000000),
+      shadow: const Color(0xFF000000),
     );
 
     final textTheme = _buildTextTheme();
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.background,
       canvasColor: AppColors.background,
@@ -78,7 +93,7 @@ class AppTheme {
           TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
         },
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.textPrimary,
         surfaceTintColor: Colors.transparent,
@@ -100,13 +115,13 @@ class AppTheme {
         shape: AppRadii.cardBorder,
         shadowColor: Colors.black.withAlpha(80),
       ),
-      dialogTheme: const DialogThemeData(
+      dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: AppRadii.cardBorder,
       ),
-      bottomSheetTheme: const BottomSheetThemeData(
+      bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         modalBackgroundColor: AppColors.surface,
@@ -114,25 +129,22 @@ class AppTheme {
         elevation: 0,
         showDragHandle: true,
         dragHandleColor: AppColors.border,
-        shape: ContinuousRectangleBorder(
+        shape: const ContinuousRectangleBorder(
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(AppRadii.card),
           ),
         ),
       ),
-      dividerTheme: const DividerThemeData(
+      dividerTheme: DividerThemeData(
         color: AppColors.border,
         thickness: 1,
         space: 1,
       ),
-      iconTheme: const IconThemeData(
-        color: AppColors.textPrimary,
-        size: 22,
-      ),
+      iconTheme: IconThemeData(color: AppColors.textPrimary, size: 22),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
-          foregroundColor: const Color(0xFF003328),
+          foregroundColor: AppColors.onPrimary,
           textStyle: AppTextStyles.button,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           minimumSize: const Size(0, 48),
@@ -143,7 +155,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
-          foregroundColor: const Color(0xFF003328),
+          foregroundColor: AppColors.onPrimary,
           textStyle: AppTextStyles.button,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           minimumSize: const Size(0, 48),
@@ -157,7 +169,7 @@ class AppTheme {
           textStyle: AppTextStyles.button,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           minimumSize: const Size(0, 48),
-          side: const BorderSide(color: AppColors.border, width: 1.2),
+          side: BorderSide(color: AppColors.border, width: 1.2),
           shape: AppRadii.buttonBorder,
         ),
       ),
@@ -213,7 +225,7 @@ class AppTheme {
           color: AppColors.primary,
           fontWeight: FontWeight.w700,
         ),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.border),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         shape: AppRadii.chipBorder,
       ),
@@ -247,15 +259,15 @@ class AppTheme {
           borderRadius: AppRadii.inputRadius,
           borderSide: BorderSide.none,
         ),
-        focusedBorder: const OutlineInputBorder(
+        focusedBorder: OutlineInputBorder(
           borderRadius: AppRadii.inputRadius,
           borderSide: BorderSide(color: AppColors.primary, width: 1.4),
         ),
-        errorBorder: const OutlineInputBorder(
+        errorBorder: OutlineInputBorder(
           borderRadius: AppRadii.inputRadius,
           borderSide: BorderSide(color: AppColors.danger, width: 1.2),
         ),
-        focusedErrorBorder: const OutlineInputBorder(
+        focusedErrorBorder: OutlineInputBorder(
           borderRadius: AppRadii.inputRadius,
           borderSide: BorderSide(color: AppColors.danger, width: 1.4),
         ),
@@ -269,7 +281,7 @@ class AppTheme {
         subtitleTextStyle: AppTextStyles.bodySmall,
         shape: AppRadii.chipBorder,
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
+      progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.primary,
         circularTrackColor: AppColors.surfaceSecondary,
         linearTrackColor: AppColors.surfaceSecondary,
@@ -291,25 +303,25 @@ class AppTheme {
           if (states.contains(WidgetState.selected)) return AppColors.primary;
           return Colors.transparent;
         }),
-        checkColor: const WidgetStatePropertyAll(Color(0xFF003328)),
-        side: const BorderSide(color: AppColors.border, width: 1.4),
+        checkColor: const WidgetStatePropertyAll(AppColors.onPrimary),
+        side: BorderSide(color: AppColors.border, width: 1.4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
-        foregroundColor: Color(0xFF003328),
+        foregroundColor: AppColors.onPrimary,
         elevation: 6,
         focusElevation: 6,
         hoverElevation: 8,
         highlightElevation: 4,
         shape: AppRadii.buttonBorder,
       ),
-      bottomAppBarTheme: const BottomAppBarThemeData(
+      bottomAppBarTheme: BottomAppBarThemeData(
         color: AppColors.surface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.surface,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textSecondary,
@@ -325,7 +337,7 @@ class AppTheme {
         shape: AppRadii.chipBorder,
         elevation: 6,
       ),
-      tooltipTheme: const TooltipThemeData(
+      tooltipTheme: TooltipThemeData(
         decoration: ShapeDecoration(
           color: AppColors.surfaceSecondary,
           shape: AppRadii.chipBorder,
@@ -347,14 +359,11 @@ class AppTheme {
           if (states.contains(WidgetState.selected)) return AppColors.primary;
           return Colors.transparent;
         }),
-        todayForegroundColor: const WidgetStatePropertyAll(AppColors.primary),
-        todayBorder: const BorderSide(color: AppColors.primary, width: 1.2),
+        todayForegroundColor: WidgetStatePropertyAll(AppColors.primary),
+        todayBorder: BorderSide(color: AppColors.primary, width: 1.2),
       ),
     );
   }
-
-  /// Backwards-compatible accessor. The app is dark-themed by design.
-  static ThemeData get lightTheme => darkTheme;
 
   static TextTheme _buildTextTheme() {
     return TextTheme(

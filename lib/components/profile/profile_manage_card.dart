@@ -55,7 +55,7 @@ class ProfileManageCard extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.border),
                     foregroundColor: AppColors.textPrimary,
                   ),
                   icon: const Icon(Icons.list_rounded, size: 18),

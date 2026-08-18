@@ -65,7 +65,7 @@ class UpcomingTimelineSection extends StatelessWidget {
                     if ((byBucket[UpcomingBucket.values[i]] ?? const [])
                         .isNotEmpty) ...[
                       if (i != 0)
-                        const Divider(
+                        Divider(
                           height: 1,
                           thickness: 1,
                           color: AppColors.border,
@@ -113,7 +113,7 @@ class _BucketGroup extends StatelessWidget {
             onAction: (action) => onAction(action, items[i]),
           ),
           if (i != items.length - 1)
-            const Divider(
+            Divider(
               height: 1,
               thickness: 1,
               color: AppColors.border,
@@ -222,7 +222,7 @@ class _OverflowMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<RecurringQuickAction>(
       tooltip: 'More actions',
-      icon: const Icon(
+      icon: Icon(
         Icons.more_vert_rounded,
         size: 18,
         color: AppColors.textSecondary,
@@ -334,14 +334,14 @@ class _EmptyTimelineCard extends StatelessWidget {
               color: AppColors.primary.withAlpha(24),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.event_available_rounded,
               color: AppColors.primary,
               size: 20,
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          const Expanded(
+          Expanded(
             child: Text(
               'No payments due soon — you\'re all caught up.',
               style: AppTextStyles.bodySmall,

@@ -525,6 +525,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           SliverToBoxAdapter(
             child: _TransactionsAppBar(
               onCalendar: _openDateFilter,
+              onAdd: widget.onAddTransaction,
             ),
           ),
           SliverPersistentHeader(
@@ -595,7 +596,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     var cursor = 0;
     for (final group in groups) {
       if (index == cursor) {
-        return _GroupHeader(label: group.label);
+        return _GroupHeader(label: group.label, netTotal: group.netTotal);
       }
       cursor++;
       for (final tx in group.items) {
@@ -622,7 +623,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 onDuplicate: () => widget.onDuplicate?.call(tx),
                 onDelete: () => widget.onDelete?.call(tx),
               ),
-              const Divider(height: 1, thickness: 1, color: AppColors.border),
+              Divider(height: 1, thickness: 1, color: AppColors.border),
             ],
           );
         }
@@ -634,9 +635,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 }
 
 class _TransactionsAppBar extends StatelessWidget {
-  const _TransactionsAppBar({required this.onCalendar});
+  const _TransactionsAppBar({required this.onCalendar, this.onAdd});
 
   final VoidCallback onCalendar;
+  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -662,6 +664,13 @@ class _TransactionsAppBar extends StatelessWidget {
             onPressed: onCalendar,
             icon: const Icon(Icons.calendar_month_rounded),
           ),
+          if (onAdd != null)
+            IconButton(
+              tooltip: 'Add transaction',
+              onPressed: onAdd,
+              icon: const Icon(Icons.add_circle_rounded),
+              color: AppColors.primary,
+            ),
         ],
       ),
     );
@@ -711,15 +720,15 @@ class _StickySearchFilters extends StatelessWidget {
               fillColor: AppColors.surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadii.input),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadii.input),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadii.input),
-                borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
+                borderSide: BorderSide(color: AppColors.primary, width: 1.4),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
@@ -842,12 +851,15 @@ class _SummaryPill extends StatelessWidget {
 }
 
 class _GroupHeader extends StatelessWidget {
-  const _GroupHeader({required this.label});
+  const _GroupHeader({required this.label, required this.netTotal});
 
   final String label;
+  final double netTotal;
 
   @override
   Widget build(BuildContext context) {
+    final currency = CurrencySettings.instance;
+    final sign = netTotal > 0 ? '+' : '';
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -855,9 +867,24 @@ class _GroupHeader extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.xs,
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w800),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          Text(
+            '$sign${currency.format(netTotal)}',
+            style: AppTextStyles.label.copyWith(
+              fontWeight: FontWeight.w800,
+              color: netTotal >= 0
+                  ? AppColors.success
+                  : AppColors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -883,7 +910,7 @@ class _EmptyTransactions extends StatelessWidget {
                 color: AppColors.primary.withAlpha(28),
                 borderRadius: BorderRadius.circular(22),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.receipt_long_rounded,
                 size: 34,
                 color: AppColors.primary,
@@ -934,7 +961,7 @@ class _NoResults extends StatelessWidget {
               color: AppColors.surfaceSecondary,
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.search_off_rounded,
               size: 28,
               color: AppColors.textSecondary,
@@ -1055,13 +1082,13 @@ class _TransactionsFilterFab extends StatelessWidget {
         color: AppColors.surface,
         elevation: 4,
         shadowColor: Colors.black26,
-        shape: const CircleBorder(
+        shape: CircleBorder(
           side: BorderSide(color: AppColors.border),
         ),
         child: InkWell(
           onTap: onTap,
           customBorder: const CircleBorder(),
-          child: const SizedBox(
+          child: SizedBox(
             width: 60,
             height: 60,
             child: Icon(

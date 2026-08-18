@@ -51,7 +51,7 @@ class ActionsSection extends StatelessWidget {
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
-        const Divider(color: AppColors.border),
+        Divider(color: AppColors.border),
         const SizedBox(height: AppSpacing.md),
         FilledButton.icon(
           onPressed: onDelete,

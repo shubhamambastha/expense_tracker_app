@@ -97,7 +97,7 @@ class _RecurringDetailsSectionState extends State<RecurringDetailsSection> {
                     padding: const EdgeInsets.only(top: AppSpacing.sm),
                     child: Column(
                       children: [
-                        const Divider(height: 1, color: AppColors.border),
+                        Divider(height: 1, color: AppColors.border),
                         const SizedBox(height: AppSpacing.sm),
                         if (tx.reminderTiming != null)
                           DetailInfoRow(

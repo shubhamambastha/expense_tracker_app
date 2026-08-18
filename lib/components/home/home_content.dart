@@ -50,7 +50,7 @@ class HomeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading && transactions.isEmpty && accounts.isEmpty) {
-      return const Center(
+      return Center(
         child: SizedBox(
           width: 32,
           height: 32,
@@ -168,7 +168,7 @@ class _OnboardingHero extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [AppColors.surface, AppColors.surfaceSecondary],
@@ -201,7 +201,7 @@ class _OnboardingHero extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: AppColors.primary.withAlpha(60)),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.bolt_rounded,
               color: AppColors.primary,
               size: 28,

@@ -15,11 +15,11 @@ import '../../services/income_category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../services/settings_preferences.dart';
 import '../../utils/snackbar_helper.dart';
-import 'sections/accounts_and_cards_page.dart';
+import 'sections/about_page.dart';
+import 'sections/appearance_page.dart';
 import 'sections/categories_page.dart';
 import 'sections/ai_assistant_page.dart';
 import 'sections/app_preferences_page.dart';
-import 'sections/budgets_and_spending_page.dart';
 import 'sections/financial_preferences_page.dart';
 import 'sections/notifications_page.dart';
 import 'sections/edit_profile_page.dart';
@@ -28,9 +28,10 @@ import '../../utils/profile_identity.dart';
 
 /// Premium Settings *hub*.
 ///
-/// Renders the profile header, a single condensed list of section entries,
-/// and the danger zone. Each entry pushes a dedicated sub-screen so the
-/// surface area stays calm and users scroll for context, not content.
+/// Renders the profile header, grouped section cards (Preferences / Data /
+/// Security / Support / About), and the destructive Sign Out row. Each
+/// entry pushes a dedicated sub-screen so the surface area stays calm and
+/// users scroll for context, not content.
 ///
 /// All persistence still flows through [SettingsPreferences],
 /// [CurrencySettings], and [CategoryCatalog] — only the shell has changed.
@@ -40,12 +41,24 @@ class SettingsPage extends StatelessWidget {
     required this.accounts,
     required this.transactions,
     required this.onAddAccount,
+    required this.onManageAccounts,
+    required this.onOpenRecurringManager,
     required this.onSignOut,
   });
 
   final List<Account> accounts;
   final List<Transaction> transactions;
   final OnAddAccount onAddAccount;
+
+  /// Opens the full accounts/cards management flow (same one Home's
+  /// "Manage accounts" quick link uses) so Settings doesn't maintain a
+  /// second, thinner accounts screen.
+  final VoidCallback onManageAccounts;
+
+  /// Opens the full recurring-payments manager (same one Analytics'
+  /// Subscriptions section uses).
+  final VoidCallback onOpenRecurringManager;
+
   final VoidCallback onSignOut;
 
   @override
@@ -72,6 +85,13 @@ class SettingsPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: Text('Settings', style: AppTextStyles.headingLarge),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
                   ProfileHeaderCard(
                     initial: _profileInitial(),
                     displayName: _displayName(),
@@ -86,83 +106,149 @@ class SettingsPage extends StatelessWidget {
                         _open(context, EditProfilePage(accounts: accounts)),
                     onManageAccount: () => _stub(context, 'Manage Account'),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.xl),
                   SettingsSection(
-                    title: 'Settings',
+                    title: 'Preferences',
                     children: [
+                      SettingsTile(
+                        icon: Icons.attach_money_rounded,
+                        title: 'Currency',
+                        valueLabel: currency.currencyCode,
+                        onTap: () => showCurrencyPickerSheet(context),
+                      ),
+                      SettingsTile(
+                        icon: Icons.dark_mode_rounded,
+                        title: 'Appearance',
+                        valueLabel: prefs.themeMode == ThemeMode.light
+                            ? 'Light'
+                            : 'Dark',
+                        onTap: () => _open(context, const AppearancePage()),
+                      ),
+                      SettingsTile(
+                        icon: Icons.notifications_rounded,
+                        title: 'Notifications',
+                        valueLabel: _notifSummary(prefs),
+                        onTap: () => _open(context, const NotificationsPage()),
+                      ),
                       SettingsTile(
                         icon: Icons.payments_rounded,
                         title: 'Financial Preferences',
-                        subtitle: 'Currency and transaction defaults',
-                        valueLabel: currency.currencyCode,
+                        subtitle: 'Transaction defaults, multi-currency',
                         onTap: () => _open(
                           context,
                           FinancialPreferencesPage(accounts: accounts),
                         ),
                       ),
                       SettingsTile(
-                        icon: Icons.category_rounded,
-                        title: 'Categories',
-                        subtitle: 'Expense and income labels',
-                        valueLabel: _categoriesSummary(),
-                        onTap: () => _open(context, const CategoriesPage()),
-                      ),
-                      SettingsTile(
-                        icon: Icons.account_balance_wallet_rounded,
-                        title: 'Accounts & Cards',
-                        subtitle: 'Banks, credit cards, wallets, and cash',
-                        valueLabel: _accountsSummary(),
-                        onTap: () => _open(
-                          context,
-                          AccountsAndCardsPage(
-                            accounts: accounts,
-                            onAddAccount: onAddAccount,
-                          ),
-                        ),
-                      ),
-                      SettingsTile(
-                        icon: Icons.donut_small_rounded,
-                        title: 'Budgets & Spending',
-                        subtitle: 'Monthly cap, category budgets, alerts',
-                        valueLabel: prefs.monthlySpendingLimit == null
-                            ? 'No cap'
-                            : currency.format(prefs.monthlySpendingLimit!),
-                        onTap: () =>
-                            _open(context, const BudgetsAndSpendingPage()),
-                      ),
-                      SettingsTile(
-                        icon: Icons.notifications_rounded,
-                        title: 'Notifications & Reminders',
-                        subtitle: 'Recurring, salary, budget alerts & timing',
-                        valueLabel: _notifSummary(prefs),
-                        onTap: () => _open(context, const NotificationsPage()),
-                      ),
-                      SettingsTile(
                         icon: Icons.psychology_rounded,
                         title: 'AI Assistant',
-                        subtitle:
-                            'Insights, suggestions, chat history controls',
                         valueLabel: prefs.aiAssistantEnabled ? 'On' : 'Off',
                         onTap: () => _open(context, const AiAssistantPage()),
                       ),
                       SettingsTile(
                         icon: Icons.tune_rounded,
                         title: 'App Preferences',
-                        subtitle: 'Lock, haptics, density',
+                        subtitle: 'Haptics, density',
                         onTap: () => _open(context, const AppPreferencesPage()),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SettingsSection(
+                    title: 'Data',
+                    children: [
+                      SettingsTile(
+                        icon: Icons.account_balance_wallet_rounded,
+                        title: 'Accounts & Cards',
+                        valueLabel: _accountsSummary(),
+                        onTap: onManageAccounts,
+                      ),
+                      SettingsTile(
+                        icon: Icons.category_rounded,
+                        title: 'Categories',
+                        valueLabel: _categoriesSummary(),
+                        onTap: () => _open(context, const CategoriesPage()),
+                      ),
+                      SettingsTile(
+                        icon: Icons.autorenew_rounded,
+                        title: 'Recurring Payments',
+                        onTap: onOpenRecurringManager,
+                      ),
+                      SettingsTile(
+                        icon: Icons.file_download_rounded,
+                        title: 'Export Data',
+                        onTap: () => _stub(context, 'Export data'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SettingsSection(
+                    title: 'Security',
+                    children: [
+                      SettingsTile(
+                        icon: Icons.fingerprint_rounded,
+                        title: 'Face ID & Passcode',
+                        futureReady: true,
+                        onTap: () => _stub(context, 'Face ID & Passcode'),
+                      ),
+                      SettingsTile(
+                        icon: Icons.cloud_done_rounded,
+                        title: 'Backup & Sync',
+                        futureReady: true,
+                        onTap: () => _stub(context, 'Backup & Sync'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SettingsSection(
+                    title: 'Support',
+                    children: [
+                      SettingsTile(
+                        icon: Icons.help_outline_rounded,
+                        title: 'Help Center',
+                        onTap: () => _stub(context, 'Help Center'),
+                      ),
+                      SettingsTile(
+                        icon: Icons.mail_outline_rounded,
+                        title: 'Contact Us',
+                        onTap: () => _stub(context, 'Contact Us'),
+                      ),
+                      SettingsTile(
+                        icon: Icons.star_outline_rounded,
+                        title: 'Rate the App',
+                        onTap: () => _stub(context, 'Rate the App'),
                       ),
                       SettingsTile(
                         icon: Icons.support_agent_rounded,
                         title: 'Support & Feedback',
-                        subtitle:
-                            'Feedback, data & privacy, legal, account removal',
+                        subtitle: 'Feedback, offline mode, delete account',
                         onTap: () =>
                             _open(context, const SupportAndFeedbackPage()),
                       ),
                     ],
                   ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SettingsSection(
+                    title: 'About',
+                    children: [
+                      SettingsTile(
+                        icon: Icons.info_outline_rounded,
+                        title: 'About',
+                        onTap: () => _open(context, const AboutPage()),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: AppSpacing.xl),
                   SettingsDangerSection(onLogout: onSignOut),
+                  const SizedBox(height: AppSpacing.xl),
+                  Center(
+                    child: Text(
+                      'Version 1.0.0 (1)',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             )

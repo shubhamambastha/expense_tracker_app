@@ -192,7 +192,7 @@ class SettingsSelectableRow extends StatelessWidget {
                 ),
               ),
               if (selected)
-                const Icon(
+                Icon(
                   Icons.check_circle_rounded,
                   color: AppColors.primary,
                 ),
@@ -277,7 +277,7 @@ class SettingsAccountPickerRow extends StatelessWidget {
                 ),
               ),
               if (selected)
-                const Icon(
+                Icon(
                   Icons.check_circle_rounded,
                   color: AppColors.primary,
                 ),

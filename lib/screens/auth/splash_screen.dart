@@ -265,7 +265,7 @@ class _LogoMark extends StatelessWidget {
           ),
         ],
       ),
-      child: const Icon(
+      child: Icon(
         Icons.account_balance_wallet_rounded,
         color: AppColors.primary,
         size: 36,

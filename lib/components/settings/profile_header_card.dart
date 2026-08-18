@@ -115,7 +115,7 @@ class ProfileHeaderCard extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.border),
                     foregroundColor: AppColors.textPrimary,
                   ),
                   icon: const Icon(Icons.edit_outlined, size: 18),
@@ -217,7 +217,7 @@ class _CurrencyPill extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(
+            Icon(
               Icons.expand_more_rounded,
               size: 14,
               color: AppColors.primary,

@@ -30,15 +30,15 @@ Future<RecurringKind?> showAddRecurringSheet(BuildContext context) {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: AppSpacing.md),
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: Text(
                   'Add Recurring Payment',
                   style: AppTextStyles.headingSmall,
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.only(bottom: AppSpacing.lg),
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.lg),
                 child: Text(
                   'Pick a kind and we\'ll preconfigure the schedule for you.',
                   style: AppTextStyles.bodySmall,
@@ -162,7 +162,7 @@ class _AddRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
                 color: AppColors.textSecondary,
               ),

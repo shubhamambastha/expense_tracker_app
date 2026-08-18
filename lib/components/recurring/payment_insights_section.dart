@@ -45,7 +45,7 @@ class PaymentInsightsSection extends StatelessWidget {
                 _InsightLine(insight: insights[i]),
                 if (i != insights.length - 1) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  const Divider(
+                  Divider(
                     height: 1,
                     thickness: 1,
                     color: AppColors.border,

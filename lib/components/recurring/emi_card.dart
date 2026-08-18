@@ -226,7 +226,7 @@ class _EmiOverflowMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<RecurringQuickAction>(
       tooltip: 'More actions',
-      icon: const Icon(
+      icon: Icon(
         Icons.more_vert_rounded,
         size: 18,
         color: AppColors.textSecondary,

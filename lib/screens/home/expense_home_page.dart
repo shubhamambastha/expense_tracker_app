@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../components/common/compact_header.dart';
 import '../../components/dialogs/add_account_dialog.dart';
@@ -118,9 +118,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     });
   }
 
-  /// A tab bar item is a navigation destination, never an action — the
-  /// add-transaction control lives outside this row (see [_AddExpenseFab])
-  /// so tapping it can never be confused with switching tabs.
   Widget _buildBottomBarItem({
     required IconData icon,
     required String label,
@@ -522,7 +519,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _switchToTab(int index) {
-    if (index < 0 || index > 3) return;
+    if (index < 0 || index > 4) return;
     setState(() => _selectedIndex = index);
   }
 
@@ -678,13 +675,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     _openAddTransactionPage(initialDraft: draft);
   }
 
-  Future<void> _openBudgetSettings() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => const BudgetsAndSpendingPage()),
-    );
-    if (!mounted) return;
-    setState(() {});
-  }
+  void _openBudgetSettings() => _switchToTab(3);
 
   void _handleInsightAction(FinancialInsight insight) {
     final payload = insight.actionPayload ?? '';
@@ -786,7 +777,34 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       accounts: _accounts,
       transactions: _transactions,
       onAddAccount: _openAddAccountDialog,
+      onManageAccounts: _openAccountsManager,
+      onOpenRecurringManager: _openRecurringManager,
       onSignOut: widget.onSignOut,
+    );
+  }
+
+  Widget _buildBudgetsContent(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.xxxl,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: Text('Budgets', style: AppTextStyles.headingLarge),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const BudgetsAndSpendingContent(),
+        ],
+      ),
     );
   }
 
@@ -797,6 +815,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       case 2:
         return _buildAnalyticsContent(context);
       case 3:
+        return _buildBudgetsContent(context);
+      case 4:
         return _buildSettingsContent(context);
       case 0:
       default:
@@ -845,116 +865,59 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           AppSpacing.md,
           AppSpacing.sm,
         ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.topCenter,
-          children: [
-            Container(
-              decoration: ShapeDecoration(
-                color: AppColors.surface,
-                shape: ContinuousRectangleBorder(
-                  borderRadius: AppRadii.cardRadius,
-                  side: const BorderSide(color: AppColors.border),
-                ),
-                shadows: AppShadows.card,
-              ),
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        _buildBottomBarItem(
-                          icon: Icons.dashboard_rounded,
-                          label: 'Home',
-                          index: 0,
-                        ),
-                        _buildBottomBarItem(
-                          icon: Icons.list_alt_rounded,
-                          label: 'Transactions',
-                          index: 1,
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Clears the floating add button between Transactions and Analytics.
-                  const SizedBox(width: 88),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        _buildBottomBarItem(
-                          icon: Icons.insights_rounded,
-                          label: 'Analytics',
-                          index: 2,
-                        ),
-                        _buildBottomBarItem(
-                          icon: Icons.settings_rounded,
-                          label: 'Settings',
-                          index: 3,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: -30,
-              child: _AddExpenseFab(onTap: () => _openAddTransactionPage()),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddExpenseFab extends StatelessWidget {
-  const _AddExpenseFab({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-          button: true,
-          label: 'Add transaction',
-          child: Material(
+        child: DecoratedBox(
+          decoration: ShapeDecoration(
             color: Colors.transparent,
-            elevation: 8,
-            shadowColor: AppColors.primary.withAlpha(120),
-            shape: const CircleBorder(),
-            child: InkWell(
-              onTap: onTap,
-              customBorder: const CircleBorder(),
-              child: Ink(
-                width: 64,
-                height: 64,
+            shape: AppRadii.cardBorder,
+            shadows: AppShadows.card,
+          ),
+          child: ClipRRect(
+            borderRadius: AppRadii.cardRadius,
+            // Standard iOS translucent tab-bar chrome — blur only, no
+            // saturate boost (ImageFilter has no direct saturate knob).
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.secondary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  border: Border.all(color: AppColors.background, width: 3),
-                  boxShadow: AppShadows.elevated,
+                  color: AppColors.surface.withAlpha(230),
+                  borderRadius: AppRadii.cardRadius,
+                  border: Border.all(color: AppColors.border),
                 ),
-                child: const Icon(
-                  Icons.add_rounded,
-                  color: Color(0xFF002820),
-                  size: 32,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                child: Row(
+                  children: [
+                    _buildBottomBarItem(
+                      icon: Icons.dashboard_rounded,
+                      label: 'Home',
+                      index: 0,
+                    ),
+                    _buildBottomBarItem(
+                      icon: Icons.list_alt_rounded,
+                      label: 'Transactions',
+                      index: 1,
+                    ),
+                    _buildBottomBarItem(
+                      icon: Icons.insights_rounded,
+                      label: 'Analytics',
+                      index: 2,
+                    ),
+                    _buildBottomBarItem(
+                      icon: Icons.donut_small_rounded,
+                      label: 'Budgets',
+                      index: 3,
+                    ),
+                    _buildBottomBarItem(
+                      icon: Icons.settings_rounded,
+                      label: 'Settings',
+                      index: 4,
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        )
-        .animate(onPlay: (c) => c.repeat(reverse: true))
-        .scaleXY(
-          begin: 1.0,
-          end: 1.04,
-          duration: const Duration(milliseconds: 1800),
-          curve: Curves.easeInOut,
-        );
+        ),
+      ),
+    );
   }
 }

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../config/design_tokens.dart';
 import 'settings_tile.dart';
 
-/// Bottom danger zone with Logout.
+/// Bottom danger zone with Sign Out.
 ///
 /// Wrapped in a danger-tinted card so it visually separates from the rest
 /// of the Settings screen.
@@ -47,7 +47,7 @@ class SettingsDangerSection extends StatelessWidget {
             children: [
               SettingsTile(
                 icon: Icons.logout_rounded,
-                title: 'Logout',
+                title: 'Sign Out',
                 subtitle: 'End this session on this device',
                 destructive: true,
                 onTap: () => _confirmLogout(context),
@@ -63,7 +63,7 @@ class SettingsDangerSection extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Logout'),
+        title: const Text('Sign Out'),
         content: const Text(
           'You will need to sign in again to access your finances.',
         ),
@@ -78,7 +78,7 @@ class SettingsDangerSection extends StatelessWidget {
               backgroundColor: AppColors.danger,
               foregroundColor: AppColors.textPrimary,
             ),
-            child: const Text('Logout'),
+            child: const Text('Sign Out'),
           ),
         ],
       ),

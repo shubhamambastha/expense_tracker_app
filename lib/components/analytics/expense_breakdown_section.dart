@@ -97,7 +97,7 @@ class _ExpenseBreakdownSectionState extends State<ExpenseBreakdownSection> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              const Divider(
+              Divider(
                 height: 1,
                 thickness: 1,
                 color: AppColors.border,
@@ -124,7 +124,7 @@ class _ExpenseBreakdownSectionState extends State<ExpenseBreakdownSection> {
                   },
                 ),
                 if (i != slices.length - 1)
-                  const Divider(
+                  Divider(
                     height: 1,
                     thickness: 1,
                     color: AppColors.border,
@@ -536,14 +536,14 @@ class _EmptyBreakdownCard extends StatelessWidget {
                   color: AppColors.primary.withAlpha(24),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.pie_chart_outline_rounded,
                   color: AppColors.primary,
                   size: 20,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'No spending in this window yet — categories will appear as you log expenses.',
                   style: AppTextStyles.bodySmall,

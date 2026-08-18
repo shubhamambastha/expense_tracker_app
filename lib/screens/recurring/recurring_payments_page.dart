@@ -452,7 +452,7 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Recurring',
           style: AppTextStyles.headingSmall,
         ),

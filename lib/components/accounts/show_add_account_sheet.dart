@@ -27,9 +27,9 @@ Future<AddAccountChoice?> showAddAccountSheet(BuildContext context) {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Add Account', style: AppTextStyles.headingSmall),
+              Text('Add Account', style: AppTextStyles.headingSmall),
               const SizedBox(height: AppSpacing.sm),
-              const Text(
+              Text(
                 'Choose where your money lives or moves from.',
                 style: AppTextStyles.bodySmall,
               ),
@@ -146,7 +146,7 @@ class _AddRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
                 color: AppColors.textSecondary,
               ),
