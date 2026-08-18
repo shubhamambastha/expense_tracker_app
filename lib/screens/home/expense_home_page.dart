@@ -72,7 +72,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     }
     _launchIntentTimers.clear();
     CategoryBudgetService.instance.removeListener(_onBudgetsChanged);
-    AppLaunchIntentHolder.instance.pending.removeListener(_onLaunchIntentChanged);
+    AppLaunchIntentHolder.instance.pending.removeListener(
+      _onLaunchIntentChanged,
+    );
     super.dispose();
   }
 
@@ -100,7 +102,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
   void _tryHandleLaunchIntent() {
     if (!mounted || _isLoading || _addTransactionRouteOpen) return;
-    if (AppLaunchIntentHolder.instance.consume() == AppLaunchIntent.addExpense) {
+    if (AppLaunchIntentHolder.instance.consume() ==
+        AppLaunchIntent.addExpense) {
       _openAddTransactionPage(kind: TransactionKind.expense);
     }
   }
@@ -124,8 +127,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     required int index,
   }) {
     final isSelected = _selectedIndex == index;
-    final fg =
-        isSelected ? AppColors.primary : AppColors.textSecondary;
+    final fg = isSelected ? AppColors.primary : AppColors.textSecondary;
 
     return Expanded(
       child: Semantics(
@@ -150,7 +152,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                 ),
                 const SizedBox(height: 2),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                  ),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
@@ -158,8 +162,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                       maxLines: 1,
                       style: AppTextStyles.caption.copyWith(
                         color: fg,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                         height: 1.0,
                       ),
                     ),
@@ -305,7 +310,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     final resolvedKind = FeatureFlags.normalizeKind(
       kind ?? initialDraft?.kind ?? TransactionKind.expense,
     );
-    final draft = initialDraft ??
+    final draft =
+        initialDraft ??
         TransactionDraft(
           kind: resolvedKind,
           accountId: _accounts.isEmpty ? null : _accounts.first.id,
@@ -380,21 +386,23 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     for (final t in _transactions.where((t) => t.isIncome)) {
       final key = t.counterpartyName.toLowerCase();
       if (key.isEmpty || !seen.add(key)) continue;
-      out.add(RecentSuggestion(
-        merchant: t.counterpartyName,
-        category: t.category ?? 'Other',
-        accountId: t.accountId,
-        amount: t.amount,
-        kind: TransactionKind.income,
-        recurring: t.isRecurring
-            ? RecurringConfig(
-                enabled: true,
-                frequency:
-                    t.recurrenceFrequency ?? RecurrenceFrequency.monthly,
-                endDate: t.recurrenceEndDate,
-              )
-            : null,
-      ));
+      out.add(
+        RecentSuggestion(
+          merchant: t.counterpartyName,
+          category: t.category ?? 'Other',
+          accountId: t.accountId,
+          amount: t.amount,
+          kind: TransactionKind.income,
+          recurring: t.isRecurring
+              ? RecurringConfig(
+                  enabled: true,
+                  frequency:
+                      t.recurrenceFrequency ?? RecurrenceFrequency.monthly,
+                  endDate: t.recurrenceEndDate,
+                )
+              : null,
+        ),
+      );
       if (out.length >= 5) break;
     }
     if (out.isNotEmpty) return out;
@@ -486,10 +494,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   Future<void> _duplicateTransaction(Transaction transaction) async {
-    final copy = transaction.copyWith(
-      id: null,
-      date: DateTime.now(),
-    );
+    final copy = transaction.copyWith(id: null, date: DateTime.now());
     await _insertTransaction(copy);
   }
 
@@ -675,9 +680,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
   Future<void> _openBudgetSettings() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => const BudgetsAndSpendingPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const BudgetsAndSpendingPage()),
     );
     if (!mounted) return;
     setState(() {});
@@ -760,10 +763,12 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   double? _currentMonthIncome() {
     final now = DateTime.now();
     final total = _transactions
-        .where((t) =>
-            t.isIncome &&
-            t.date.year == now.year &&
-            t.date.month == now.month)
+        .where(
+          (t) =>
+              t.isIncome &&
+              t.date.year == now.year &&
+              t.date.month == now.month,
+        )
         .fold<double>(0, (sum, t) => sum + t.amount);
     return total > 0 ? total : null;
   }
@@ -912,41 +917,38 @@ class _AddExpenseFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      button: true,
-      label: 'Add transaction',
-      child: Material(
-        color: Colors.transparent,
-        elevation: 8,
-        shadowColor: AppColors.primary.withAlpha(120),
-        shape: const CircleBorder(),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Ink(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.secondary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          button: true,
+          label: 'Add transaction',
+          child: Material(
+            color: Colors.transparent,
+            elevation: 8,
+            shadowColor: AppColors.primary.withAlpha(120),
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: onTap,
+              customBorder: const CircleBorder(),
+              child: Ink(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.secondary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(color: AppColors.background, width: 3),
+                  boxShadow: AppShadows.elevated,
+                ),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Color(0xFF002820),
+                  size: 32,
+                ),
               ),
-              border: Border.all(
-                color: AppColors.background,
-                width: 3,
-              ),
-              boxShadow: AppShadows.elevated,
-            ),
-            child: const Icon(
-              Icons.add_rounded,
-              color: Color(0xFF002820),
-              size: 32,
             ),
           ),
-        ),
-      ),
-    )
+        )
         .animate(onPlay: (c) => c.repeat(reverse: true))
         .scaleXY(
           begin: 1.0,
@@ -956,4 +958,3 @@ class _AddExpenseFab extends StatelessWidget {
         );
   }
 }
-

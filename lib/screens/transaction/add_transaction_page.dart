@@ -457,8 +457,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         child: TransactionTypeSelector(
           selected: _draft.kind,
           onChanged: _onKindChanged,
-          includeTransfer:
-              FeatureFlags.showTransferInTypeSelector(_draft.kind),
+          includeTransfer: FeatureFlags.showTransferInTypeSelector(_draft.kind),
         ),
       ),
       TransactionPrimaryFields(
