@@ -1,6 +1,6 @@
 import '../models/category_budget.dart';
 import '../models/transaction.dart';
-import '../models/transaction_draft.dart';
+import 'recurrence_normalization.dart';
 import 'transaction_subtype_helpers.dart';
 
 /// The selectable analytics period.
@@ -375,7 +375,7 @@ class AnalyticsAggregations {
           '${tx.recurrenceFrequency?.name ?? ''}';
       if (!seenSignatures.add(signature)) continue;
 
-      final monthly = _normaliseMonthly(tx);
+      final monthly = monthlyEquivalent(tx);
       final isSub = TransactionSubtypeHelpers.isSubscriptionCategory(
         tx.category,
       );
@@ -595,22 +595,6 @@ class AnalyticsAggregations {
     return buckets;
   }
 
-  static double _normaliseMonthly(Transaction tx) {
-    switch (tx.recurrenceFrequency) {
-      case RecurrenceFrequency.weekly:
-        return tx.amount * 4.33;
-      case RecurrenceFrequency.daily:
-        return tx.amount * 30;
-      case RecurrenceFrequency.quarterly:
-        return tx.amount / 3;
-      case RecurrenceFrequency.yearly:
-        return tx.amount / 12;
-      case RecurrenceFrequency.monthly:
-      case RecurrenceFrequency.custom:
-      case null:
-        return tx.amount;
-    }
-  }
 
   static const _monthShort = [
     'Jan',

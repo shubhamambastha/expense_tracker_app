@@ -192,7 +192,7 @@ Pure functions and small helpers — no Flutter widget trees except where UI-adj
 | Validation | `validators.dart` |
 | UX | `snackbar_helper.dart`, `category_style.dart` |
 | Aggregations | `dashboard_aggregations.dart`, `analytics_aggregations.dart`, `financial_insights.dart` |
-| Domain | `recurring_management.dart`, `upcoming_payments.dart`, `account_management.dart`, `transaction_filter_logic.dart`, `transaction_grouping.dart`, `transaction_subtype_helpers.dart`, `income_flow_helpers.dart` |
+| Domain | `recurring_management.dart`, `upcoming_payments.dart`, `account_management.dart`, `transaction_filter_logic.dart`, `transaction_grouping.dart`, `transaction_subtype_helpers.dart`, `income_flow_helpers.dart`, `recurrence_normalization.dart` |
 | Formatting | `transaction_date_format.dart`, `timezone_options.dart`, `profile_identity.dart` |
 
 ---

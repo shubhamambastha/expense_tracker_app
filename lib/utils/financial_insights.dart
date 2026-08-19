@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/category_budget.dart';
 import '../models/transaction.dart';
-import '../models/transaction_draft.dart';
+import 'recurrence_normalization.dart';
 import 'transaction_subtype_helpers.dart';
 
 /// Lightweight insight surfaced on the dashboard. Future AI-generated
@@ -148,7 +148,7 @@ void _subscriptionsCost(
     if (!TransactionSubtypeHelpers.isSubscriptionCategory(tx.category)) {
       continue;
     }
-    monthly += _normaliseToMonthly(tx);
+    monthly += monthlyEquivalent(tx);
     count++;
   }
   if (count == 0 || monthly <= 0) return;
@@ -217,22 +217,6 @@ void _budgetProximity(
   }
 }
 
-double _normaliseToMonthly(Transaction tx) {
-  switch (tx.recurrenceFrequency) {
-    case RecurrenceFrequency.weekly:
-      return tx.amount * 4.33;
-    case RecurrenceFrequency.daily:
-      return tx.amount * 30;
-    case RecurrenceFrequency.quarterly:
-      return tx.amount / 3;
-    case RecurrenceFrequency.yearly:
-      return tx.amount / 12;
-    case RecurrenceFrequency.monthly:
-    case RecurrenceFrequency.custom:
-    case null:
-      return tx.amount;
-  }
-}
 
 String _compact(double value) {
   if (value >= 100000) return '${(value / 100000).toStringAsFixed(1)}L';

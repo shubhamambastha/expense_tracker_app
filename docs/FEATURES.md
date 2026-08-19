@@ -41,7 +41,7 @@ One unified `Transaction` model covers all three kinds, persisted in `public.tra
 - **Next-due-date algorithm** (`recurring_management.dart::nextDueWithEvents`): walk forward from `recurrenceStartDate` (or `date`) one cycle at a time. For each candidate occurrence — if a `paid`/`skipped` event exists for that date, skip past it; if a `snoozed` event exists, defer to its `snoozeUntil` (unless that date has already lapsed, in which case the occurrence is treated as due today); otherwise return the first occurrence that isn't in the past. Capped at 500 iterations.
 - Recurring events are idempotent on `(user_id, transaction_id, occurrence_date, event_type)` — repeated taps on the same swipe action upsert rather than duplicate, backed by a unique index in `sql/20260528_recurring_events.sql` (`supabase_service.dart::insertRecurringEvent`).
 - **"Auto-deduct" badge is inferred, not stored**: `reminderTiming == null` is read as "user didn't configure a manual reminder," which the UI treats as "this charge auto-deducts" (`upcoming_payments.dart` / `recurring_management.dart`, `UpcomingPaymentItem.isAutoDeduct`, `RecurringScheduleItem.isAutoDeduct`).
-- Monthly-equivalent normalization (used for manager totals, analytics, and insights alike): weekly ×4.33, daily ×30, quarterly ÷3, yearly ÷12; monthly/custom/unset unchanged. This formula is implemented independently in three places (`recurring_management.dart::monthlyEquivalent`, `analytics_aggregations.dart::_normaliseMonthly`, `financial_insights.dart::_normaliseToMonthly`) rather than shared from one source.
+- Monthly-equivalent normalization (used for manager totals, analytics, insights, and the home screen's Spending Room card alike): weekly ×4.33, daily ×30, quarterly ÷3, yearly ÷12; monthly/custom/unset unchanged. Shared from one source, `recurrence_normalization.dart::monthlyEquivalent`.
 - **EMI progress** is computed purely from user-entered start/end dates — not a real amortization schedule. Total months = inclusive month-diff between start and end; completed = months elapsed from start to now (clamped to total); remaining principal = remaining months × the transaction's flat per-installment amount (no interest modeling). Returns `null` if there's no end date or the category isn't EMI-classified (`recurring_management.dart::emiProgress`).
 - The upcoming-payments timeline (Recurring Manager) defaults to a **60-day lookahead**, bucketed as Today / Tomorrow / This Week (≤7 days) / Later This Month (`recurring_management.dart::build`, `lookaheadDays: 60`).
 - Recurring transactions can appear multiple times in the in-memory transaction cache; both the manager and the analytics recurring summary de-duplicate on a signature (`id`, or `merchant|amount|frequency` if no id) so monthly totals aren't double-counted (`recurring_management.dart::_scheduleSignature`, `analytics_aggregations.dart::recurringSummary`).
@@ -86,8 +86,19 @@ One optional monthly spending limit per expense category name — no rollover, n
 - At most one budget per `(user_id, category_name)`, enforced by a case-insensitive unique index; saving a budget for an already-budgeted category **replaces** it via upsert (`supabase_service.dart::upsertCategoryBudget`, `sql/20260527_dashboard_data.sql`).
 - A budget requires a selected category and a strictly positive amount, or the save is rejected client-side (`category_budget_service.dart::upsert`).
 - No rollover exists: "spent" is recomputed fresh from raw transactions for the target month every time — nothing persists a "remaining balance" across months (`analytics_aggregations.dart::budgetSpend`).
-- Recommended daily spend = (monthlyLimit − monthSpent) ÷ daysRemainingInMonth. Returns `0` (not negative) once the limit is exceeded; returns the full remaining amount undivided if computed on/after the last day of the month (`dashboard_aggregations.dart::safeDailySpend`, `daysRemainingInMonth`).
 - The dashboard's budget-proximity insight (below) only ever surfaces the **first** budget it encounters that's near/over limit — not all of them — because the loop returns on first match (`financial_insights.dart::_budgetProximity`).
+
+---
+
+## Spending Room (home screen "how much can I spend today")
+
+Settings → Budgets & Spending → "Safe Daily Spend" toggle (on by default, `settings_preferences.dart::safeDailySpendEnabled`) gates a card below the home screen's Total Balance hero.
+
+- Formula: `monthlyDiscretionary = monthIncome − monthlyRecurringExpenseTotal`; `dailyAllowance = monthlyDiscretionary ÷ daysInMonth`; `accrued = dailyAllowance × today's day-of-month`; displayed amount = `accrued − discretionaryMonthSpend` (`dashboard_aggregations.dart::spendableToday`).
+- **Resets every calendar month — no rollover.** Unspent (or overspent) balance does not carry into the next month; each month starts its accrual fresh from day 1 (v1 scope decision — rollover was considered and deliberately deferred, see `docs/BACKLOG.md` if revisited).
+- `monthlyRecurringExpenseTotal` only counts recurring **expense** schedules that are active during the month (not paused, not closed, within `recurrenceStartDate`/`recurrenceEndDate`), normalized via `recurrence_normalization.dart::monthlyEquivalent` — same shared formula used everywhere else recurring amounts get annualized/monthlyized.
+- `discretionaryMonthSpend` excludes recurring template rows (`isRecurring == true`) **and** any expense categorized as EMI/Subscription, to avoid double-counting the "mark paid" clone `RecurringPaymentsPage._markPaid` inserts into the ledger (same amount, same category, `isRecurring` flipped `false`). This does **not** catch recurring "other"-category clones (rent, a custom loan name) — see the residual gap in `docs/BACKLOG.md`.
+- When no income has been logged for the current month yet, the card shows a distinct prompt state instead of a large negative number (`SpendingRoomCard` / `hasIncomeThisMonth`).
 
 ---
 

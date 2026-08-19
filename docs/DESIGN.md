@@ -34,7 +34,7 @@ lib/
 │   ├── transaction/
 │   │   ├── detail/widgets/     # DetailSectionCard, DetailInfoRow
 │   │   └── …                   # Form fields, list items, type selectors
-│   ├── home/dashboard/         # HeroOverviewCard, section headers, quick actions
+│   ├── home/dashboard/         # HeroOverviewCard, SpendingRoomCard, section headers, quick actions
 │   ├── accounts/               # Account cards, swipe tiles, empty states
 │   ├── recurring/              # Subscription/EMI cards, timeline tiles
 │   ├── profile/                # Profile form fields, manage cards
@@ -56,7 +56,7 @@ Token classes are private-constructor (`AppColors._()`) static-only namespaces. 
 
 | Tab / area | Screen | Primary design primitives |
 | --- | --- | --- |
-| Home | `screens/home/expense_home_page.dart` | `CompactHeader`, `HeroOverviewCard`, dashboard sections, `states.dart` |
+| Home | `screens/home/expense_home_page.dart` | `CompactHeader`, `HeroOverviewCard`, `SpendingRoomCard`, dashboard sections, `states.dart` |
 | Transactions | `components/home/transactions_content.dart` | `TransactionListItem`, filters, `EmptyStatePresets` |
 | Add (+ FAB) | `screens/transaction/add_transaction_page.dart` | `AmountSection`, `TransactionPrimaryFields`, `TransactionAdvancedSection`, `StickyBottomCTA` |
 | Analytics | `screens/analytics/analytics_page.dart` | `AnalyticsSectionCard`, chart widgets, `TimeRangeSelector` |
@@ -257,6 +257,7 @@ Prefer existing shared widgets over one-off `Container` decorations. Each primit
 | `DetailSectionCard` | `components/transaction/detail/widgets/` | Nested panels on transaction detail (uses `surfaceSecondary`) |
 | `SettingsSection` | `components/settings/` | Grouped settings rows inside a single card |
 | `HeroOverviewCard` | `components/home/dashboard/` | Minimal today balance, income, and expenses |
+| `SpendingRoomCard` | `components/home/dashboard/` | This month's discretionary spend remaining, gated by the "Safe Daily Spend" settings toggle |
 
 Raw surface pattern (when no shared widget fits):
 

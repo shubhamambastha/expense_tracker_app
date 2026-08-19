@@ -2,6 +2,7 @@ import '../models/account.dart';
 import '../models/recurring_event.dart';
 import '../models/transaction.dart';
 import '../models/transaction_draft.dart';
+import 'recurrence_normalization.dart' as recurrence_normalization;
 import 'transaction_subtype_helpers.dart';
 import 'upcoming_payments.dart';
 
@@ -397,25 +398,9 @@ class RecurringManagement {
     return RecurringKind.other;
   }
 
-  /// Normalise the recurring amount to a per-month figure. Mirrors the
-  /// private helper in `AnalyticsAggregations` so the manager screen and the
-  /// analytics section stay in sync without coupling.
-  static double monthlyEquivalent(Transaction transaction) {
-    switch (transaction.recurrenceFrequency) {
-      case RecurrenceFrequency.weekly:
-        return transaction.amount * 4.33;
-      case RecurrenceFrequency.daily:
-        return transaction.amount * 30;
-      case RecurrenceFrequency.quarterly:
-        return transaction.amount / 3;
-      case RecurrenceFrequency.yearly:
-        return transaction.amount / 12;
-      case RecurrenceFrequency.monthly:
-      case RecurrenceFrequency.custom:
-      case null:
-        return transaction.amount;
-    }
-  }
+  /// Normalise the recurring amount to a per-month figure.
+  static double monthlyEquivalent(Transaction transaction) =>
+      recurrence_normalization.monthlyEquivalent(transaction);
 
   /// Computes EMI progress purely from the user-entered schedule. Returns
   /// null for non-EMI transactions or EMIs without an end date.

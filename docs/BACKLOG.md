@@ -2,7 +2,7 @@
 
 Living list of known gaps, half-finished features, and structural debt — derived from the current codebase (feature flags, reserved-but-unused hooks, legacy adapters, test coverage) rather than aspirational planning. Update this file as items are picked up or resolved; delete a row rather than leaving it stale once it's done.
 
-Last reviewed: 2026-08-15.
+Last reviewed: 2026-08-19.
 
 ---
 
@@ -26,7 +26,7 @@ Last reviewed: 2026-08-15.
 | Item | Evidence | Notes |
 | --- | --- | --- |
 | Two divergent "next due date" implementations for recurring transactions | Recurring Manager uses `recurring_management.dart::nextDueWithEvents` (honors paid/skipped/snoozed events); the transaction detail sheet and dashboard's upcoming card instead use `upcoming_payments.dart::computeNextPaymentDate`, which never looks at `recurring_events` | A schedule the user just marked "paid" or "snoozed" in the manager can still show its old due date on the dashboard/detail sheet until the underlying transaction row itself changes. Consolidate on one due-date function. See [FEATURES.md](./FEATURES.md#recurring-transactions--recurring-events). |
-| Monthly-equivalent normalization formula implemented three times independently | `recurring_management.dart::monthlyEquivalent`, `analytics_aggregations.dart::_normaliseMonthly`, `financial_insights.dart::_normaliseToMonthly` all reimplement the same weekly ×4.33 / daily ×30 / quarterly ÷3 / yearly ÷12 conversion | No shared source of truth — a future change to the formula (e.g. more precise weekly multiplier) has to be made in three places or the manager, analytics, and insights will silently disagree. Extract to one util function. |
+| "Mark paid" clone has no back-reference to its recurring template, so category-string matching is the only way to exclude it from discretionary spend | `RecurringPaymentsPage._markPaid` (`lib/screens/recurring/recurring_payments_page.dart:171`) inserts a same-category expense clone with `isRecurring` flipped to `false` and drops the parent transaction's `id` (`copyWith(id: null, ...)`) | `DashboardAggregations.discretionaryMonthSpend` excludes clones by matching `TransactionSubtypeHelpers.isEmiCategory`/`isSubscriptionCategory`, which covers EMI/Subscription but not recurring items in "other" categories (rent, a custom-named loan) — those clones still double-count against `spendableToday`'s upfront recurring deduction. Fix properly by giving the clone a `parentTransactionId` (schema change) instead of relying on category text. |
 
 ---
 

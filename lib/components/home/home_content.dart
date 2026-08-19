@@ -5,6 +5,7 @@ import '../../models/account.dart';
 import '../../models/category_budget.dart';
 import '../../models/transaction.dart';
 import '../../services/category_budget_service.dart';
+import '../../services/settings_preferences.dart';
 import '../../utils/analytics_aggregations.dart';
 import '../../utils/dashboard_aggregations.dart';
 import 'dashboard/budgets_summary_section.dart';
@@ -12,6 +13,7 @@ import 'dashboard/dashboard_greeting_header.dart';
 import 'dashboard/hero_overview_card.dart';
 import 'dashboard/quick_actions_row.dart';
 import 'dashboard/recent_transactions_section.dart';
+import 'dashboard/spending_room_card.dart';
 
 /// Behavioral-finance dashboard composed from modular section widgets.
 ///
@@ -140,6 +142,30 @@ class HomeContent extends StatelessWidget {
         monthSpent: monthSpent,
       ),
       const SizedBox(height: AppSpacing.xxl),
+      ListenableBuilder(
+        listenable: SettingsPreferences.instance,
+        builder: (context, _) {
+          if (!SettingsPreferences.instance.safeDailySpendEnabled) {
+            return const SizedBox.shrink();
+          }
+          final now = DateTime.now();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SpendingRoomCard(
+                amount: DashboardAggregations.spendableToday(
+                  transactions,
+                  now: now,
+                ),
+                hasIncomeThisMonth:
+                    DashboardAggregations.monthIncome(transactions, now: now) >
+                    0,
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+            ],
+          );
+        },
+      ),
       QuickActionsRow(
         onAddExpense: onAddExpense,
         onRecurring: onOpenRecurring,
