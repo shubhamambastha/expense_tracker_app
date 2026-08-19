@@ -56,6 +56,17 @@ class DashboardAggregations {
         .fold<double>(0.0, (sum, t) => sum + t.amount);
   }
 
+  /// Sum of income transactions in `now`'s current month.
+  static double monthIncome(
+    List<Transaction> transactions, {
+    DateTime? now,
+  }) {
+    final clock = now ?? DateTime.now();
+    return transactions
+        .where((t) => t.isIncome && _isSameMonth(t.date, clock))
+        .fold<double>(0.0, (sum, t) => sum + t.amount);
+  }
+
   /// Sum of expense transactions for `categoryName` in the current month
   /// (case-insensitive match).
   static double categoryMonthSpend(
@@ -118,6 +129,17 @@ class DashboardAggregations {
       }
     }
     return balance;
+  }
+
+  /// Net worth across every account: sum of each account's running balance.
+  static double totalBalance(
+    List<Account> accounts,
+    List<Transaction> transactions,
+  ) {
+    return accounts.fold<double>(
+      0.0,
+      (sum, account) => sum + accountBalance(account, transactions),
+    );
   }
 
   /// Used amount on a credit card = sum of expenses charged to it for the

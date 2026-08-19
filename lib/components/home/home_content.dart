@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
+import '../../models/category_budget.dart';
 import '../../models/transaction.dart';
+import '../../services/category_budget_service.dart';
+import '../../utils/analytics_aggregations.dart';
 import '../../utils/dashboard_aggregations.dart';
-import 'dashboard/account_overview_section.dart';
+import 'dashboard/budgets_summary_section.dart';
 import 'dashboard/dashboard_greeting_header.dart';
-import 'dashboard/dashboard_intents.dart';
 import 'dashboard/hero_overview_card.dart';
 import 'dashboard/quick_actions_row.dart';
 import 'dashboard/recent_transactions_section.dart';
@@ -17,10 +19,9 @@ import 'dashboard/recent_transactions_section.dart';
 /// stays stateless and cheap. Designed to swap onto a Riverpod/Bloc layer
 /// later without touching the section widgets themselves.
 ///
-/// Budget progress, behavioural insights, and recurring/upcoming payment
-/// summaries live on the Analytics screen (`BudgetAnalyticsSection`,
-/// `BehavioralInsightsSection`, `SubscriptionsSection`) so home stays
-/// scannable and focused on today/this-month action.
+/// Behavioural insights and recurring/upcoming payment summaries live on the
+/// Analytics screen (`BehavioralInsightsSection`, `SubscriptionsSection`) so
+/// home stays scannable and focused on this-month action.
 class HomeContent extends StatelessWidget {
   const HomeContent({
     super.key,
@@ -29,11 +30,13 @@ class HomeContent extends StatelessWidget {
     required this.userEmail,
     required this.isLoading,
     required this.onRefresh,
-    required this.onQuickAction,
+    required this.onAddExpense,
+    required this.onOpenRecurring,
+    required this.onOpenAnalytics,
+    required this.onOpenBudgets,
     required this.onTapTransaction,
     required this.onViewAllTransactions,
     required this.onManageAccounts,
-    required this.onTapAccount,
   });
 
   final List<Transaction> transactions;
@@ -41,11 +44,13 @@ class HomeContent extends StatelessWidget {
   final String? userEmail;
   final bool isLoading;
   final Future<void> Function() onRefresh;
-  final void Function(QuickAction action) onQuickAction;
+  final VoidCallback onAddExpense;
+  final VoidCallback onOpenRecurring;
+  final VoidCallback onOpenAnalytics;
+  final VoidCallback onOpenBudgets;
   final void Function(Transaction tx) onTapTransaction;
   final VoidCallback onViewAllTransactions;
   final VoidCallback onManageAccounts;
-  final void Function(Account account) onTapAccount;
 
   @override
   Widget build(BuildContext context) {
@@ -63,12 +68,24 @@ class HomeContent extends StatelessWidget {
     }
 
     final now = DateTime.now();
-    final todayBalance =
-        DashboardAggregations.todayBalance(transactions, now: now);
-    final todayIncome =
-        DashboardAggregations.todayIncome(transactions, now: now);
-    final todayExpenses =
-        DashboardAggregations.todaySpend(transactions, now: now);
+    final totalBalance = DashboardAggregations.totalBalance(
+      accounts,
+      transactions,
+    );
+    final monthIncome = DashboardAggregations.monthIncome(
+      transactions,
+      now: now,
+    );
+    final monthSpent = DashboardAggregations.monthSpend(
+      transactions,
+      now: now,
+    );
+    final budgets = CategoryBudgetService.instance.budgets;
+    final budgetSpend = AnalyticsAggregations.budgetSpend(
+      transactions: transactions,
+      budgets: budgets,
+      range: ResolvedRange(start: DateTime(now.year, now.month), end: now),
+    );
     final isOnboarding = transactions.isEmpty && accounts.isEmpty;
 
     return RefreshIndicator(
@@ -91,9 +108,11 @@ class HomeContent extends StatelessWidget {
               children: isOnboarding
                   ? _onboarding(context)
                   : _sections(
-                      todayBalance: todayBalance,
-                      todayIncome: todayIncome,
-                      todayExpenses: todayExpenses,
+                      totalBalance: totalBalance,
+                      monthIncome: monthIncome,
+                      monthSpent: monthSpent,
+                      budgets: budgets,
+                      budgetSpend: budgetSpend,
                     ),
             ),
           ),
@@ -103,9 +122,11 @@ class HomeContent extends StatelessWidget {
   }
 
   List<Widget> _sections({
-    required double todayBalance,
-    required double todayIncome,
-    required double todayExpenses,
+    required double totalBalance,
+    required double monthIncome,
+    required double monthSpent,
+    required List<CategoryBudget> budgets,
+    required Map<String, double> budgetSpend,
   }) {
     return [
       DashboardGreetingHeader(
@@ -114,25 +135,28 @@ class HomeContent extends StatelessWidget {
       ),
       const SizedBox(height: AppSpacing.lg),
       HeroOverviewCard(
-        todayBalance: todayBalance,
-        todayIncome: todayIncome,
-        todayExpenses: todayExpenses,
+        totalBalance: totalBalance,
+        monthIncome: monthIncome,
+        monthSpent: monthSpent,
       ),
       const SizedBox(height: AppSpacing.xxl),
-      QuickActionsRow(onAction: onQuickAction),
+      QuickActionsRow(
+        onAddExpense: onAddExpense,
+        onRecurring: onOpenRecurring,
+        onAnalytics: onOpenAnalytics,
+      ),
+      const SizedBox(height: AppSpacing.xxl),
+      BudgetsSummarySection(
+        budgets: budgets,
+        spendByCategory: budgetSpend,
+        onSeeAll: onOpenBudgets,
+      ),
       const SizedBox(height: AppSpacing.xxl),
       RecentTransactionsSection(
         transactions: transactions,
         accounts: accounts,
         onTap: onTapTransaction,
         onViewAll: onViewAllTransactions,
-      ),
-      const SizedBox(height: AppSpacing.xxl),
-      AccountOverviewSection(
-        accounts: accounts,
-        transactions: transactions,
-        onTapAccount: onTapAccount,
-        onManage: onManageAccounts,
       ),
     ];
   }
@@ -145,14 +169,17 @@ class HomeContent extends StatelessWidget {
       ),
       const SizedBox(height: AppSpacing.lg),
       _OnboardingHero(
-        onAddTransaction: () => onQuickAction(QuickAction.addExpense),
+        onAddTransaction: onAddExpense,
         onAddAccount: onManageAccounts,
       ),
       const SizedBox(height: AppSpacing.xxl),
-      QuickActionsRow(onAction: onQuickAction),
+      QuickActionsRow(
+        onAddExpense: onAddExpense,
+        onRecurring: onOpenRecurring,
+        onAnalytics: onOpenAnalytics,
+      ),
     ];
   }
-
 }
 
 class _OnboardingHero extends StatelessWidget {

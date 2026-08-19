@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import '../../components/common/compact_header.dart';
 import '../../components/dialogs/add_account_dialog.dart';
-import '../../components/home/dashboard/dashboard_intents.dart';
 import '../../components/home/home_content.dart';
 import '../../components/home/transactions_content.dart';
 import '../../components/recurring/add_recurring_sheet.dart';
@@ -27,11 +26,7 @@ import '../../utils/constants.dart';
 import '../../utils/financial_insights.dart';
 import '../../utils/recurring_management.dart';
 import '../../utils/snackbar_helper.dart';
-import '../../utils/transaction_subtype_helpers.dart';
-import '../accounts/account_detail_page.dart';
 import '../accounts/accounts_list_page.dart';
-import '../accounts/add_edit_account_page.dart';
-import '../accounts/credit_card_detail_page.dart';
 import '../analytics/analytics_page.dart';
 import '../recurring/recurring_payments_page.dart';
 import '../settings/sections/budgets_and_spending_page.dart';
@@ -102,9 +97,15 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
   void _tryHandleLaunchIntent() {
     if (!mounted || _isLoading || _addTransactionRouteOpen) return;
-    if (AppLaunchIntentHolder.instance.consume() ==
-        AppLaunchIntent.addExpense) {
-      _openAddTransactionPage(kind: TransactionKind.expense);
+    switch (AppLaunchIntentHolder.instance.consume()) {
+      case AppLaunchIntent.addExpense:
+        _openAddTransactionPage(kind: TransactionKind.expense);
+      case AppLaunchIntent.addIncome:
+        _openAddTransactionPage(kind: TransactionKind.income);
+      case AppLaunchIntent.openAnalytics:
+        setState(() => _selectedIndex = 2);
+      case null:
+        break;
     }
   }
 
@@ -282,21 +283,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     } catch (error) {
       if (!mounted) return;
       SnackbarHelper.showMessage(context, 'Could not save account: $error');
-    }
-  }
-
-  Future<void> _archiveAccount(Account account) async {
-    try {
-      final archived = await SupabaseService.archiveAccount(account);
-      if (!mounted) return;
-      setState(() {
-        final idx = _accounts.indexWhere((a) => a.id == archived.id);
-        if (idx >= 0) _accounts[idx] = archived;
-      });
-      SnackbarHelper.showSuccess(context, '${account.displayName} archived');
-    } catch (error) {
-      if (!mounted) return;
-      SnackbarHelper.showMessage(context, 'Could not archive account: $error');
     }
   }
 
@@ -508,11 +494,14 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           userEmail: AuthService.instance.currentSession?.email,
           isLoading: _isLoading,
           onRefresh: _refreshDashboard,
-          onQuickAction: _handleQuickAction,
+          onAddExpense: () =>
+              _openAddTransactionPage(kind: TransactionKind.expense),
+          onOpenRecurring: _openRecurringManager,
+          onOpenAnalytics: () => _switchToTab(2),
+          onOpenBudgets: _openBudgetSettings,
           onTapTransaction: _openTransactionDetail,
           onViewAllTransactions: () => _switchToTab(1),
           onManageAccounts: _openAccountsManager,
-          onTapAccount: _openAccountFromDashboard,
         );
       },
     );
@@ -521,33 +510,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   void _switchToTab(int index) {
     if (index < 0 || index > 4) return;
     setState(() => _selectedIndex = index);
-  }
-
-  void _handleQuickAction(QuickAction action) {
-    switch (action) {
-      case QuickAction.addExpense:
-        _openAddTransactionPage(kind: TransactionKind.expense);
-        return;
-      case QuickAction.addIncome:
-        _openAddTransactionPage(kind: TransactionKind.income);
-        return;
-      case QuickAction.transfer:
-        if (FeatureFlags.transferVisible) {
-          _openAddTransactionPage(kind: TransactionKind.transfer);
-        }
-        return;
-      case QuickAction.addEmi:
-        final draft = TransactionDraft(
-          kind: TransactionKind.expense,
-          accountId: _accounts.isEmpty ? null : _accounts.first.id,
-        );
-        TransactionSubtypeHelpers.applyExpenseSubtype(
-          draft,
-          TransactionSubtypeHelpers.expenseCategoryEmi,
-        );
-        _openAddTransactionPage(initialDraft: draft);
-        return;
-    }
   }
 
   void _openTransactionDetail(Transaction transaction) {
@@ -589,90 +551,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
     if (!mounted) return;
     await _refreshDashboard();
-  }
-
-  Future<void> _openAccountFromDashboard(Account account) async {
-    if (account.isCreditCard) {
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => CreditCardDetailPage(
-            account: account,
-            accounts: _accounts,
-            transactions: _transactions,
-            onMutation: _refreshDashboard,
-            onEdit: () => _editAccount(account),
-            onArchive: () async {
-              await _archiveAccount(account);
-              if (mounted) Navigator.of(context).pop();
-            },
-            onPayBill: () => _payCreditBill(account),
-            onAddEmi: () => _addEmiOnAccount(account),
-            onManageEmi: _openRecurringManager,
-            onTapTransaction: _openTransactionDetail,
-            onViewAllTransactions: () => _switchToTab(1),
-          ),
-        ),
-      );
-    } else {
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => AccountDetailPage(
-            account: account,
-            accounts: _accounts,
-            transactions: _transactions,
-            onMutation: _refreshDashboard,
-            onEdit: () => _editAccount(account),
-            onArchive: () async {
-              await _archiveAccount(account);
-              if (mounted) Navigator.of(context).pop();
-            },
-            onAddTransaction: (draft) async {
-              _openAddTransactionPage(initialDraft: draft);
-            },
-            onTapTransaction: _openTransactionDetail,
-            onViewAllTransactions: () => _switchToTab(1),
-          ),
-        ),
-      );
-    }
-    if (!mounted) return;
-    await _refreshDashboard();
-  }
-
-  Future<void> _editAccount(Account account) async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => AddEditAccountPage(
-          accounts: _accounts,
-          transactions: _transactions,
-          account: account,
-          onSave: _saveAccount,
-        ),
-      ),
-    );
-    if (!mounted) return;
-    await _refreshDashboard();
-  }
-
-  Future<void> _payCreditBill(Account account) async {
-    final draft = TransactionDraft(
-      kind: TransactionKind.expense,
-      accountId: account.linkedAccountId ?? account.id,
-    );
-    draft.merchant = '${account.displayName} bill payment';
-    _openAddTransactionPage(initialDraft: draft);
-  }
-
-  Future<void> _addEmiOnAccount(Account account) async {
-    final draft = TransactionDraft(
-      kind: TransactionKind.expense,
-      accountId: account.id,
-    );
-    TransactionSubtypeHelpers.applyExpenseSubtype(
-      draft,
-      TransactionSubtypeHelpers.expenseCategoryEmi,
-    );
-    _openAddTransactionPage(initialDraft: draft);
   }
 
   void _openBudgetSettings() => _switchToTab(3);
@@ -775,7 +653,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   Widget _buildSettingsContent(BuildContext context) {
     return SettingsPage(
       accounts: _accounts,
-      transactions: _transactions,
       onAddAccount: _openAddAccountDialog,
       onManageAccounts: _openAccountsManager,
       onOpenRecurringManager: _openRecurringManager,

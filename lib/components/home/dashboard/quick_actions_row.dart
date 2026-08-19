@@ -1,55 +1,46 @@
 import 'package:flutter/material.dart';
 
 import '../../../config/design_tokens.dart';
-import '../../../config/feature_flags.dart';
-import 'dashboard_intents.dart';
 
-/// Thumb-sized shortcuts: expense, income, optional transfer, EMI.
+/// Thumb-sized shortcuts: add expense, jump to recurring, jump to analytics.
 class QuickActionsRow extends StatelessWidget {
-  const QuickActionsRow({super.key, required this.onAction});
+  const QuickActionsRow({
+    super.key,
+    required this.onAddExpense,
+    required this.onRecurring,
+    required this.onAnalytics,
+  });
 
-  final void Function(QuickAction action) onAction;
-
-  static List<_QuickActionSpec> get _specs => [
-    const _QuickActionSpec(
-      action: QuickAction.addExpense,
-      label: 'Expense',
-      icon: Icons.south_west_rounded,
-      tint: AppColors.danger,
-    ),
-    const _QuickActionSpec(
-      action: QuickAction.addIncome,
-      label: 'Income',
-      icon: Icons.north_east_rounded,
-      tint: AppColors.success,
-    ),
-    if (FeatureFlags.transferVisible)
-      const _QuickActionSpec(
-        action: QuickAction.transfer,
-        label: 'Transfer',
-        icon: Icons.swap_horiz_rounded,
-        tint: AppColors.secondary,
-      ),
-    const _QuickActionSpec(
-      action: QuickAction.addEmi,
-      label: 'EMI',
-      icon: Icons.event_repeat_rounded,
-      tint: AppColors.warning,
-    ),
-  ];
+  final VoidCallback onAddExpense;
+  final VoidCallback onRecurring;
+  final VoidCallback onAnalytics;
 
   @override
   Widget build(BuildContext context) {
-    final specs = _specs;
+    final specs = [
+      _QuickActionSpec(
+        label: 'Add Expense',
+        icon: Icons.add_rounded,
+        tint: AppColors.danger,
+        onTap: onAddExpense,
+      ),
+      _QuickActionSpec(
+        label: 'Recurring',
+        icon: Icons.repeat_rounded,
+        tint: AppColors.warning,
+        onTap: onRecurring,
+      ),
+      _QuickActionSpec(
+        label: 'Analytics',
+        icon: Icons.insights_rounded,
+        tint: AppColors.secondary,
+        onTap: onAnalytics,
+      ),
+    ];
     return Row(
       children: [
         for (var i = 0; i < specs.length; i++) ...[
-          Expanded(
-            child: _QuickActionChip(
-              spec: specs[i],
-              onTap: () => onAction(specs[i].action),
-            ),
-          ),
+          Expanded(child: _QuickActionChip(spec: specs[i])),
           if (i != specs.length - 1) const SizedBox(width: AppSpacing.sm),
         ],
       ],
@@ -59,30 +50,29 @@ class QuickActionsRow extends StatelessWidget {
 
 class _QuickActionSpec {
   const _QuickActionSpec({
-    required this.action,
     required this.label,
     required this.icon,
     required this.tint,
+    required this.onTap,
   });
 
-  final QuickAction action;
   final String label;
   final IconData icon;
   final Color tint;
+  final VoidCallback onTap;
 }
 
 class _QuickActionChip extends StatelessWidget {
-  const _QuickActionChip({required this.spec, required this.onTap});
+  const _QuickActionChip({required this.spec});
 
   final _QuickActionSpec spec;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: spec.onTap,
         borderRadius: AppRadii.buttonRadius,
         child: Container(
           padding: const EdgeInsets.symmetric(
@@ -92,19 +82,18 @@ class _QuickActionChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: AppRadii.buttonRadius,
-            border: Border.all(color: AppColors.border),
           ),
           child: Column(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: spec.tint.withAlpha(36),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
-                child: Icon(spec.icon, color: spec.tint, size: 20),
+                child: Icon(spec.icon, color: spec.tint, size: 18),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -112,7 +101,10 @@ class _QuickActionChip extends StatelessWidget {
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
+                  fontSize: 11.5,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

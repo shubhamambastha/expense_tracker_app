@@ -4,92 +4,75 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../config/design_tokens.dart';
 import '../../../services/currency_settings.dart';
 
-/// Card headed by today's balance; income and expenses sit beneath.
+/// Gradient "Total Balance" card with this-month Income/Spent sub-stats.
 class HeroOverviewCard extends StatelessWidget {
   const HeroOverviewCard({
     super.key,
-    required this.todayBalance,
-    required this.todayIncome,
-    required this.todayExpenses,
+    required this.totalBalance,
+    required this.monthIncome,
+    required this.monthSpent,
   });
 
-  final double todayBalance;
-  final double todayIncome;
-  final double todayExpenses;
+  final double totalBalance;
+  final double monthIncome;
+  final double monthSpent;
 
   @override
   Widget build(BuildContext context) {
     final currency = CurrencySettings.instance;
-    final balanceColor = _balanceColor(todayBalance);
 
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.surface, AppColors.surfaceSecondary],
+          colors: [AppColors.primary, AppColors.secondary],
         ),
         borderRadius: AppRadii.cardRadius,
-        border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.card,
       ),
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Semantics(
-            header: true,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Text(
-                    "Today's balance",
-                    style: AppTextStyles.headingMedium,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Flexible(
-                  child: _emphasizedBalance(
-                    Text(
-                      currency.format(todayBalance),
-                      textAlign: TextAlign.end,
-                      style: AppTextStyles.displayMedium.copyWith(
-                        height: 1.05,
-                        color: balanceColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
+          Text(
+            'Total Balance',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: Colors.white.withAlpha(191),
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Container(height: 1, color: AppColors.border),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _TodayMetricTile(
-                  label: 'Income',
-                  value: currency.format(todayIncome),
-                  valueColor: AppColors.success,
-                  labelIcon: Icons.trending_up_rounded,
-                  tone: AppColors.success,
+          const SizedBox(height: 4),
+          Text(
+                currency.format(totalBalance),
+                style: AppTextStyles.displayMedium.copyWith(
+                  color: Colors.white,
+                  letterSpacing: -0.5,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              )
+              .animate()
+              .fadeIn(duration: AppDurations.reveal)
+              .slideY(
+                begin: 0.08,
+                end: 0,
+                duration: AppDurations.reveal,
+                curve: AppCurves.spring,
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _TodayMetricTile(
-                  label: 'Expenses',
-                  value: currency.format(todayExpenses),
-                  valueColor: AppColors.textPrimary,
-                  labelIcon: Icons.trending_down_rounded,
-                  tone: AppColors.danger,
-                ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              _StatBadge(
+                icon: Icons.arrow_outward_rounded,
+                label: 'Income',
+                value: currency.formatCompact(monthIncome),
+              ),
+              const SizedBox(width: AppSpacing.xl),
+              _StatBadge(
+                icon: Icons.call_received_rounded,
+                label: 'Spent',
+                value: currency.formatCompact(monthSpent),
               ),
             ],
           ),
@@ -97,79 +80,57 @@ class HeroOverviewCard extends StatelessWidget {
       ),
     );
   }
-
-  Widget _emphasizedBalance(Widget child) {
-    return child
-        .animate()
-        .fadeIn(duration: AppDurations.reveal)
-        .slideY(
-          begin: 0.08,
-          end: 0,
-          duration: AppDurations.reveal,
-          curve: AppCurves.spring,
-        );
-  }
-
-  static Color _balanceColor(double balance) {
-    if (balance > 0) return AppColors.success;
-    if (balance < 0) return AppColors.danger;
-    return AppColors.textPrimary;
-  }
 }
 
-class _TodayMetricTile extends StatelessWidget {
-  const _TodayMetricTile({
+class _StatBadge extends StatelessWidget {
+  const _StatBadge({
+    required this.icon,
     required this.label,
     required this.value,
-    required this.valueColor,
-    required this.labelIcon,
-    required this.tone,
   });
 
+  final IconData icon;
   final String label;
   final String value;
-  final Color valueColor;
-  final IconData labelIcon;
-  final Color tone;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: tone.withAlpha(24),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: tone.withAlpha(50)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                label,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(51),
+            borderRadius: BorderRadius.circular(7),
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, size: 12, color: Colors.white),
+        ),
+        const SizedBox(width: 6),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.label.copyWith(
+                color: Colors.white.withAlpha(178),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(width: 6),
-              Icon(labelIcon, size: 18, color: tone),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            value,
-            style: AppTextStyles.headingLarge.copyWith(
-              color: valueColor,
-              fontWeight: FontWeight.w800,
-              height: 1.1,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
+            Text(
+              value,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
