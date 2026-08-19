@@ -5,11 +5,11 @@ import '../../components/dialogs/add_account_dialog.dart';
 import '../../components/settings/currency_picker_sheet.dart';
 import '../../components/settings/profile_header_card.dart';
 import '../../components/settings/settings_danger_section.dart';
+import '../../components/settings/settings_info_tile.dart';
 import '../../components/settings/settings_section.dart';
 import '../../components/settings/settings_tile.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
-import '../../models/transaction.dart';
 import '../../services/category_catalog.dart';
 import '../../services/income_category_catalog.dart';
 import '../../services/currency_settings.dart';
@@ -23,6 +23,7 @@ import 'sections/app_preferences_page.dart';
 import 'sections/financial_preferences_page.dart';
 import 'sections/notifications_page.dart';
 import 'sections/edit_profile_page.dart';
+import 'sections/security_page.dart';
 import 'sections/support_and_feedback_page.dart';
 import '../../utils/profile_identity.dart';
 
@@ -39,7 +40,6 @@ class SettingsPage extends StatelessWidget {
   const SettingsPage({
     super.key,
     required this.accounts,
-    required this.transactions,
     required this.onAddAccount,
     required this.onManageAccounts,
     required this.onOpenRecurringManager,
@@ -47,7 +47,6 @@ class SettingsPage extends StatelessWidget {
   });
 
   final List<Account> accounts;
-  final List<Transaction> transactions;
   final OnAddAccount onAddAccount;
 
   /// Opens the full accounts/cards management flow (same one Home's
@@ -96,15 +95,8 @@ class SettingsPage extends StatelessWidget {
                     initial: _profileInitial(),
                     displayName: _displayName(),
                     email: _email(),
-                    currencyCode: currency.currencyCode,
-                    monthSummary:
-                        '${currency.format(_monthSpent())} spent this month',
-                    subscriptionsSummary:
-                        '${_recurringCount()} subscriptions active',
-                    onCurrencyTap: () => showCurrencyPickerSheet(context),
                     onEditProfile: () =>
-                        _open(context, EditProfilePage(accounts: accounts)),
-                    onManageAccount: () => _stub(context, 'Manage Account'),
+                        _open(context, const EditProfilePage()),
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   SettingsSection(
@@ -179,6 +171,20 @@ class SettingsPage extends StatelessWidget {
                         title: 'Export Data',
                         onTap: () => _stub(context, 'Export data'),
                       ),
+                      const SettingsInfoTile(
+                        icon: Icons.cloud_done_rounded,
+                        title: 'Sync Status',
+                        subtitle: 'All changes synced',
+                        statusPill: 'Synced',
+                      ),
+                      const SettingsInfoTile(
+                        icon: Icons.offline_bolt_rounded,
+                        title: 'Offline Data',
+                        subtitle:
+                            'Reads and writes work offline — synced when '
+                            'you reconnect',
+                        statusPill: 'Local-first',
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -187,9 +193,10 @@ class SettingsPage extends StatelessWidget {
                     children: [
                       SettingsTile(
                         icon: Icons.fingerprint_rounded,
-                        title: 'Face ID & Passcode',
-                        futureReady: true,
-                        onTap: () => _stub(context, 'Face ID & Passcode'),
+                        title: 'Security',
+                        subtitle: 'App lock and session',
+                        valueLabel: prefs.appLockEnabled ? 'On' : 'Off',
+                        onTap: () => _open(context, const SecurityPage()),
                       ),
                       SettingsTile(
                         icon: Icons.cloud_done_rounded,
@@ -325,18 +332,4 @@ class SettingsPage extends StatelessWidget {
   }
 
   String _email() => ProfileIdentity.emailFor();
-
-  double _monthSpent() {
-    final now = DateTime.now();
-    return transactions
-        .where(
-          (t) =>
-              t.isExpense &&
-              t.date.year == now.year &&
-              t.date.month == now.month,
-        )
-        .fold<double>(0, (sum, t) => sum + t.amount);
-  }
-
-  int _recurringCount() => transactions.where((t) => t.isRecurring).length;
 }

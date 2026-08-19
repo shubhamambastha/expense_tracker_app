@@ -11,6 +11,7 @@ import '../../../models/account.dart';
 import '../../../models/expense.dart';
 import '../../../services/currency_settings.dart';
 import '../../../services/settings_preferences.dart';
+import '../../../utils/timezone_options.dart';
 
 /// Dedicated screen for "Financial Preferences" — the subset of settings that
 /// affect how transactions are interpreted, which currency is used for
@@ -30,6 +31,7 @@ class FinancialPreferencesPage extends StatelessWidget {
       builder: (context, _) {
         final currency = CurrencySettings.instance;
         final prefs = SettingsPreferences.instance;
+        final deviceTz = DateTime.now().timeZoneName;
 
         return SettingsSubpageScaffold(
           title: 'Financial Preferences',
@@ -93,6 +95,34 @@ class FinancialPreferencesPage extends StatelessWidget {
                   subtitle: 'Starting tab on Add Transaction',
                   valueLabel: prefs.defaultTransactionType.label,
                   onTap: () => _pickDefaultTransactionType(context, prefs),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SettingsSection(
+              title: 'Localization',
+              footnote: 'Used to group activity by day across the app.',
+              children: [
+                SettingsTile(
+                  icon: Icons.schedule_rounded,
+                  title: 'Timezone',
+                  subtitle: 'Reminders, recurring payments & analytics',
+                  valueLabel: TimezoneOptions.labelFor(
+                    prefs.timezoneId,
+                    deviceLabel: deviceTz,
+                  ),
+                  onTap: () => showSettingsOptionSheet<String>(
+                    context: context,
+                    title: 'Timezone',
+                    subtitle: 'Used when grouping activity by day.',
+                    current: prefs.timezoneId,
+                    options: TimezoneOptions.all(
+                      deviceLabel: deviceTz,
+                    ).map((o) => o.id).toList(),
+                    labelFor: (id) =>
+                        TimezoneOptions.labelFor(id, deviceLabel: deviceTz),
+                    onPicked: prefs.setTimezoneId,
+                  ),
                 ),
               ],
             ),
