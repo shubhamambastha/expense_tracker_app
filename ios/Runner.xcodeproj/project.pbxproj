@@ -21,6 +21,9 @@
 		AEW00A2E8E89220040F4C01 /* AddExpenseWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEW0012E8E89220040F4C01 /* AddExpenseWidget.swift */; };
 		AEW00B2E8E89220040F4C01 /* AddExpenseWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEW0022E8E89220040F4C01 /* AddExpenseWidgetBundle.swift */; };
 		AEW00C2E8E89220040F4C01 /* AddExpenseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AEW0042E8E89220040F4C01 /* AddExpenseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AEW0152E8E89220040F4C01 /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEW0142E8E89220040F4C01 /* WidgetTheme.swift */; };
+		AEW0172E8E89220040F4C01 /* AddIncomeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEW0162E8E89220040F4C01 /* AddIncomeWidget.swift */; };
+		AEW0192E8E89220040F4C01 /* QuickActionsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEW0182E8E89220040F4C01 /* QuickActionsWidget.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -90,6 +93,9 @@
 		AEW0022E8E89220040F4C01 /* AddExpenseWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExpenseWidgetBundle.swift; sourceTree = "<group>"; };
 		AEW0032E8E89220040F4C01 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AEW0042E8E89220040F4C01 /* AddExpenseWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AddExpenseWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AEW0142E8E89220040F4C01 /* WidgetTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTheme.swift; sourceTree = "<group>"; };
+		AEW0162E8E89220040F4C01 /* AddIncomeWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddIncomeWidget.swift; sourceTree = "<group>"; };
+		AEW0182E8E89220040F4C01 /* QuickActionsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsWidget.swift; sourceTree = "<group>"; };
 		B2601BF4232DD07E92E2EFEC /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		BC7CDB626AF32A5CF9A06105 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAB382D30118031F82583B47 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
@@ -209,6 +215,9 @@
 			isa = PBXGroup;
 			children = (
 				AEW0012E8E89220040F4C01 /* AddExpenseWidget.swift */,
+				AEW0162E8E89220040F4C01 /* AddIncomeWidget.swift */,
+				AEW0182E8E89220040F4C01 /* QuickActionsWidget.swift */,
+				AEW0142E8E89220040F4C01 /* WidgetTheme.swift */,
 				AEW0022E8E89220040F4C01 /* AddExpenseWidgetBundle.swift */,
 				AEW0032E8E89220040F4C01 /* Info.plist */,
 			);
@@ -475,6 +484,9 @@
 			files = (
 				AEW00A2E8E89220040F4C01 /* AddExpenseWidget.swift in Sources */,
 				AEW00B2E8E89220040F4C01 /* AddExpenseWidgetBundle.swift in Sources */,
+				AEW0152E8E89220040F4C01 /* WidgetTheme.swift in Sources */,
+				AEW0172E8E89220040F4C01 /* AddIncomeWidget.swift in Sources */,
+				AEW0192E8E89220040F4C01 /* QuickActionsWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

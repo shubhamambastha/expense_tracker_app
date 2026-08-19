@@ -29,17 +29,27 @@ struct AddExpenseWidgetEntryView: View {
     var body: some View {
         ZStack {
             ContainerRelativeShape()
-                .fill(Color(red: 0.0, green: 0.16, blue: 0.13))
+                .fill(WidgetTheme.surface)
 
-            VStack(spacing: 8) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 36, weight: .semibold))
-                    .foregroundColor(Color(red: 0.0, green: 0.78, blue: 0.59))
+            VStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(WidgetTheme.teal.opacity(0.18))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(WidgetTheme.teal)
+                }
 
-                Text("Add expense")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
+                VStack(spacing: 2) {
+                    Text("Add Expense")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(WidgetTheme.textPrimary)
+                    Text("Log a purchase")
+                        .font(.caption2)
+                        .foregroundColor(WidgetTheme.textSecondary)
+                }
+                .multilineTextAlignment(.center)
             }
             .padding()
         }

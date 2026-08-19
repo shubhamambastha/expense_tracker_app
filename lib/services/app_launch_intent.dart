@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 /// Deep-link / widget launch actions consumed by [ExpenseHomePage].
 enum AppLaunchIntent {
   addExpense,
+  addIncome,
+  openAnalytics,
 }
 
 /// Holds a pending launch intent until the home screen consumes it.
@@ -41,6 +43,10 @@ class AppLaunchIntentHolder {
     switch (segment) {
       case 'add-expense':
         return AppLaunchIntent.addExpense;
+      case 'add-income':
+        return AppLaunchIntent.addIncome;
+      case 'open-analytics':
+        return AppLaunchIntent.openAnalytics;
       default:
         return null;
     }
