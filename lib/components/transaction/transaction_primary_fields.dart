@@ -188,59 +188,29 @@ class _ExpenseFields extends StatelessWidget {
         TransactionFormRow(
           label: 'Merchant',
           showChevron: false,
-          child: Row(
-            children: [
-              // Only shown once category is already Subscription — the
-              // picker already auto-opened when that category was picked;
-              // this just lets them reopen it if they dismissed it and
-              // typed their own name instead, then changed their mind.
-              if (categoryName ==
-                  TransactionSubtypeHelpers.expenseCategorySubscription)
-                Semantics(
-                  label: 'Browse subscriptions',
-                  button: true,
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      icon: Icon(
-                        Icons.list_alt_rounded,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                      onPressed: () => _pickSubscription(context),
-                    ),
-                  ),
-                ),
-              Expanded(
-                child: TextField(
-                  controller: merchantController,
-                  focusNode: merchantFocus,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => merchantFocus.unfocus(),
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.end,
-                  decoration: InputDecoration(
-                    hintText: 'Swiggy',
-                    isDense: true,
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    hintStyle: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
+          child: TextField(
+            controller: merchantController,
+            focusNode: merchantFocus,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => merchantFocus.unfocus(),
+            style: AppTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.end,
+            decoration: InputDecoration(
+              hintText: 'Swiggy',
+              isDense: true,
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+              hintStyle: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
               ),
-            ],
+            ),
           ),
         ),
         TransactionFormRow(
