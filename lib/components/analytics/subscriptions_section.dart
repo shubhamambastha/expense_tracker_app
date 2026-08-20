@@ -7,6 +7,8 @@ import '../../models/transaction_draft.dart';
 import '../../services/category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../utils/analytics_aggregations.dart';
+import '../../utils/subscription_catalog.dart';
+import '../common/subscription_badge.dart';
 import '../home/dashboard/dashboard_section_header.dart';
 import 'widgets/analytics_section_card.dart';
 
@@ -300,6 +302,9 @@ class _RecurringRow extends StatelessWidget {
     return Icons.autorenew_rounded;
   }
 
+  SubscriptionEntry? get _subscription =>
+      SubscriptionCatalog.forName(commitment.transaction.counterpartyName);
+
   String get _cycleLabel {
     final freq = commitment.transaction.recurrenceFrequency;
     return (freq ?? RecurrenceFrequency.monthly).label;
@@ -316,15 +321,18 @@ class _RecurringRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
           child: Row(
             children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: _accent.withAlpha(32),
-                  borderRadius: BorderRadius.circular(10),
+              if (_subscription != null)
+                SubscriptionBadge(entry: _subscription!, size: 32)
+              else
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: _accent.withAlpha(32),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(_icon, color: _accent, size: 16),
                 ),
-                child: Icon(_icon, color: _accent, size: 16),
-              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(

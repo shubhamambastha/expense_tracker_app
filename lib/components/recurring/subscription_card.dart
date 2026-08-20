@@ -6,6 +6,8 @@ import '../../models/transaction_draft.dart';
 import '../../services/category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../utils/recurring_management.dart';
+import '../../utils/subscription_catalog.dart';
+import '../common/subscription_badge.dart';
 import 'upcoming_timeline_section.dart';
 
 /// Card for a single active subscription or generic recurring expense.
@@ -47,6 +49,9 @@ class SubscriptionCard extends StatelessWidget {
         return AppColors.primary;
     }
   }
+
+  SubscriptionEntry? get _subscription =>
+      SubscriptionCatalog.forName(item.transaction.counterpartyName);
 
   IconData get _icon {
     final cat = item.transaction.category;
@@ -111,15 +116,18 @@ class SubscriptionCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _accent.withAlpha(paused ? 24 : 36),
-                      borderRadius: BorderRadius.circular(12),
+                  if (_subscription != null)
+                    SubscriptionBadge(entry: _subscription!, size: 40)
+                  else
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: _accent.withAlpha(paused ? 24 : 36),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(_icon, color: _accent, size: 20),
                     ),
-                    child: Icon(_icon, color: _accent, size: 20),
-                  ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(

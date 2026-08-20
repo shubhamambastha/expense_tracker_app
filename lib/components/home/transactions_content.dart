@@ -15,6 +15,8 @@ class TransactionsContent extends StatelessWidget {
     this.onDuplicate,
     this.onConvertToRecurring,
     this.onAddTransaction,
+    this.onTagSubscription,
+    this.taggingTransactionId,
   });
 
   final List<Transaction> transactions;
@@ -25,6 +27,8 @@ class TransactionsContent extends StatelessWidget {
   final void Function(Transaction transaction)? onDuplicate;
   final void Function(Transaction transaction)? onConvertToRecurring;
   final VoidCallback? onAddTransaction;
+  final void Function(Transaction transaction)? onTagSubscription;
+  final int? taggingTransactionId;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +41,8 @@ class TransactionsContent extends StatelessWidget {
       onDuplicate: onDuplicate,
       onConvertToRecurring: onConvertToRecurring,
       onAddTransaction: onAddTransaction,
+      onTagSubscription: onTagSubscription,
+      taggingTransactionId: taggingTransactionId,
     );
   }
 }

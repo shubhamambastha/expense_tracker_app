@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../components/dialogs/add_account_dialog.dart';
 import '../../components/transaction/amount_numeric_keypad.dart';
 import '../../components/transaction/amount_section.dart';
+import '../../components/transaction/subscription_hint_banner.dart';
 import '../../components/transaction/sticky_bottom_cta.dart';
 import '../../components/transaction/transaction_advanced_section.dart';
 import '../../components/transaction/transaction_app_bar.dart';
@@ -19,6 +21,7 @@ import '../../services/currency_settings.dart';
 import '../../services/income_category_catalog.dart';
 import '../../utils/emi_schedule_helpers.dart';
 import '../../utils/income_flow_helpers.dart';
+import '../../utils/subscription_catalog.dart';
 import '../../utils/transaction_subtype_helpers.dart';
 import '../../utils/snackbar_helper.dart';
 
@@ -93,6 +96,9 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
   bool _advancedExpanded = false;
   bool _isBusy = false;
   bool _amountKeypadOpen = true;
+  bool _showSubscriptionTip = false;
+
+  static const _kSeenSubscriptionTip = 'seen_subscription_picker_hint';
 
   @override
   void initState() {
@@ -102,6 +108,20 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     _merchantController.addListener(_syncMerchantToDraft);
     _noteController.addListener(_syncNoteToDraft);
     _merchantFocus.addListener(_onMerchantFocusChanged);
+    _loadSubscriptionTipState();
+  }
+
+  Future<void> _loadSubscriptionTipState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    if (prefs.getBool(_kSeenSubscriptionTip) ?? false) return;
+    setState(() => _showSubscriptionTip = true);
+  }
+
+  Future<void> _dismissSubscriptionTip() async {
+    setState(() => _showSubscriptionTip = false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kSeenSubscriptionTip, true);
   }
 
   void _onMerchantFocusChanged() {
@@ -206,6 +226,27 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           current: _draft.recurring,
         );
         _applySalaryAutofillIfNeeded(name);
+      }
+    });
+  }
+
+  /// Picking a subscription fills the merchant field with the catalog's
+  /// canonical spelling and, only if the category is still unset/default,
+  /// applies the same Subscription quick-pick defaults (category +
+  /// recurring: monthly) that TransactionSubtypeHelpers.applyExpenseSubtype
+  /// already gives the manual Subscription category pick — so the two paths
+  /// produce the same draft state for the same intent.
+  void _onSubscriptionPicked(SubscriptionEntry entry) {
+    setState(() {
+      _merchantController.text = entry.name;
+      _draft.merchant = entry.name;
+      final categoryUnsetOrDefault =
+          _draft.categoryName == null || _draft.categoryName == _defaultCategory();
+      if (categoryUnsetOrDefault) {
+        TransactionSubtypeHelpers.applyExpenseSubtype(
+          _draft,
+          TransactionSubtypeHelpers.expenseCategorySubscription,
+        );
       }
     });
   }
@@ -472,11 +513,16 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         recentCategoryNames: widget.recentCategoryNames,
         recentIncomeCategoryNames: widget.recentIncomeCategoryNames,
         onCategoryChanged: _onCategoryChanged,
+        onSubscriptionPicked: _onSubscriptionPicked,
         onAccountChanged: _onAccountChanged,
         onTransferToChanged: _onTransferToChanged,
         onPickDate: _pickTransactionDate,
         onAddAccount: widget.onAddAccount,
       ),
+      if (_showSubscriptionTip &&
+          _draft.kind == TransactionKind.expense &&
+          !_draft.isEditing)
+        SubscriptionHintBanner(onDismiss: _dismissSubscriptionTip),
       TransactionAdvancedSection(
         expanded: _advancedExpanded,
         onExpandToggle: () =>

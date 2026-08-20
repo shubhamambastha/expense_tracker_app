@@ -133,6 +133,7 @@ class SettingsSelectableRow extends StatelessWidget {
     required this.onTap,
     this.icon,
     this.iconColor,
+    this.leading,
   });
 
   final String label;
@@ -143,6 +144,11 @@ class SettingsSelectableRow extends StatelessWidget {
   /// carries its own icon/color instead of reading as plain text.
   final IconData? icon;
   final Color? iconColor;
+
+  /// Optional leading widget overriding the icon avatar entirely — used by
+  /// pickers whose leading visual isn't a Material icon (e.g. a brand-color
+  /// badge). Takes precedence over [icon] when both are supplied.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +176,10 @@ class SettingsSelectableRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              if (icon != null) ...[
+              if (leading != null) ...[
+                leading!,
+                const SizedBox(width: AppSpacing.sm),
+              ] else if (icon != null) ...[
                 Container(
                   width: 32,
                   height: 32,

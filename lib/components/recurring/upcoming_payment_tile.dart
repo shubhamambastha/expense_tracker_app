@@ -5,7 +5,9 @@ import '../../models/transaction_draft.dart';
 import '../../services/category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../utils/recurring_management.dart';
+import '../../utils/subscription_catalog.dart';
 import '../../utils/upcoming_payments.dart';
+import '../common/subscription_badge.dart';
 
 /// Single row in the upcoming-payments timeline.
 ///
@@ -41,6 +43,9 @@ class UpcomingPaymentTile extends StatelessWidget {
         return AppColors.primary;
     }
   }
+
+  SubscriptionEntry? get _subscription =>
+      SubscriptionCatalog.forName(item.transaction.counterpartyName);
 
   IconData get _icon {
     switch (item.kind) {
@@ -82,15 +87,18 @@ class UpcomingPaymentTile extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _accent.withAlpha(32),
-                  borderRadius: BorderRadius.circular(12),
+              if (_subscription != null)
+                SubscriptionBadge(entry: _subscription!, size: 38)
+              else
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: _accent.withAlpha(32),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(_icon, color: _accent, size: 18),
                 ),
-                child: Icon(_icon, color: _accent, size: 18),
-              ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(

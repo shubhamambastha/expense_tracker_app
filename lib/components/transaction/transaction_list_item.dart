@@ -6,10 +6,12 @@ import '../../models/account.dart';
 import '../../models/transaction.dart';
 import '../../models/transaction_draft.dart';
 import '../../models/transaction_filters.dart';
+import '../../utils/subscription_catalog.dart';
 import '../../utils/transaction_subtype_helpers.dart';
 import '../../services/category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../services/income_category_catalog.dart';
+import '../common/subscription_badge.dart';
 
 /// Compact transaction row — category avatar, merchant/subtitle, amount/date.
 class TransactionListItem extends StatefulWidget {
@@ -24,6 +26,7 @@ class TransactionListItem extends StatefulWidget {
     this.onDuplicate,
     this.onDelete,
     this.onLongPress,
+    this.isTagging = false,
   });
 
   final Transaction transaction;
@@ -35,6 +38,11 @@ class TransactionListItem extends StatefulWidget {
   final VoidCallback? onDuplicate;
   final VoidCallback? onDelete;
   final VoidCallback? onLongPress;
+
+  /// True while a long-press subscription tag write is in flight for this
+  /// row — shows a brief spinner instead of the avatar so the user knows
+  /// their pick registered, rather than a silent wait for the write.
+  final bool isTagging;
 
   @override
   State<TransactionListItem> createState() => _TransactionListItemState();
@@ -95,6 +103,13 @@ class _TransactionListItemState extends State<TransactionListItem>
   }
 
   Transaction get _tx => widget.transaction;
+
+  /// Subscriptions are expense-only; income/transfer rows always fall back
+  /// to the category icon.
+  SubscriptionEntry? get _subscription {
+    if (_tx.isIncome || _tx.isTransfer) return null;
+    return SubscriptionCatalog.forName(_tx.counterpartyName);
+  }
 
   Color get _categoryColor {
     final cat = _tx.category;
@@ -250,10 +265,13 @@ class _TransactionListItemState extends State<TransactionListItem>
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _CategoryAvatar(
-                              color: _categoryColor,
-                              icon: _leadingIcon,
-                            ),
+                            widget.isTagging
+                                ? const _TaggingAvatar()
+                                : _CategoryAvatar(
+                                    color: _categoryColor,
+                                    icon: _leadingIcon,
+                                    subscription: _subscription,
+                                  ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: Column(
@@ -332,13 +350,21 @@ class _TransactionListItemState extends State<TransactionListItem>
 }
 
 class _CategoryAvatar extends StatelessWidget {
-  const _CategoryAvatar({required this.color, required this.icon});
+  const _CategoryAvatar({
+    required this.color,
+    required this.icon,
+    this.subscription,
+  });
 
   final Color color;
   final IconData icon;
+  final SubscriptionEntry? subscription;
 
   @override
   Widget build(BuildContext context) {
+    if (subscription != null) {
+      return SubscriptionBadge(entry: subscription!, size: 40);
+    }
     return Container(
       width: 40,
       height: 40,
@@ -347,6 +373,29 @@ class _CategoryAvatar extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(icon, color: color, size: 20),
+    );
+  }
+}
+
+/// Dimmed 40x40 placeholder with a spinner, shown in place of the category
+/// avatar while a long-press subscription tag write is in flight.
+class _TaggingAvatar extends StatelessWidget {
+  const _TaggingAvatar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: AppColors.textSecondary.withAlpha(24),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(11),
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: AppColors.textSecondary,
+      ),
     );
   }
 }

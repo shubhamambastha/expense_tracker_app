@@ -8,6 +8,8 @@ import '../../../models/transaction_draft.dart';
 import '../../../services/category_catalog.dart';
 import '../../../services/currency_settings.dart';
 import '../../../services/income_category_catalog.dart';
+import '../../../utils/subscription_catalog.dart';
+import '../../common/subscription_badge.dart';
 import 'dashboard_section_header.dart';
 
 const int kRecentTransactionsLimit = 5;
@@ -127,6 +129,11 @@ class _RecentTransactionTile extends StatelessWidget {
         : Icons.south_west_rounded;
   }
 
+  SubscriptionEntry? get _subscription {
+    if (transaction.isIncome || transaction.isTransfer) return null;
+    return SubscriptionCatalog.forName(transaction.counterpartyName);
+  }
+
   String get _title {
     if (transaction.isTransfer) {
       final from = account?.name ?? 'Unknown';
@@ -175,15 +182,18 @@ class _RecentTransactionTile extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _categoryColor.withAlpha(32),
-                  borderRadius: BorderRadius.circular(12),
+              if (_subscription != null)
+                SubscriptionBadge(entry: _subscription!, size: 38)
+              else
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: _categoryColor.withAlpha(32),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(_icon, color: _categoryColor, size: 18),
                 ),
-                child: Icon(_icon, color: _categoryColor, size: 18),
-              ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(

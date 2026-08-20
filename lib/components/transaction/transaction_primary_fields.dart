@@ -13,6 +13,8 @@ import '../../models/transaction_draft.dart';
 import '../../services/category_catalog.dart';
 import '../../services/income_category_catalog.dart';
 import '../../utils/income_flow_helpers.dart';
+import '../../utils/subscription_catalog.dart';
+import 'subscription_picker_sheet.dart';
 import 'transaction_form_row.dart';
 
 /// Compact primary field block for Add Transaction — no cards, no horizontal
@@ -31,6 +33,7 @@ class TransactionPrimaryFields extends StatelessWidget {
     required this.recentCategoryNames,
     required this.recentIncomeCategoryNames,
     required this.onCategoryChanged,
+    required this.onSubscriptionPicked,
     required this.onAccountChanged,
     required this.onTransferToChanged,
     required this.onPickDate,
@@ -48,6 +51,7 @@ class TransactionPrimaryFields extends StatelessWidget {
   final List<String> recentCategoryNames;
   final List<String> recentIncomeCategoryNames;
   final ValueChanged<String> onCategoryChanged;
+  final ValueChanged<SubscriptionEntry> onSubscriptionPicked;
   final ValueChanged<Account> onAccountChanged;
   final ValueChanged<Account> onTransferToChanged;
   final Future<void> Function() onPickDate;
@@ -67,6 +71,7 @@ class TransactionPrimaryFields extends StatelessWidget {
             accounts: accounts,
             recentCategoryNames: recentCategoryNames,
             onCategoryChanged: onCategoryChanged,
+            onSubscriptionPicked: onSubscriptionPicked,
             onAccountChanged: onAccountChanged,
             onPickDate: onPickDate,
             onAddAccount: onAddAccount,
@@ -109,6 +114,7 @@ class _ExpenseFields extends StatelessWidget {
     required this.accounts,
     required this.recentCategoryNames,
     required this.onCategoryChanged,
+    required this.onSubscriptionPicked,
     required this.onAccountChanged,
     required this.onPickDate,
     this.onAddAccount,
@@ -122,9 +128,18 @@ class _ExpenseFields extends StatelessWidget {
   final List<Account> accounts;
   final List<String> recentCategoryNames;
   final ValueChanged<String> onCategoryChanged;
+  final ValueChanged<SubscriptionEntry> onSubscriptionPicked;
   final ValueChanged<Account> onAccountChanged;
   final Future<void> Function() onPickDate;
   final OnAddAccount? onAddAccount;
+
+  Future<void> _pickSubscription(BuildContext context) async {
+    final picked = await showSubscriptionPickerSheet(
+      context: context,
+      selectedName: merchantController.text,
+    );
+    if (picked != null) onSubscriptionPicked(picked);
+  }
 
   Future<void> _pickCategory(BuildContext context) async {
     final catalog = CategoryCatalog.instance;
@@ -164,29 +179,53 @@ class _ExpenseFields extends StatelessWidget {
         TransactionFormRow(
           label: 'Merchant',
           showChevron: false,
-          child: TextField(
-            controller: merchantController,
-            focusNode: merchantFocus,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => merchantFocus.unfocus(),
-            style: AppTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.end,
-            decoration: InputDecoration(
-              hintText: 'Swiggy',
-              isDense: true,
-              filled: false,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
-              hintStyle: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w500,
+          child: Row(
+            children: [
+              Semantics(
+                label: 'Pick subscription from list',
+                button: true,
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                      Icons.list_alt_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                    onPressed: () => _pickSubscription(context),
+                  ),
+                ),
               ),
-            ),
+              Expanded(
+                child: TextField(
+                  controller: merchantController,
+                  focusNode: merchantFocus,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => merchantFocus.unfocus(),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.end,
+                  decoration: InputDecoration(
+                    hintText: 'Swiggy',
+                    isDense: true,
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    hintStyle: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         TransactionFormRow(

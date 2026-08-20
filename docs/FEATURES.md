@@ -49,6 +49,22 @@ One unified `Transaction` model covers all three kinds, persisted in `public.tra
 
 ---
 
+## Subscription picker & brand icons
+
+A curated, fixed list of ~20 common subscriptions (Netflix, Spotify, etc.) that a user can pick from instead of free-typing the merchant, so the transaction gets a recognizable brand-colored badge instead of the generic category icon.
+
+- The catalog is a hand-maintained `const` list, not a database table or user-editable — same shape as `DefaultCategories.seeds` (`subscription_catalog.dart::SubscriptionCatalog.entries`).
+- Matching is **exact, case-insensitive** on `Transaction.counterpartyName` — not the substring match `isSubscriptionCategory` uses on `category`. "Netflix Gift Card" or "My Netflix" will **not** match "Netflix" (`subscription_catalog.dart::SubscriptionCatalog.forName`).
+- **This is a second, independent classification axis from the existing category-string-based one** (`isSubscriptionCategory`/`RecurringKind.subscription` in `recurring_management.dart`). A transaction can be "Subscription" by category without matching the catalog (e.g. a subscription not in the curated list), and vice versa is not possible since picking from the catalog always sets category to "Subscription" too. Reconciling these two mechanisms into one is tracked as a TODO — see `TODOS.md`.
+- Brand marks are **generated placeholder badges** (solid brand-color square + first letter), rendered as a Flutter widget (`SubscriptionBadge`), not bundled image assets — this app has no image-generation tooling, and a widget avoids the whole "what if the asset fails to load" question entirely, since there's no I/O to fail. Real logos (if ever swapped in) are a separate TODO with its own legal-check item.
+- Picking a subscription (Add Transaction's picker, or long-press on an existing row) fills `counterpartyName` with the catalog's canonical spelling — **overwriting** whatever was typed/already stored. Category + recurring defaults (`enabled: true`, `frequency: monthly`) are applied via the existing `applyExpenseSubtype` helper, matching the manual Subscription quick-pick's behavior exactly (`add_transaction_page.dart::_onSubscriptionPicked`, `expense_home_page.dart::_tagTransactionAsSubscription`).
+  - On the **Add Transaction** picker, the category/recurring defaults are only applied if the category is currently unset or still the catalog default — so it never clobbers a category the user already deliberately chose.
+  - On **long-press retroactive tagging** of an existing row, category + recurring are applied unconditionally — the whole point of that action is "make this a tagged subscription."
+- The brand-badge resolution (subscription match → badge; no match → today's generic category icon, unchanged) is independently re-implemented at **6 render sites** because this app has no single shared transaction-icon rendering path: `transaction_list_item.dart`, `subscription_card.dart`, `upcoming_payment_tile.dart`, `analytics/subscriptions_section.dart`, `home/dashboard/recent_transactions_section.dart`, and the picker sheet's own rows. Subscription matching is expense-only — income and transfer rows always fall back to the category icon.
+- A one-time onboarding tip (covering both the picker button and long-press) shows once on the Add Transaction screen, gated by a `SharedPreferences` bool (`add_transaction_page.dart::_kSeenSubscriptionTip`), and is dismissed permanently once tapped away.
+
+---
+
 ## Accounts (bank / wallet / credit card)
 
 Balances and credit metrics are always computed on the fly from transaction history — nothing is cached/stored as a running balance.
@@ -147,6 +163,15 @@ Auth0 handles identity; Supabase stores data; every row is scoped by the Auth0 `
 - Login callback scheme differs by platform: Android always uses HTTPS app links; iOS/macOS use a custom URL scheme unless `AppConfig.auth0UseHttps` is explicitly set (`auth_service.dart::_useHttpsCallbacks`).
 - A user cancelling the Auth0 web login is surfaced as a distinct `AuthLoginCancelledException`, not a generic error (`auth_service.dart::login`).
 - Splash bootstrap reserves (but does not yet implement) two future gates: a biometric-unlock step (`SplashBootstrapResult.requiresBiometricUnlock`, currently hardcoded to always return `false`) and an onboarding destination (`SplashDestination.onboarding`, reachable only if a local `onboarding_complete` pref is explicitly set `false`, which nothing in the app currently does) — see [BACKLOG.md](./BACKLOG.md).
+
+---
+
+## Data export
+
+Settings → Data → "Export Data".
+
+- Fetches fresh from Supabase (not the in-memory lists the rest of the app uses, which may be stale/paginated) — transactions, accounts (including archived), and category budgets — serializes each to CSV (`utils/data_export.dart`, pure functions, unit tested), writes them to the OS temp directory, and hands all three files to the native share sheet via `share_plus`. Settings/preferences are deliberately excluded — they're app config, not financial data. CSV was chosen over JSON: the target audience is a non-technical user who wants something that opens in Excel/Sheets, not a re-import format (no import feature exists or is planned).
+- Account reset/deletion is **not** self-service — see [BACKLOG.md](./BACKLOG.md) for the planned "Reset my account" / "Delete my account" flows, both mail-triggered requests to an admin rather than an automatic client-side wipe.
 
 ---
 

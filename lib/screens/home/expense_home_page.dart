@@ -8,6 +8,7 @@ import '../../components/dialogs/add_account_dialog.dart';
 import '../../components/home/home_content.dart';
 import '../../components/home/transactions_content.dart';
 import '../../components/recurring/add_recurring_sheet.dart';
+import '../../components/transaction/subscription_picker_sheet.dart';
 import '../../components/transaction/transaction_detail_sheet.dart';
 import '../../config/design_tokens.dart';
 import '../../config/feature_flags.dart';
@@ -26,6 +27,7 @@ import '../../utils/constants.dart';
 import '../../utils/financial_insights.dart';
 import '../../utils/recurring_management.dart';
 import '../../utils/snackbar_helper.dart';
+import '../../utils/transaction_subtype_helpers.dart';
 import '../accounts/accounts_list_page.dart';
 import '../analytics/analytics_page.dart';
 import '../recurring/recurring_payments_page.dart';
@@ -50,6 +52,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   int _selectedIndex = 0;
   bool _addTransactionRouteOpen = false;
   final List<Timer> _launchIntentTimers = [];
+  int? _taggingTransactionId;
 
   @override
   void initState() {
@@ -256,6 +259,46 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       SnackbarHelper.showMessage(
         context,
         '${AppConstants.errorFailedToUpdateExpense}: $error',
+      );
+    }
+  }
+
+  /// Long-press retroactive tagging: overwrites the merchant text to the
+  /// catalog's canonical spelling and applies the same Subscription
+  /// category + recurring-monthly defaults the picker gives new
+  /// transactions, so an old "netflix.com" charge gets the same treatment
+  /// as one entered through the picker today.
+  Future<void> _tagTransactionAsSubscription(Transaction transaction) async {
+    final picked = await showSubscriptionPickerSheet(
+      context: context,
+      selectedName: transaction.counterpartyName,
+    );
+    if (picked == null || !mounted) return;
+
+    final updated = transaction.copyWith(
+      counterpartyName: picked.name,
+      category: TransactionSubtypeHelpers.expenseCategorySubscription,
+      isRecurring: true,
+      recurrenceFrequency: RecurrenceFrequency.monthly,
+    );
+
+    setState(() => _taggingTransactionId = transaction.id);
+    try {
+      final saved = await SupabaseService.updateTransaction(updated);
+      if (!mounted) return;
+      setState(() {
+        final idx = _transactions.indexWhere((t) => t.id == saved.id);
+        if (idx >= 0) _transactions[idx] = saved;
+        _taggingTransactionId = null;
+      });
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context, 'Tagged as ${picked.name}');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _taggingTransactionId = null);
+      SnackbarHelper.showMessage(
+        context,
+        'Could not tag transaction: $error',
       );
     }
   }
@@ -572,6 +615,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       onDuplicate: _duplicateTransaction,
       onConvertToRecurring: _convertToRecurring,
       onAddTransaction: () => _openAddTransactionPage(),
+      onTagSubscription: _tagTransactionAsSubscription,
+      taggingTransactionId: _taggingTransactionId,
     );
   }
 

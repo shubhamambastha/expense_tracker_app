@@ -27,6 +27,8 @@ class TransactionsScreen extends StatefulWidget {
     this.onDuplicate,
     this.onConvertToRecurring,
     this.onAddTransaction,
+    this.onTagSubscription,
+    this.taggingTransactionId,
   });
 
   final List<Transaction> transactions;
@@ -37,6 +39,14 @@ class TransactionsScreen extends StatefulWidget {
   final void Function(Transaction transaction)? onDuplicate;
   final void Function(Transaction transaction)? onConvertToRecurring;
   final VoidCallback? onAddTransaction;
+
+  /// Long-press retroactive tagging — opens the subscription picker for an
+  /// existing transaction.
+  final void Function(Transaction transaction)? onTagSubscription;
+
+  /// Id of the transaction currently mid-write from a tag pick, if any —
+  /// drives the row's brief loading state.
+  final int? taggingTransactionId;
 
   @override
   State<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -622,6 +632,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 onEdit: () => widget.onEdit?.call(tx),
                 onDuplicate: () => widget.onDuplicate?.call(tx),
                 onDelete: () => widget.onDelete?.call(tx),
+                onLongPress: widget.onTagSubscription == null
+                    ? null
+                    : () => widget.onTagSubscription!(tx),
+                isTagging: widget.taggingTransactionId == tx.id,
               ),
               Divider(height: 1, thickness: 1, color: AppColors.border),
             ],
