@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../components/common/states/states.dart';
 import '../../components/dialogs/add_account_dialog.dart';
 import '../../components/settings/currency_picker_sheet.dart';
 import '../../components/settings/profile_header_card.dart';
@@ -10,10 +14,14 @@ import '../../components/settings/settings_section.dart';
 import '../../components/settings/settings_tile.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
+import '../../models/category_budget.dart';
+import '../../models/transaction.dart';
 import '../../services/category_catalog.dart';
 import '../../services/income_category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../services/settings_preferences.dart';
+import '../../services/supabase_service.dart';
+import '../../utils/data_export.dart';
 import '../../utils/snackbar_helper.dart';
 import 'sections/about_page.dart';
 import 'sections/appearance_page.dart';
@@ -169,7 +177,7 @@ class SettingsPage extends StatelessWidget {
                       SettingsTile(
                         icon: Icons.file_download_rounded,
                         title: 'Export Data',
-                        onTap: () => _stub(context, 'Export data'),
+                        onTap: () => _exportData(context),
                       ),
                       const SettingsInfoTile(
                         icon: Icons.cloud_done_rounded,
@@ -281,6 +289,62 @@ class SettingsPage extends StatelessWidget {
 
   void _stub(BuildContext context, String label) {
     SnackbarHelper.showMessage(context, '$label is coming soon');
+  }
+
+  /// Fetches everything this user owns fresh from Supabase (not the
+  /// in-memory `accounts` list, which may be stale/paginated), serializes it
+  /// to CSV, and hands it to the OS share sheet.
+  Future<void> _exportData(BuildContext context) async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: AppLoadingIndicator()),
+    );
+
+    try {
+      final results = await Future.wait([
+        SupabaseService.fetchTransactions(),
+        SupabaseService.fetchAccounts(includeArchived: true),
+        SupabaseService.fetchCategoryBudgets(),
+      ]);
+      final transactions = results[0] as List<Transaction>;
+      final exportAccounts = results[1] as List<Account>;
+      final budgets = results[2] as List<CategoryBudget>;
+
+      final tempDir = Directory.systemTemp;
+      final files = <XFile>[
+        await _writeCsv(
+          tempDir,
+          'transactions.csv',
+          transactionsToCsv(transactions),
+        ),
+        await _writeCsv(
+          tempDir,
+          'accounts.csv',
+          accountsToCsv(exportAccounts),
+        ),
+        await _writeCsv(
+          tempDir,
+          'budgets.csv',
+          categoryBudgetsToCsv(budgets),
+        ),
+      ];
+
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      await SharePlus.instance.share(
+        ShareParams(files: files, subject: 'My expense data export'),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      SnackbarHelper.showError(context, 'Could not export your data. Please try again.');
+    }
+  }
+
+  Future<XFile> _writeCsv(Directory dir, String name, String csv) async {
+    final file = await File('${dir.path}/$name').writeAsString(csv);
+    return XFile(file.path, mimeType: 'text/csv');
   }
 
   // ---------------------------------------------------------------------------
