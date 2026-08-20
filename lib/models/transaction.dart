@@ -139,16 +139,16 @@ class Transaction {
       'account_id': accountId,
       if (transferToAccountId != null)
         'transfer_to_account_id': transferToAccountId,
-      'date': date.toIso8601String(),
+      'date': date.toUtc().toIso8601String(),
       'is_recurring': isRecurring,
       'is_paused': isPaused,
-      'closed_at': closedAt?.toIso8601String(),
+      'closed_at': closedAt?.toUtc().toIso8601String(),
       if (isRecurring && recurrenceFrequency != null)
         'recurrence_frequency': recurrenceFrequency!.name,
       if (isRecurring && recurrenceStartDate != null)
-        'recurrence_start_date': recurrenceStartDate!.toIso8601String(),
+        'recurrence_start_date': recurrenceStartDate!.toUtc().toIso8601String(),
       if (isRecurring && recurrenceEndDate != null)
-        'recurrence_end_date': recurrenceEndDate!.toIso8601String(),
+        'recurrence_end_date': recurrenceEndDate!.toUtc().toIso8601String(),
       if (isRecurring && reminderTiming != null)
         'reminder_timing': reminderTiming!.name,
     };
