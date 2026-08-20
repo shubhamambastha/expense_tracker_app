@@ -587,4 +587,24 @@ class SupabaseService {
         .eq('user_id', userId)
         .eq('is_default', false);
   }
+
+  /// Wipes every user-owned row *except* `user_settings` (preferences +
+  /// currency) and the Auth0 session itself — used by "Reset My Account" in
+  /// Help Center. Deletion order respects FKs: recurring_events →
+  /// transactions → accounts, then the FK-free tables.
+  static Future<void> resetUserData() async {
+    final userId = requireUserId();
+    final client = Supabase.instance.client;
+
+    for (final table in [
+      'recurring_events',
+      'transactions',
+      'accounts',
+      'category_budgets',
+      'expense_categories',
+      'income_categories',
+    ]) {
+      await client.from(table).delete().eq('user_id', userId);
+    }
+  }
 }

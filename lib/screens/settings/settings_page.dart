@@ -31,6 +31,7 @@ import 'sections/app_preferences_page.dart';
 import 'sections/financial_preferences_page.dart';
 import 'sections/notifications_page.dart';
 import 'sections/edit_profile_page.dart';
+import 'sections/help_center_page.dart';
 import 'sections/security_page.dart';
 import 'sections/support_and_feedback_page.dart';
 import '../../utils/profile_identity.dart';
@@ -52,6 +53,7 @@ class SettingsPage extends StatelessWidget {
     required this.onManageAccounts,
     required this.onOpenRecurringManager,
     required this.onSignOut,
+    required this.onAccountReset,
   });
 
   final List<Account> accounts;
@@ -67,6 +69,10 @@ class SettingsPage extends StatelessWidget {
   final VoidCallback onOpenRecurringManager;
 
   final VoidCallback onSignOut;
+
+  /// Called after Help Center's "Reset My Account" wipes the user's data,
+  /// so the tab shell can clear its in-memory transactions/accounts.
+  final VoidCallback onAccountReset;
 
   @override
   Widget build(BuildContext context) {
@@ -221,7 +227,10 @@ class SettingsPage extends StatelessWidget {
                       SettingsTile(
                         icon: Icons.help_outline_rounded,
                         title: 'Help Center',
-                        onTap: () => _stub(context, 'Help Center'),
+                        onTap: () => _open(
+                          context,
+                          HelpCenterPage(onAccountReset: onAccountReset),
+                        ),
                       ),
                       SettingsTile(
                         icon: Icons.mail_outline_rounded,

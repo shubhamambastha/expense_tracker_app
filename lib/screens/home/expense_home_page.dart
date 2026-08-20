@@ -702,7 +702,19 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       onManageAccounts: _openAccountsManager,
       onOpenRecurringManager: _openRecurringManager,
       onSignOut: widget.onSignOut,
+      onAccountReset: _onAccountReset,
     );
+  }
+
+  /// After Help Center's "Reset My Account" wipes Supabase data, drop the
+  /// stale in-memory lists and reload everything (transactions, accounts,
+  /// budgets) fresh.
+  void _onAccountReset() {
+    setState(() {
+      _transactions.clear();
+      _accounts.clear();
+    });
+    _loadTransactions();
   }
 
   Widget _buildBudgetsContent(BuildContext context) {

@@ -2,25 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../../config/design_tokens.dart';
 
-/// Typed-confirmation dialog for permanently deleting the user's account.
-Future<bool> showConfirmDeleteAccountDialog(BuildContext context) async {
+/// Typed-confirmation dialog for wiping all of the user's data.
+Future<bool> showConfirmResetAccountDialog(BuildContext context) async {
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (_) => const _ConfirmDeleteAccountDialog(),
+    builder: (_) => const _ConfirmResetAccountDialog(),
   );
   return confirmed == true;
 }
 
-class _ConfirmDeleteAccountDialog extends StatefulWidget {
-  const _ConfirmDeleteAccountDialog();
+class _ConfirmResetAccountDialog extends StatefulWidget {
+  const _ConfirmResetAccountDialog();
 
   @override
-  State<_ConfirmDeleteAccountDialog> createState() =>
-      _ConfirmDeleteAccountDialogState();
+  State<_ConfirmResetAccountDialog> createState() =>
+      _ConfirmResetAccountDialogState();
 }
 
-class _ConfirmDeleteAccountDialogState
-    extends State<_ConfirmDeleteAccountDialog> {
+class _ConfirmResetAccountDialogState
+    extends State<_ConfirmResetAccountDialog> {
   final _controller = TextEditingController();
 
   @override
@@ -31,24 +31,25 @@ class _ConfirmDeleteAccountDialogState
 
   @override
   Widget build(BuildContext context) {
-    final canConfirm = _controller.text.trim().toUpperCase() == 'DELETE';
+    final canConfirm = _controller.text.trim().toUpperCase() == 'RESET';
 
     return AlertDialog(
-      title: const Text('Delete account'),
+      title: const Text('Reset my account'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'This permanently removes your account, transactions, '
-            'accounts, and preferences. This cannot be undone.',
+            'This permanently erases your transactions, accounts, '
+            'categories, budgets, and recurring payments. Your '
+            'login and preferences are kept. This cannot be undone.',
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Type DELETE to confirm:',
+            'Type RESET to confirm:',
             style: AppTextStyles.caption,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -57,7 +58,7 @@ class _ConfirmDeleteAccountDialogState
             autofocus: true,
             textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
-              hintText: 'DELETE',
+              hintText: 'RESET',
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -74,7 +75,7 @@ class _ConfirmDeleteAccountDialogState
             backgroundColor: AppColors.danger,
             foregroundColor: AppColors.textPrimary,
           ),
-          child: const Text('Delete forever'),
+          child: const Text('Reset account'),
         ),
       ],
     );
