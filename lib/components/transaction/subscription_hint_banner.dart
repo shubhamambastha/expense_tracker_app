@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../config/design_tokens.dart';
 
-/// One-time first-run tip covering both new ways to tag a subscription:
-/// the picker button on this screen, and long-press on an existing
-/// transaction row. Dismissed permanently once tapped away.
+/// One-time first-run tip about long-press retroactive tagging — the one
+/// subscription-picker capability with no visual affordance of its own
+/// (picking "Subscription" as the category already auto-opens the brand
+/// picker, so that half needs no separate hint). Dismissed permanently
+/// once tapped away.
 class SubscriptionHintBanner extends StatelessWidget {
   const SubscriptionHintBanner({super.key, required this.onDismiss});
 
@@ -29,13 +31,12 @@ class SubscriptionHintBanner extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.list_alt_rounded, color: AppColors.primary, size: 18),
+            Icon(Icons.touch_app_rounded, color: AppColors.primary, size: 18),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
-                'Tap the list icon to pick a subscription with its own '
-                'brand icon. You can also long-press any transaction later '
-                'to tag it.',
+                'Tip: long-press any transaction in the list later to tag '
+                'it as a subscription with its own brand icon.',
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.textPrimary,
                 ),

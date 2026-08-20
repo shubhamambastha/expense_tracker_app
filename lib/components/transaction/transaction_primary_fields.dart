@@ -14,6 +14,7 @@ import '../../services/category_catalog.dart';
 import '../../services/income_category_catalog.dart';
 import '../../utils/income_flow_helpers.dart';
 import '../../utils/subscription_catalog.dart';
+import '../../utils/transaction_subtype_helpers.dart';
 import 'subscription_picker_sheet.dart';
 import 'transaction_form_row.dart';
 
@@ -156,7 +157,15 @@ class _ExpenseFields extends StatelessWidget {
       onAddCategory: (name, iconKey) =>
           catalog.addCategory(name: name, iconKey: iconKey),
     );
-    if (picked != null) onCategoryChanged(picked);
+    if (picked == null) return;
+    onCategoryChanged(picked);
+    // Picking "Subscription" auto-opens the brand picker — the natural
+    // next step, not a separate hunt-for-an-icon action. Dismissing it
+    // leaves category as Subscription with merchant still free-typeable.
+    if (picked == TransactionSubtypeHelpers.expenseCategorySubscription &&
+        context.mounted) {
+      await _pickSubscription(context);
+    }
   }
 
   Future<void> _pickAccount(BuildContext context) async {
@@ -181,24 +190,30 @@ class _ExpenseFields extends StatelessWidget {
           showChevron: false,
           child: Row(
             children: [
-              Semantics(
-                label: 'Pick subscription from list',
-                button: true,
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      Icons.list_alt_rounded,
-                      color: AppColors.primary,
-                      size: 20,
+              // Only shown once category is already Subscription — the
+              // picker already auto-opened when that category was picked;
+              // this just lets them reopen it if they dismissed it and
+              // typed their own name instead, then changed their mind.
+              if (categoryName ==
+                  TransactionSubtypeHelpers.expenseCategorySubscription)
+                Semantics(
+                  label: 'Browse subscriptions',
+                  button: true,
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        Icons.list_alt_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                      onPressed: () => _pickSubscription(context),
                     ),
-                    onPressed: () => _pickSubscription(context),
                   ),
                 ),
-              ),
               Expanded(
                 child: TextField(
                   controller: merchantController,
