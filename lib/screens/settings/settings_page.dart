@@ -9,6 +9,7 @@ import '../../components/dialogs/add_account_dialog.dart';
 import '../../components/settings/currency_picker_sheet.dart';
 import '../../components/settings/profile_header_card.dart';
 import '../../components/settings/settings_danger_section.dart';
+import '../../components/settings/settings_guest_data_section.dart';
 import '../../components/settings/settings_info_tile.dart';
 import '../../components/settings/settings_section.dart';
 import '../../components/settings/settings_tile.dart';
@@ -53,6 +54,7 @@ class SettingsPage extends StatelessWidget {
     required this.onOpenRecurringManager,
     required this.onSignOut,
     required this.onAccountReset,
+    required this.onGuestDataChanged,
   });
 
   final List<Account> accounts;
@@ -72,6 +74,10 @@ class SettingsPage extends StatelessWidget {
   /// Called after Help Center's "Reset My Account" wipes the user's data,
   /// so the tab shell can clear its in-memory transactions/accounts.
   final VoidCallback onAccountReset;
+
+  /// Called after a manual guest-data import from the "Guest data" section
+  /// so the tab shell can reload transactions/accounts.
+  final VoidCallback onGuestDataChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -219,6 +225,8 @@ class SettingsPage extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SettingsGuestDataSection(onImported: onGuestDataChanged),
                   const SizedBox(height: AppSpacing.lg),
                   SettingsSection(
                     title: 'Support',

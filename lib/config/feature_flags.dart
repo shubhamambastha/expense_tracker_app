@@ -8,6 +8,11 @@ class FeatureFlags {
   /// Existing transfer transactions still display and can be edited.
   static const bool transferVisible = false;
 
+  /// When false, "Continue as guest" is hidden from the login screen and the
+  /// guest data path in [SupabaseService] is never exercised. One-line kill
+  /// switch, not a gradual rollout gate.
+  static const bool guestModeEnabled = true;
+
   static List<TransactionKind> get selectableTransactionKinds {
     if (transferVisible) return TransactionKind.values;
     return const [TransactionKind.expense, TransactionKind.income];

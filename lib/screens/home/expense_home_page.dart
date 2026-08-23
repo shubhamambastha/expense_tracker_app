@@ -703,6 +703,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       onOpenRecurringManager: _openRecurringManager,
       onSignOut: widget.onSignOut,
       onAccountReset: _onAccountReset,
+      onGuestDataChanged: _onAccountReset,
     );
   }
 

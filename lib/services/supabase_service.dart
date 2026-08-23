@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/app_config.dart';
 import '../utils/constants.dart';
 import 'auth_service.dart';
+import 'guest_store.dart';
 import '../models/account.dart';
 import '../models/category_budget.dart';
 import '../models/expense.dart';
@@ -58,7 +59,12 @@ class SupabaseService {
     return userId;
   }
 
+  /// Single choke point: every method below branches here first. Guest
+  /// sessions never reach `Supabase.instance.client` at all.
+  static bool get _isGuest => AuthService.instance.isGuest.value;
+
   static Future<List<Transaction>> fetchTransactions() async {
+    if (_isGuest) return GuestStore.instance.fetchTransactions();
     final userId = requireUserId();
 
     final data = await Supabase.instance.client
@@ -96,6 +102,7 @@ class SupabaseService {
   }
 
   static Future<Transaction> insertTransaction(Transaction transaction) async {
+    if (_isGuest) return GuestStore.instance.insertTransaction(transaction);
     final userId = requireUserId();
 
     final payload = transaction.toMap()..['user_id'] = userId;
@@ -110,6 +117,7 @@ class SupabaseService {
   }
 
   static Future<Transaction> updateTransaction(Transaction transaction) async {
+    if (_isGuest) return GuestStore.instance.updateTransaction(transaction);
     final userId = requireUserId();
 
     final payload = transaction.toMap()
@@ -127,6 +135,7 @@ class SupabaseService {
   }
 
   static Future<void> deleteTransaction(int transactionId) async {
+    if (_isGuest) return GuestStore.instance.deleteTransaction(transactionId);
     final userId = requireUserId();
 
     await Supabase.instance.client
@@ -143,6 +152,9 @@ class SupabaseService {
     int transactionId,
     bool paused,
   ) async {
+    if (_isGuest) {
+      return GuestStore.instance.setTransactionPaused(transactionId, paused);
+    }
     final userId = requireUserId();
 
     final data = await Supabase.instance.client
@@ -167,6 +179,12 @@ class SupabaseService {
     int transactionId, {
     required bool closed,
   }) async {
+    if (_isGuest) {
+      return GuestStore.instance.setTransactionClosed(
+        transactionId,
+        closed: closed,
+      );
+    }
     final userId = requireUserId();
 
     final payload = <String, dynamic>{
@@ -187,6 +205,7 @@ class SupabaseService {
   /// recurring transactions. The manager screen joins these in-memory with
   /// the transaction list to compute the *real* next due date.
   static Future<List<RecurringEvent>> fetchRecurringEvents() async {
+    if (_isGuest) return GuestStore.instance.fetchRecurringEvents();
     final userId = requireUserId();
 
     final data = await Supabase.instance.client
@@ -207,6 +226,7 @@ class SupabaseService {
   static Future<RecurringEvent> insertRecurringEvent(
     RecurringEvent event,
   ) async {
+    if (_isGuest) return GuestStore.instance.insertRecurringEvent(event);
     final userId = requireUserId();
 
     final payload = event.toMap()..['user_id'] = userId;
@@ -226,6 +246,7 @@ class SupabaseService {
   /// Undoes a previously logged recurring event — used by the "Undo"
   /// affordance on the Mark Paid / Skip / Snooze confirmation snackbars.
   static Future<void> deleteRecurringEvent(int eventId) async {
+    if (_isGuest) return GuestStore.instance.deleteRecurringEvent(eventId);
     final userId = requireUserId();
 
     await Supabase.instance.client
@@ -251,6 +272,9 @@ class SupabaseService {
   static Future<List<Account>> fetchAccounts({
     bool includeArchived = false,
   }) async {
+    if (_isGuest) {
+      return GuestStore.instance.fetchAccounts(includeArchived: includeArchived);
+    }
     final userId = requireUserId();
 
     var query = Supabase.instance.client
@@ -270,6 +294,7 @@ class SupabaseService {
   }
 
   static Future<Account> insertAccount(Account account) async {
+    if (_isGuest) return GuestStore.instance.insertAccount(account);
     final userId = requireUserId();
 
     final payload = account.toMap()..['user_id'] = userId;
@@ -283,10 +308,11 @@ class SupabaseService {
   }
 
   static Future<Account> updateAccount(Account account) async {
-    final userId = requireUserId();
     if (account.id == null) {
       throw Exception('Cannot update an account without an id.');
     }
+    if (_isGuest) return GuestStore.instance.updateAccount(account);
+    final userId = requireUserId();
 
     final payload = account.toMap()
       ..remove('user_id')
@@ -306,7 +332,22 @@ class SupabaseService {
     return updateAccount(account.copyWith(isArchived: true));
   }
 
+  /// Hard delete — not exposed anywhere in the UI (soft-archive is the
+  /// user-facing path). Exists solely so [GuestMigrationService] can roll
+  /// back accounts it inserted this attempt if migration fails partway.
+  static Future<void> deleteAccount(int accountId) async {
+    if (_isGuest) return GuestStore.instance.deleteAccount(accountId);
+    final userId = requireUserId();
+
+    await Supabase.instance.client
+        .from('accounts')
+        .delete()
+        .eq('id', accountId)
+        .eq('user_id', userId);
+  }
+
   static Future<List<CategoryBudget>> fetchCategoryBudgets() async {
+    if (_isGuest) return GuestStore.instance.fetchCategoryBudgets();
     final userId = requireUserId();
 
     final data = await Supabase.instance.client
@@ -326,6 +367,7 @@ class SupabaseService {
   static Future<CategoryBudget> upsertCategoryBudget(
     CategoryBudget budget,
   ) async {
+    if (_isGuest) return GuestStore.instance.upsertCategoryBudget(budget);
     final userId = requireUserId();
 
     final payload = budget.toMap()
@@ -342,6 +384,7 @@ class SupabaseService {
   }
 
   static Future<void> deleteCategoryBudget(int budgetId) async {
+    if (_isGuest) return GuestStore.instance.deleteCategoryBudget(budgetId);
     final userId = requireUserId();
 
     await Supabase.instance.client
@@ -375,6 +418,7 @@ class SupabaseService {
   }
 
   static Future<UserSettings?> fetchUserSettings() async {
+    if (_isGuest) return GuestStore.instance.fetchUserSettings();
     final userId = requireUserId();
 
     final data = await Supabase.instance.client
@@ -396,6 +440,12 @@ class SupabaseService {
     String defaultCurrencyCode, {
     Map<String, dynamic>? preferences,
   }) async {
+    if (_isGuest) {
+      return GuestStore.instance.upsertUserSettings(
+        defaultCurrencyCode,
+        preferences: preferences,
+      );
+    }
     final userId = requireUserId();
 
     Map<String, dynamic> resolvedPrefs;
@@ -434,6 +484,7 @@ class SupabaseService {
   }
 
   static Future<List<ExpenseCategory>> fetchCategories() async {
+    if (_isGuest) return GuestStore.instance.fetchCategories();
     final userId = requireUserId();
 
     final data = await Supabase.instance.client
@@ -450,6 +501,7 @@ class SupabaseService {
 
   /// Inserts only default categories the user does not already have.
   static Future<List<ExpenseCategory>> ensureDefaultCategories() async {
+    if (_isGuest) return GuestStore.instance.ensureDefaultCategories();
     final userId = requireUserId();
 
     var existing = await fetchCategories();
@@ -483,6 +535,13 @@ class SupabaseService {
     required String iconKey,
     required int sortOrder,
   }) async {
+    if (_isGuest) {
+      return GuestStore.instance.insertCategory(
+        name: name,
+        iconKey: iconKey,
+        sortOrder: sortOrder,
+      );
+    }
     final userId = requireUserId();
 
     final data = await Supabase.instance.client
@@ -501,6 +560,7 @@ class SupabaseService {
   }
 
   static Future<void> deleteCategory(int categoryId) async {
+    if (_isGuest) return GuestStore.instance.deleteCategory(categoryId);
     final userId = requireUserId();
 
     await Supabase.instance.client
@@ -512,6 +572,7 @@ class SupabaseService {
   }
 
   static Future<List<IncomeCategory>> fetchIncomeCategories() async {
+    if (_isGuest) return GuestStore.instance.fetchIncomeCategories();
     final userId = requireUserId();
 
     final data = await Supabase.instance.client
@@ -527,6 +588,7 @@ class SupabaseService {
   }
 
   static Future<List<IncomeCategory>> ensureDefaultIncomeCategories() async {
+    if (_isGuest) return GuestStore.instance.ensureDefaultIncomeCategories();
     final userId = requireUserId();
 
     var existing = await fetchIncomeCategories();
@@ -560,6 +622,13 @@ class SupabaseService {
     required String iconKey,
     required int sortOrder,
   }) async {
+    if (_isGuest) {
+      return GuestStore.instance.insertIncomeCategory(
+        name: name,
+        iconKey: iconKey,
+        sortOrder: sortOrder,
+      );
+    }
     final userId = requireUserId();
 
     final data = await Supabase.instance.client
@@ -578,6 +647,7 @@ class SupabaseService {
   }
 
   static Future<void> deleteIncomeCategory(int categoryId) async {
+    if (_isGuest) return GuestStore.instance.deleteIncomeCategory(categoryId);
     final userId = requireUserId();
 
     await Supabase.instance.client
@@ -593,6 +663,7 @@ class SupabaseService {
   /// Help Center. Deletion order respects FKs: recurring_events →
   /// transactions → accounts, then the FK-free tables.
   static Future<void> resetUserData() async {
+    if (_isGuest) return GuestStore.instance.resetUserData();
     final userId = requireUserId();
     final client = Supabase.instance.client;
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:auth0_flutter/auth0_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/app_session.dart';
 import '../utils/app_config.dart';
@@ -13,10 +14,18 @@ class AuthService {
 
   static final AuthService instance = AuthService._();
 
+  static const _kIsGuestKey = 'guest.is_active';
+
   late final Auth0 _auth0;
   bool _initialized = false;
 
   final ValueNotifier<AppSession?> session = ValueNotifier<AppSession?>(null);
+
+  /// True while the user is using the app without an Auth0 session — all
+  /// data access routes to on-device storage instead of Supabase. Persisted
+  /// so it survives a process kill (checked by [SplashBootstrap] at cold
+  /// start, same as [session] is restored from Auth0's own credential store).
+  final ValueNotifier<bool> isGuest = ValueNotifier<bool>(false);
 
   Future<void> init() async {
     if (_initialized) return;
@@ -29,7 +38,29 @@ class AuthService {
     }
     _auth0 = Auth0(domain, clientId);
     _initialized = true;
+    await _loadGuestFlag();
     await refreshSession();
+  }
+
+  Future<void> _loadGuestFlag() async {
+    final prefs = await SharedPreferences.getInstance();
+    isGuest.value = prefs.getBool(_kIsGuestKey) ?? false;
+  }
+
+  /// Enters guest mode: no Auth0 session, all data local. Persisted so a
+  /// cold restart lands back in the app instead of at login.
+  Future<void> enterGuestMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kIsGuestKey, true);
+    isGuest.value = true;
+  }
+
+  /// Leaves guest mode without touching any locally stored guest data —
+  /// callers decide separately whether to keep, migrate, or discard it.
+  Future<void> exitGuestMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kIsGuestKey);
+    isGuest.value = false;
   }
 
   Auth0 get auth0 {

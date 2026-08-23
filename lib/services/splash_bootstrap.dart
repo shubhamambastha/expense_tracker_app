@@ -86,6 +86,12 @@ class SplashBootstrap {
   static const _syncTimeout = Duration(milliseconds: 2500);
   static const _kOnboardingCompleteKey = 'onboarding_complete';
 
+  /// [CategoryCatalog]/[IncomeCategoryCatalog].syncForUser take a userId
+  /// parameter that only ever gets forwarded to argument-less remote calls
+  /// (`SupabaseService.ensureDefaultCategories()`, etc.) — it's structurally
+  /// required but never actually read. Any non-empty placeholder is safe.
+  static const _guestSyncPlaceholder = 'guest';
+
   Future<SplashBootstrapResult> run({
     void Function(SplashBootstrapProgress progress)? onProgress,
     Duration syncTimeout = _syncTimeout,
@@ -101,6 +107,11 @@ class SplashBootstrap {
     await _ensureLocalStoresReady();
 
     if (session == null) {
+      if (AuthService.instance.isGuest.value) {
+        report(SplashBootstrapStep.checkingSync);
+        await _warmGuestData();
+        return const SplashBootstrapResult(destination: SplashDestination.dashboard);
+      }
       return SplashBootstrapResult(
         destination: await _resolveLoggedOutDestination(),
       );
@@ -153,6 +164,24 @@ class SplashBootstrap {
     } catch (error) {
       debugPrint('SplashBootstrap: sync deferred ($error)');
       return true;
+    }
+  }
+
+  /// Loads guest category/budget state from [GuestStore] (via the already
+  /// guest-branched [SupabaseService] methods). Unlike [_warmUserData] this
+  /// is purely local — no timeout needed, nothing can hang. `CurrencySettings`
+  /// and `SettingsPreferences` need no guest-specific call here: [load]
+  /// already restored them from their session-independent local cache, and
+  /// their remote-sync paths already no-op when there's no Auth0 session.
+  Future<void> _warmGuestData() async {
+    try {
+      await Future.wait([
+        CategoryCatalog.instance.syncForUser(_guestSyncPlaceholder),
+        IncomeCategoryCatalog.instance.syncForUser(_guestSyncPlaceholder),
+        CategoryBudgetService.instance.refresh(),
+      ]);
+    } catch (error) {
+      debugPrint('SplashBootstrap: guest warm-up failed ($error)');
     }
   }
 

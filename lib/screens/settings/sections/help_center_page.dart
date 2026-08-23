@@ -7,6 +7,7 @@ import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_tile.dart';
 import '../../../config/design_tokens.dart';
+import '../../../services/auth_service.dart';
 import '../../../services/category_catalog.dart';
 import '../../../services/income_category_catalog.dart';
 import '../../../services/supabase_service.dart';
@@ -115,7 +116,10 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
 
     setState(() => _resetting = true);
     try {
-      final userId = SupabaseService.requireUserId();
+      // Not requireUserId() — a guest has no Auth0 session, and
+      // resetUserData()/syncForUser() are already guest-branched, so any
+      // non-empty placeholder is fine here (see SupabaseService._isGuest).
+      final userId = AuthService.instance.currentSession?.userId ?? 'guest';
       await SupabaseService.resetUserData();
       await Future.wait([
         CategoryCatalog.instance.syncForUser(userId),

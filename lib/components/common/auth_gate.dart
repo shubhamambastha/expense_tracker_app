@@ -13,7 +13,16 @@ import '../../services/income_category_catalog.dart';
 import '../../services/currency_settings.dart';
 import '../../services/settings_preferences.dart';
 import '../../services/deep_link_service.dart';
+import '../../services/guest_migration_service.dart';
+import '../../services/guest_store.dart';
 import '../../services/splash_bootstrap.dart';
+import '../dialogs/confirm_guest_migration_dialog.dart';
+import '../../utils/snackbar_helper.dart';
+
+/// [CategoryCatalog]/[IncomeCategoryCatalog].syncForUser take a userId
+/// parameter that's structurally required but never actually read by the
+/// underlying argument-less remote calls — any non-empty placeholder works.
+const _kGuestSyncPlaceholder = 'guest';
 
 enum _AuthPhase { splash, login, app }
 
@@ -38,6 +47,7 @@ class _AuthGateState extends State<AuthGate> {
     super.initState();
     unawaited(DeepLinkService.instance.start());
     AuthService.instance.session.addListener(_onSessionChange);
+    AuthService.instance.isGuest.addListener(_onGuestChange);
     unawaited(_bootstrap());
   }
 
@@ -85,8 +95,14 @@ class _AuthGateState extends State<AuthGate> {
 
     setState(() => _phase = nextPhase);
 
-    if (result.userId != null) {
+    // A guest cold start also reaches `dashboard` but carries no userId
+    // (see SplashBootstrap._warmGuestData) — still capture pending deep
+    // links (e.g. the AddExpenseWidget launch intent) for them.
+    if (nextPhase == _AuthPhase.app) {
       unawaited(DeepLinkService.instance.captureLinks());
+    }
+
+    if (result.userId != null) {
       if (result.syncDeferred) {
         unawaited(SplashBootstrap.instance.completeDeferredSync(result.userId!));
       }
@@ -106,7 +122,56 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _handleSignedIn(String userId) async {
+    await _maybeOfferGuestMigration(userId);
     await _syncUserPreferences(userId);
+    if (!mounted || _phase == _AuthPhase.splash) return;
+    setState(() => _phase = _AuthPhase.app);
+    unawaited(DeepLinkService.instance.captureLinks());
+  }
+
+  /// Offers to import leftover local guest data the moment a real Auth0
+  /// session lands — runs before [_syncUserPreferences] so the account's
+  /// categories exist for name-matching during replay. A decline leaves
+  /// [GuestStore] untouched; the same import can be re-run later from
+  /// Settings (see `SettingsPage`'s guest-data section).
+  Future<void> _maybeOfferGuestMigration(String userId) async {
+    final hasData = await GuestStore.instance.hasMigratableData();
+    if (!hasData || !mounted) return;
+
+    final summary = await GuestMigrationService.instance.buildSummary();
+    if (!mounted) return;
+    final accepted = await showGuestMigrationDialog(context, summary: summary);
+    if (!accepted || !mounted) return;
+
+    final result = await GuestMigrationService.instance.migrate();
+    if (!mounted) return;
+    if (result.success) {
+      SnackbarHelper.showSuccess(
+        context,
+        'Imported ${summary.transactionCount} transactions from guest mode',
+      );
+    } else {
+      SnackbarHelper.showError(
+        context,
+        'Could not import your guest data — you can try again from Settings',
+      );
+    }
+  }
+
+  void _onGuestChange() {
+    if (_phase == _AuthPhase.splash) return;
+    if (AuthService.instance.isGuest.value) {
+      unawaited(_handleGuestEntry());
+    }
+  }
+
+  /// Warms the same category/budget singletons a real sign-in warms —
+  /// their remote calls are already guest-branched inside [SupabaseService],
+  /// so this reloads them from [GuestStore] instead of Supabase.
+  Future<void> _handleGuestEntry() async {
+    await CategoryCatalog.instance.syncForUser(_kGuestSyncPlaceholder);
+    await IncomeCategoryCatalog.instance.syncForUser(_kGuestSyncPlaceholder);
+    await CategoryBudgetService.instance.refresh();
     if (!mounted || _phase == _AuthPhase.splash) return;
     setState(() => _phase = _AuthPhase.app);
     unawaited(DeepLinkService.instance.captureLinks());
@@ -123,6 +188,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void dispose() {
     AuthService.instance.session.removeListener(_onSessionChange);
+    AuthService.instance.isGuest.removeListener(_onGuestChange);
     unawaited(DeepLinkService.instance.dispose());
     super.dispose();
   }
@@ -136,7 +202,14 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _signOut() async {
-    await AuthService.instance.logout();
+    if (AuthService.instance.isGuest.value) {
+      // No Auth0 session to close. GuestStore data is intentionally left
+      // untouched — re-entering guest mode later resumes where they left
+      // off, same as declining the migration offer does.
+      await AuthService.instance.exitGuestMode();
+    } else {
+      await AuthService.instance.logout();
+    }
     _clearUserScopedState();
     if (!mounted) return;
     setState(() => _phase = _AuthPhase.login);

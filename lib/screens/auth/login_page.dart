@@ -34,6 +34,15 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _continueAsGuest() async {
+    setState(() => _isLoading = true);
+    // AuthGate's isGuest listener takes it from here (warms local category
+    // state, then switches phases) — stay loading until this page is
+    // replaced. No try/catch needed: this only ever writes to
+    // SharedPreferences, nothing that can throw a user-facing error.
+    await AuthService.instance.enterGuestMode();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,6 +86,7 @@ class _LoginPageState extends State<LoginPage> {
                   LoginForm(
                     isLoading: _isLoading,
                     onSignIn: _signIn,
+                    onContinueAsGuest: _continueAsGuest,
                   )
                       .animate()
                       .fadeIn(
