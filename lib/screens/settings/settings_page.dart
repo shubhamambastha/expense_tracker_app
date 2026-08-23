@@ -33,7 +33,6 @@ import 'sections/notifications_page.dart';
 import 'sections/edit_profile_page.dart';
 import 'sections/help_center_page.dart';
 import 'sections/security_page.dart';
-import 'sections/support_and_feedback_page.dart';
 import '../../utils/profile_identity.dart';
 
 /// Premium Settings *hub*.
@@ -227,27 +226,11 @@ class SettingsPage extends StatelessWidget {
                       SettingsTile(
                         icon: Icons.help_outline_rounded,
                         title: 'Help Center',
+                        subtitle: 'Feedback, contact, offline mode, account tools',
                         onTap: () => _open(
                           context,
                           HelpCenterPage(onAccountReset: onAccountReset),
                         ),
-                      ),
-                      SettingsTile(
-                        icon: Icons.mail_outline_rounded,
-                        title: 'Contact Us',
-                        onTap: () => _stub(context, 'Contact Us'),
-                      ),
-                      SettingsTile(
-                        icon: Icons.star_outline_rounded,
-                        title: 'Rate the App',
-                        onTap: () => _stub(context, 'Rate the App'),
-                      ),
-                      SettingsTile(
-                        icon: Icons.support_agent_rounded,
-                        title: 'Support & Feedback',
-                        subtitle: 'Feedback, offline mode, delete account',
-                        onTap: () =>
-                            _open(context, const SupportAndFeedbackPage()),
                       ),
                     ],
                   ),
