@@ -158,15 +158,7 @@ class _AuthGateState extends State<AuthGate> {
               errorMessage: _splashErrorMessage ?? 'Unable to load app',
               onRetry: _bootstrap,
             ),
-          _AuthPhase.login => LoginPage(
-              key: const ValueKey('login'),
-              onSignedIn: () async {
-                final session = AuthService.instance.currentSession;
-                if (session != null) {
-                  await _handleSignedIn(session.userId);
-                }
-              },
-            ),
+          _AuthPhase.login => const LoginPage(key: ValueKey('login')),
           _AuthPhase.app => ExpenseHomePage(
               key: const ValueKey('app'),
               onSignOut: _signOut,

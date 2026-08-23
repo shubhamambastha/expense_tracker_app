@@ -9,12 +9,7 @@ import '../../utils/snackbar_helper.dart';
 
 /// Auth0 Universal Login screen.
 class LoginPage extends StatefulWidget {
-  const LoginPage({
-    super.key,
-    required this.onSignedIn,
-  });
-
-  final VoidCallback onSignedIn;
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -28,15 +23,14 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await AuthService.instance.login();
-      if (!mounted) return;
-      widget.onSignedIn();
+      // AuthGate's session listener takes it from here (syncs user data,
+      // then switches phases) — stay loading until this page is replaced.
     } on AuthLoginCancelledException {
-      // User closed the browser — no error snackbar.
+      if (mounted) setState(() => _isLoading = false);
     } catch (error) {
       if (!mounted) return;
       SnackbarHelper.showError(context, error);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
   }
 

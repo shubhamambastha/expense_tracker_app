@@ -67,8 +67,8 @@ class AuthService {
     }
   }
 
-  /// Android uses HTTPS app links; iOS/macOS default to custom URL scheme unless
-  /// [AppConfig.auth0UseHttps] is true and Associated Domains are configured.
+  /// Defaults to a custom URL scheme on every platform (no Android App Links /
+  /// iOS Universal Links verification needed) unless [AppConfig.auth0UseHttps] opts in.
   WebAuthentication _webAuthentication() {
     if (_useHttpsCallbacks) {
       return auth0.webAuthentication();
@@ -76,10 +76,7 @@ class AuthService {
     return auth0.webAuthentication(scheme: AppConfig.auth0CallbackScheme);
   }
 
-  bool get _useHttpsCallbacks {
-    if (AppConfig.auth0UseHttps) return true;
-    return defaultTargetPlatform == TargetPlatform.android;
-  }
+  bool get _useHttpsCallbacks => AppConfig.auth0UseHttps;
 
   /// Explicit redirect for iOS/macOS custom scheme (must match Auth0 dashboard + Info.plist).
   String? get _customSchemeRedirectUrl =>
