@@ -7,6 +7,7 @@ This reads the JSON file and runs `flutter` with `--dart-define=KEY=VALUE` for e
 Do NOT store real secrets in committed JSON files; use local copies ignored by git.
 """
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -32,9 +33,13 @@ for k, v in data.items():
 flutter_cmd = ["flutter", sys.argv[2]] + sys.argv[3:] + defines
 print('Running:', ' '.join(flutter_cmd))
 
+# Also export as env vars so android/app/build.gradle.kts (e.g. AUTH0_DOMAIN's
+# manifestPlaceholders lookup) can see them — Gradle isn't reachable via --dart-define.
+env = {**os.environ, **{k: str(v) for k, v in data.items()}}
+
 # Execute the flutter command
 try:
-    subprocess.check_call(flutter_cmd)
+    subprocess.check_call(flutter_cmd, env=env)
 except subprocess.CalledProcessError as e:
     print('Command failed with exit code', e.returncode)
     sys.exit(e.returncode)
