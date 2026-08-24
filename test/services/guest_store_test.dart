@@ -197,4 +197,15 @@ void main() {
       expect(all.single.name, 'Primary Checking');
     });
   });
+
+  group('GuestStore onboarding wizard flag', () {
+    test('defaults to not complete', () async {
+      expect(await GuestStore.instance.isOnboardingComplete(), isFalse);
+    });
+
+    test('setOnboardingComplete persists true', () async {
+      await GuestStore.instance.setOnboardingComplete();
+      expect(await GuestStore.instance.isOnboardingComplete(), isTrue);
+    });
+  });
 }

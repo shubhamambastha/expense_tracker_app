@@ -483,6 +483,32 @@ class SupabaseService {
     return UserSettings.fromMap(data);
   }
 
+  /// Timestamp the real account completed the post-login onboarding wizard,
+  /// or null if pending. Guest accounts never reach this — see
+  /// `OnboardingWizardStatus`, which branches to `GuestStore` instead.
+  static Future<DateTime?> fetchOnboardingCompletedAt() async {
+    final userId = requireUserId();
+    final data = await Supabase.instance.client
+        .from('user_settings')
+        .select('onboarding_completed_at')
+        .eq('user_id', userId)
+        .maybeSingle();
+    final raw = data?['onboarding_completed_at'];
+    return raw == null ? null : DateTime.parse(raw as String);
+  }
+
+  /// Marks the real account's onboarding wizard complete. Only ever touches
+  /// this one column — PostgREST upsert only sets columns present in the
+  /// payload, so this is safe from `SettingsPreferences`' broader
+  /// `preferences` sync (see docs/designs/post-login-onboarding.md, T5eng).
+  static Future<void> markOnboardingComplete() async {
+    final userId = requireUserId();
+    await Supabase.instance.client.from('user_settings').upsert({
+      'user_id': userId,
+      'onboarding_completed_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
   static Future<List<ExpenseCategory>> fetchCategories() async {
     if (_isGuest) return GuestStore.instance.fetchCategories();
     final userId = requireUserId();

@@ -4,6 +4,7 @@ class UserSettings {
     required this.defaultCurrencyCode,
     this.preferences = const {},
     this.updatedAt,
+    this.onboardingCompletedAt,
   });
 
   final String userId;
@@ -13,6 +14,12 @@ class UserSettings {
   final Map<String, dynamic> preferences;
 
   final DateTime? updatedAt;
+
+  /// When the post-login onboarding wizard was completed or skipped.
+  /// Null means onboarding is pending (shows the wizard) — see
+  /// `sql/20260824_onboarding_completed_at.sql` for the backfill that keeps
+  /// every pre-existing account out of the gate.
+  final DateTime? onboardingCompletedAt;
 
   factory UserSettings.fromMap(Map<String, dynamic> map) {
     final raw = map['preferences'];
@@ -28,6 +35,9 @@ class UserSettings {
       updatedAt: map['updated_at'] == null
           ? null
           : DateTime.parse(map['updated_at'] as String),
+      onboardingCompletedAt: map['onboarding_completed_at'] == null
+          ? null
+          : DateTime.parse(map['onboarding_completed_at'] as String),
     );
   }
 

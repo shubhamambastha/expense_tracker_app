@@ -267,6 +267,22 @@ class GuestStore {
     await _writeList(prefs, _kCategoryBudgets, items);
   }
 
+  // --- Onboarding wizard status (guest's own flag, deliberately separate
+  // from UserSettings.preferences — see docs/designs/post-login-onboarding.md,
+  // Open Question #2) ---
+
+  static const _kOnboardingComplete = 'guest.onboarding_complete';
+
+  Future<bool> isOnboardingComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kOnboardingComplete) ?? false;
+  }
+
+  Future<void> setOnboardingComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kOnboardingComplete, true);
+  }
+
   // --- User settings (single row, no server round trip) ---
 
   Future<UserSettings?> fetchUserSettings() async {

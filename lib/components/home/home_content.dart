@@ -74,7 +74,7 @@ class HomeContent extends StatelessWidget {
       accounts,
       transactions,
     );
-    final monthIncome = DashboardAggregations.monthIncome(
+    final monthIncome = DashboardAggregations.totalMonthIncome(
       transactions,
       now: now,
     );
@@ -158,7 +158,10 @@ class HomeContent extends StatelessWidget {
                   now: now,
                 ),
                 hasIncomeThisMonth:
-                    DashboardAggregations.monthIncome(transactions, now: now) >
+                    DashboardAggregations.totalMonthIncome(
+                      transactions,
+                      now: now,
+                    ) >
                     0,
               ),
               const SizedBox(height: AppSpacing.xxl),

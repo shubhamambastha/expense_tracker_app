@@ -3,11 +3,26 @@ import 'package:expense_tracker_app/models/transaction.dart';
 import 'package:expense_tracker_app/models/transaction_draft.dart';
 import 'package:expense_tracker_app/utils/dashboard_aggregations.dart';
 
-Transaction _income(double amount, DateTime date) => Transaction(
+Transaction _income(
+  double amount,
+  DateTime date, {
+  bool isRecurring = false,
+  bool isPaused = false,
+  DateTime? closedAt,
+  RecurrenceFrequency? recurrenceFrequency,
+  DateTime? recurrenceStartDate,
+  DateTime? recurrenceEndDate,
+}) => Transaction(
   amount: amount,
   counterpartyName: 'Salary',
   date: date,
   kind: TransactionKind.income,
+  isRecurring: isRecurring,
+  isPaused: isPaused,
+  closedAt: closedAt,
+  recurrenceFrequency: recurrenceFrequency,
+  recurrenceStartDate: recurrenceStartDate,
+  recurrenceEndDate: recurrenceEndDate,
 );
 
 Transaction _expense(
@@ -110,6 +125,108 @@ void main() {
           now: now,
         ),
         0,
+      );
+    });
+  });
+
+  group('monthIncome / monthlyRecurringIncomeTotal / totalMonthIncome', () {
+    test(
+      'CRITICAL REGRESSION: a recurring income transaction is not '
+      'double-counted in its own creation month',
+      () {
+        final now = DateTime(2027, 1, 15);
+        final transactions = [
+          _income(
+            5000,
+            DateTime(2027, 1, 1),
+            isRecurring: true,
+            recurrenceFrequency: RecurrenceFrequency.monthly,
+            recurrenceStartDate: DateTime(2027, 1, 1),
+          ),
+        ];
+
+        // monthIncome alone must exclude the recurring row entirely — it's
+        // accounted for by the projection instead.
+        expect(
+          DashboardAggregations.monthIncome(transactions, now: now),
+          0,
+        );
+        expect(
+          DashboardAggregations.monthlyRecurringIncomeTotal(
+            transactions,
+            now: now,
+          ),
+          5000,
+        );
+        // The combined figure every dashboard surface should use counts it
+        // exactly once.
+        expect(
+          DashboardAggregations.totalMonthIncome(transactions, now: now),
+          5000,
+        );
+      },
+    );
+
+    test('non-recurring income is counted normally, unaffected', () {
+      final now = DateTime(2027, 1, 15);
+      final transactions = [_income(1200, DateTime(2027, 1, 10))];
+      expect(
+        DashboardAggregations.monthIncome(transactions, now: now),
+        1200,
+      );
+      expect(
+        DashboardAggregations.monthlyRecurringIncomeTotal(
+          transactions,
+          now: now,
+        ),
+        0,
+      );
+      expect(
+        DashboardAggregations.totalMonthIncome(transactions, now: now),
+        1200,
+      );
+    });
+
+    test(
+      'recurring income still projects correctly in a later month, not '
+      'just the creation month',
+      () {
+        final createdIn = DateTime(2027, 1, 1);
+        final laterMonth = DateTime(2027, 3, 15);
+        final transactions = [
+          _income(
+            5000,
+            createdIn,
+            isRecurring: true,
+            recurrenceFrequency: RecurrenceFrequency.monthly,
+            recurrenceStartDate: createdIn,
+          ),
+        ];
+        expect(
+          DashboardAggregations.totalMonthIncome(
+            transactions,
+            now: laterMonth,
+          ),
+          5000,
+        );
+      },
+    );
+
+    test('mixed recurring + non-recurring income sums both, once each', () {
+      final now = DateTime(2027, 1, 15);
+      final transactions = [
+        _income(
+          5000,
+          DateTime(2027, 1, 1),
+          isRecurring: true,
+          recurrenceFrequency: RecurrenceFrequency.monthly,
+          recurrenceStartDate: DateTime(2027, 1, 1),
+        ),
+        _income(300, DateTime(2027, 1, 12)), // one-off freelance payment
+      ];
+      expect(
+        DashboardAggregations.totalMonthIncome(transactions, now: now),
+        5300,
       );
     });
   });

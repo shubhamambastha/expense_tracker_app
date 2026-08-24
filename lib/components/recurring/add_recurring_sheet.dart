@@ -44,7 +44,7 @@ Future<RecurringKind?> showAddRecurringSheet(BuildContext context) {
                   style: AppTextStyles.bodySmall,
                 ),
               ),
-              _AddRow(
+              RecurringKindRow(
                 icon: Icons.subscriptions_rounded,
                 tone: AppColors.secondary,
                 title: 'Add Subscription',
@@ -54,7 +54,7 @@ Future<RecurringKind?> showAddRecurringSheet(BuildContext context) {
                     Navigator.of(sheetContext).pop(RecurringKind.subscription),
               ),
               const SizedBox(height: AppSpacing.sm),
-              _AddRow(
+              RecurringKindRow(
                 icon: Icons.receipt_long_rounded,
                 tone: AppColors.warning,
                 title: 'Add EMI',
@@ -64,7 +64,7 @@ Future<RecurringKind?> showAddRecurringSheet(BuildContext context) {
                     Navigator.of(sheetContext).pop(RecurringKind.emi),
               ),
               const SizedBox(height: AppSpacing.sm),
-              _AddRow(
+              RecurringKindRow(
                 icon: Icons.autorenew_rounded,
                 tone: AppColors.primary,
                 title: 'Add Recurring Expense',
@@ -106,8 +106,9 @@ void applyDraftFor(TransactionDraft draft, RecurringKind kind) {
   }
 }
 
-class _AddRow extends StatelessWidget {
-  const _AddRow({
+class RecurringKindRow extends StatelessWidget {
+  const RecurringKindRow({
+    super.key,
     required this.icon,
     required this.tone,
     required this.title,

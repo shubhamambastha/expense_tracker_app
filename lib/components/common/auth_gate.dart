@@ -6,16 +6,19 @@ import '../../config/design_tokens.dart';
 import '../../screens/auth/login_page.dart';
 import '../../screens/auth/splash_screen.dart';
 import '../../screens/home/expense_home_page.dart';
+import '../../screens/onboarding/onboarding_wizard_page.dart';
 import '../../services/auth_service.dart';
 import '../../services/category_budget_service.dart';
 import '../../services/category_catalog.dart';
 import '../../services/income_category_catalog.dart';
 import '../../services/currency_settings.dart';
+import '../../services/onboarding_wizard_status.dart';
 import '../../services/settings_preferences.dart';
 import '../../services/deep_link_service.dart';
 import '../../services/guest_migration_service.dart';
 import '../../services/guest_store.dart';
 import '../../services/splash_bootstrap.dart';
+import '../../services/supabase_service.dart';
 import '../dialogs/confirm_guest_migration_dialog.dart';
 import '../../utils/snackbar_helper.dart';
 
@@ -24,7 +27,7 @@ import '../../utils/snackbar_helper.dart';
 /// underlying argument-less remote calls — any non-empty placeholder works.
 const _kGuestSyncPlaceholder = 'guest';
 
-enum _AuthPhase { splash, login, app }
+enum _AuthPhase { splash, login, onboarding, app }
 
 /// Root gate: splash while restoring session, login when signed out, app when
 /// signed in. Nothing else is reachable without a valid session.
@@ -37,6 +40,13 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   _AuthPhase _phase = _AuthPhase.splash;
+
+  /// Guards `_handleSignedIn`/`_handleGuestEntry` against re-entrant calls.
+  /// Both were fast enough that this never mattered before the onboarding
+  /// wizard existed; a wizard can run for minutes, so a second session-change
+  /// notification mid-wizard (e.g. an Auth0 silent token refresh) must not
+  /// re-run migration-offer/sync concurrently with the wizard in flight.
+  bool _handlingAuthTransition = false;
 
   SplashUiState _splashUiState = SplashUiState.loading;
   String _splashStatusMessage = SplashBootstrapStep.restoringSession.statusMessage;
@@ -87,11 +97,22 @@ class _AuthGateState extends State<AuthGate> {
       // Biometric gate will live between splash and app in a later iteration.
     }
 
-    final nextPhase = switch (result.destination) {
+    var nextPhase = switch (result.destination) {
       SplashDestination.dashboard => _AuthPhase.app,
       SplashDestination.authentication => _AuthPhase.login,
       SplashDestination.onboarding => _AuthPhase.login,
     };
+
+    // A cold start with an already-valid session (real or guest) reaches
+    // `dashboard` directly here, bypassing `_handleSignedIn`/
+    // `_handleGuestEntry` — the only other places that check onboarding
+    // status. Check here too, or a user who never finished the wizard would
+    // silently skip it on every subsequent app open.
+    if (nextPhase == _AuthPhase.app &&
+        !await OnboardingWizardStatus.instance.isComplete()) {
+      nextPhase = _AuthPhase.onboarding;
+    }
+    if (!mounted) return;
 
     setState(() => _phase = nextPhase);
 
@@ -122,9 +143,29 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _handleSignedIn(String userId) async {
-    await _maybeOfferGuestMigration(userId);
-    await _syncUserPreferences(userId);
-    if (!mounted || _phase == _AuthPhase.splash) return;
+    if (_handlingAuthTransition) return;
+    _handlingAuthTransition = true;
+    try {
+      await _maybeOfferGuestMigration(userId);
+      await _syncUserPreferences(userId);
+      if (!mounted || _phase == _AuthPhase.splash) return;
+      final complete = await OnboardingWizardStatus.instance.isComplete();
+      if (!mounted || _phase == _AuthPhase.splash) return;
+      if (!complete) {
+        setState(() => _phase = _AuthPhase.onboarding);
+        return;
+      }
+      setState(() => _phase = _AuthPhase.app);
+      unawaited(DeepLinkService.instance.captureLinks());
+    } finally {
+      _handlingAuthTransition = false;
+    }
+  }
+
+  /// Called by [OnboardingWizardPage] when the user finishes or skips the
+  /// wizard entirely.
+  void _handleOnboardingComplete() {
+    if (!mounted) return;
     setState(() => _phase = _AuthPhase.app);
     unawaited(DeepLinkService.instance.captureLinks());
   }
@@ -146,6 +187,13 @@ class _AuthGateState extends State<AuthGate> {
     final result = await GuestMigrationService.instance.migrate();
     if (!mounted) return;
     if (result.success) {
+      // Carry the guest's onboarding-complete flag over explicitly — a
+      // single scoped column write, not a change to GuestMigrationService's
+      // broader "exclude preferences" policy (see Open Question #2).
+      if (await GuestStore.instance.isOnboardingComplete()) {
+        unawaited(SupabaseService.markOnboardingComplete());
+      }
+      if (!mounted) return;
       SnackbarHelper.showSuccess(
         context,
         'Imported ${summary.transactionCount} transactions from guest mode',
@@ -169,12 +217,24 @@ class _AuthGateState extends State<AuthGate> {
   /// their remote calls are already guest-branched inside [SupabaseService],
   /// so this reloads them from [GuestStore] instead of Supabase.
   Future<void> _handleGuestEntry() async {
-    await CategoryCatalog.instance.syncForUser(_kGuestSyncPlaceholder);
-    await IncomeCategoryCatalog.instance.syncForUser(_kGuestSyncPlaceholder);
-    await CategoryBudgetService.instance.refresh();
-    if (!mounted || _phase == _AuthPhase.splash) return;
-    setState(() => _phase = _AuthPhase.app);
-    unawaited(DeepLinkService.instance.captureLinks());
+    if (_handlingAuthTransition) return;
+    _handlingAuthTransition = true;
+    try {
+      await CategoryCatalog.instance.syncForUser(_kGuestSyncPlaceholder);
+      await IncomeCategoryCatalog.instance.syncForUser(_kGuestSyncPlaceholder);
+      await CategoryBudgetService.instance.refresh();
+      if (!mounted || _phase == _AuthPhase.splash) return;
+      final complete = await OnboardingWizardStatus.instance.isComplete();
+      if (!mounted || _phase == _AuthPhase.splash) return;
+      if (!complete) {
+        setState(() => _phase = _AuthPhase.onboarding);
+        return;
+      }
+      setState(() => _phase = _AuthPhase.app);
+      unawaited(DeepLinkService.instance.captureLinks());
+    } finally {
+      _handlingAuthTransition = false;
+    }
   }
 
   void _clearUserScopedState() {
@@ -232,6 +292,10 @@ class _AuthGateState extends State<AuthGate> {
               onRetry: _bootstrap,
             ),
           _AuthPhase.login => const LoginPage(key: ValueKey('login')),
+          _AuthPhase.onboarding => OnboardingWizardPage(
+              key: const ValueKey('onboarding'),
+              onComplete: _handleOnboardingComplete,
+            ),
           _AuthPhase.app => ExpenseHomePage(
               key: const ValueKey('app'),
               onSignOut: _signOut,

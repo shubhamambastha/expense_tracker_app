@@ -20,6 +20,7 @@ import '../../services/category_budget_service.dart';
 import '../../services/income_category_catalog.dart';
 import '../../services/settings_preferences.dart';
 import '../../services/app_launch_intent.dart';
+import '../../utils/dashboard_aggregations.dart';
 import '../../services/deep_link_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/supabase_service.dart';
@@ -675,15 +676,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   /// Sums the current calendar-month income — fed to the manager's Payment
   /// Insights section so it can render the "EMIs consume X% of income" line.
   double? _currentMonthIncome() {
-    final now = DateTime.now();
-    final total = _transactions
-        .where(
-          (t) =>
-              t.isIncome &&
-              t.date.year == now.year &&
-              t.date.month == now.month,
-        )
-        .fold<double>(0, (sum, t) => sum + t.amount);
+    final total = DashboardAggregations.totalMonthIncome(_transactions);
     return total > 0 ? total : null;
   }
 

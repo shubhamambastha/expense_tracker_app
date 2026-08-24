@@ -58,15 +58,61 @@ class DashboardAggregations {
         .fold<double>(0.0, (sum, t) => sum + t.amount);
   }
 
-  /// Sum of income transactions in `now`'s current month.
+  /// Sum of non-recurring income transactions in `now`'s current month.
+  /// Excludes recurring income templates (e.g. a wizard-created Salary
+  /// entry) — those are counted separately via [monthlyRecurringIncomeTotal]
+  /// so a recurring transaction isn't summed twice: once here by literal
+  /// date match, once by the monthly projection. Mirrors
+  /// [discretionaryMonthSpend]'s exclusion on the expense side.
   static double monthIncome(
     List<Transaction> transactions, {
     DateTime? now,
   }) {
     final clock = now ?? DateTime.now();
     return transactions
-        .where((t) => t.isIncome && _isSameMonth(t.date, clock))
+        .where(
+          (t) => t.isIncome && _isSameMonth(t.date, clock) && !t.isRecurring,
+        )
         .fold<double>(0.0, (sum, t) => sum + t.amount);
+  }
+
+  /// True when a recurring income schedule is active at any point during
+  /// the month spanning [monthStart]..[monthEnd] (not paused, not closed,
+  /// started on/before the month ends, and hasn't ended before it starts).
+  /// Mirrors [_isActiveRecurringExpenseInMonth] on the income side.
+  static bool _isActiveRecurringIncomeInMonth(
+    Transaction t,
+    DateTime monthStart,
+    DateTime monthEnd,
+  ) {
+    if (!t.isRecurring || !t.isIncome || t.isPaused || t.isClosed) {
+      return false;
+    }
+    final start = t.recurrenceStartDate ?? t.date;
+    if (start.isAfter(monthEnd)) return false;
+    final end = t.recurrenceEndDate;
+    if (end != null && end.isBefore(monthStart)) return false;
+    return true;
+  }
+
+  /// Projected total of active recurring income (e.g. a declared monthly
+  /// salary) for `now`'s calendar month, normalised to a monthly figure
+  /// regardless of each schedule's actual frequency. Mirrors
+  /// [monthlyRecurringExpenseTotal] on the income side — sum this alongside
+  /// [monthIncome] for the full Income figure, never double-counted since
+  /// [monthIncome] excludes recurring rows.
+  static double monthlyRecurringIncomeTotal(
+    List<Transaction> transactions, {
+    DateTime? now,
+  }) {
+    final clock = now ?? DateTime.now();
+    final monthStart = DateTime(clock.year, clock.month, 1);
+    final monthEnd = DateTime(clock.year, clock.month + 1, 0);
+    return transactions
+        .where(
+          (t) => _isActiveRecurringIncomeInMonth(t, monthStart, monthEnd),
+        )
+        .fold<double>(0.0, (sum, t) => sum + monthlyEquivalent(t));
   }
 
   /// Sum of expense transactions for `categoryName` in the current month
@@ -146,6 +192,20 @@ class DashboardAggregations {
         .fold<double>(0.0, (sum, t) => sum + t.amount);
   }
 
+  /// Full Income figure for `now`'s month: non-recurring income transactions
+  /// plus the projected total of active recurring income (e.g. a declared
+  /// salary) — the composition every dashboard-facing income figure should
+  /// use, never [monthIncome] alone (which deliberately excludes recurring
+  /// rows to avoid double-counting them against this projection).
+  static double totalMonthIncome(
+    List<Transaction> transactions, {
+    DateTime? now,
+  }) {
+    final clock = now ?? DateTime.now();
+    return monthIncome(transactions, now: clock) +
+        monthlyRecurringIncomeTotal(transactions, now: clock);
+  }
+
   /// "How much can I spend today" — this month's discretionary budget
   /// (income minus active recurring commitments) accrued day by day through
   /// the month, minus non-recurring spending so far. Resets each calendar
@@ -155,7 +215,7 @@ class DashboardAggregations {
     DateTime? now,
   }) {
     final clock = now ?? DateTime.now();
-    final income = monthIncome(transactions, now: clock);
+    final income = totalMonthIncome(transactions, now: clock);
     final recurring = monthlyRecurringExpenseTotal(transactions, now: clock);
     final monthlyDiscretionary = income - recurring;
 

@@ -13,6 +13,14 @@ class FeatureFlags {
   /// switch, not a gradual rollout gate.
   static const bool guestModeEnabled = true;
 
+  /// When false, `AuthGate` skips the post-login onboarding wizard entirely
+  /// (every user goes straight to the dashboard, same as before this
+  /// feature existed). Gating guest-mode entry with the wizard is
+  /// unresolved risk per docs/designs/post-login-onboarding.md — this flag
+  /// is the clean disable path if that risk materializes, without a code
+  /// revert + new release.
+  static const bool postLoginOnboardingEnabled = true;
+
   static List<TransactionKind> get selectableTransactionKinds {
     if (transferVisible) return TransactionKind.values;
     return const [TransactionKind.expense, TransactionKind.income];
