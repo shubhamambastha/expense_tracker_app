@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
-import '../../models/expense.dart';
+import '../../models/expense.dart' show AccountType, AccountTypeLabel;
 
 /// Shared bottom-sheet pickers and small row widgets used across Settings
 /// sub-screens. Extracted out of `SettingsPage` so each sub-screen can pick

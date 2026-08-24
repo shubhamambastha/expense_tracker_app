@@ -4,22 +4,42 @@ import '../../../components/settings/currency_picker_sheet.dart';
 import '../../../components/settings/settings_picker_helpers.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
-import '../../../components/settings/settings_switch_tile.dart';
 import '../../../components/settings/settings_tile.dart';
 import '../../../config/design_tokens.dart';
 import '../../../models/account.dart';
-import '../../../models/expense.dart';
+import '../../../models/expense.dart' show AccountTypeLabel;
+import '../../../services/category_catalog.dart';
 import '../../../services/currency_settings.dart';
+import '../../../services/income_category_catalog.dart';
 import '../../../services/settings_preferences.dart';
-import '../../../utils/timezone_options.dart';
+import 'appearance_page.dart';
+import 'categories_page.dart';
 
-/// Dedicated screen for "Financial Preferences" — the subset of settings that
-/// affect how transactions are interpreted, which currency is used for
-/// roll-ups, and which defaults pre-populate the Add Transaction form.
-class FinancialPreferencesPage extends StatelessWidget {
-  const FinancialPreferencesPage({super.key, required this.accounts});
+/// Thin hub for everything about your money — currency, appearance,
+/// accounts, categories, recurring payments, and a shortcut to Budgets.
+///
+/// Deliberately a navigation hub, not an inline mega-page: rows push to
+/// the existing unchanged subpages (Appearance, Categories) or call the
+/// existing shared callbacks (Accounts & Cards, Recurring Payments) — the
+/// same pattern the top-level Settings hub already uses. Only Base
+/// Currency and Default Expense Account render inline, since they're each
+/// a single row, not a whole subpage's worth of content.
+class MoneyPage extends StatelessWidget {
+  const MoneyPage({
+    super.key,
+    required this.accounts,
+    required this.onManageAccounts,
+    required this.onOpenRecurringManager,
+    required this.onOpenBudgets,
+  });
 
   final List<Account> accounts;
+  final VoidCallback onManageAccounts;
+  final VoidCallback onOpenRecurringManager;
+
+  /// Leaves the Settings tab entirely and switches to the Budgets tab —
+  /// Budgets is a sibling primary tab, not a Settings subpage.
+  final VoidCallback onOpenBudgets;
 
   @override
   Widget build(BuildContext context) {
@@ -27,17 +47,15 @@ class FinancialPreferencesPage extends StatelessWidget {
       listenable: Listenable.merge([
         CurrencySettings.instance,
         SettingsPreferences.instance,
+        CategoryCatalog.instance,
+        IncomeCategoryCatalog.instance,
       ]),
       builder: (context, _) {
         final currency = CurrencySettings.instance;
         final prefs = SettingsPreferences.instance;
-        final deviceTz = DateTime.now().timeZoneName;
 
         return SettingsSubpageScaffold(
-          title: 'Financial Preferences',
-          subtitle:
-              'Currency and the defaults the app uses when you add a new '
-              'transaction.',
+          title: 'Money',
           children: [
             SettingsSection(
               title: 'Currency',
@@ -49,80 +67,71 @@ class FinancialPreferencesPage extends StatelessWidget {
                   valueLabel: currency.currencyCode,
                   onTap: () => showCurrencyPickerSheet(context),
                 ),
-                SettingsSwitchTile(
-                  icon: Icons.swap_horiz_rounded,
-                  title: 'Multi-Currency',
-                  subtitle: 'Track foreign currencies on individual entries',
-                  value: prefs.multiCurrencyEnabled,
-                  onChanged: prefs.setMultiCurrencyEnabled,
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SettingsSection(
+              title: 'Appearance',
+              children: [
+                SettingsTile(
+                  icon: Icons.dark_mode_rounded,
+                  title: 'Appearance',
+                  valueLabel: prefs.themeMode == ThemeMode.light
+                      ? 'Light'
+                      : 'Dark',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AppearancePage(),
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
             SettingsSection(
-              title: 'Defaults',
+              title: 'Data',
               children: [
                 SettingsTile(
                   icon: Icons.outbox_rounded,
                   title: 'Default Expense Account',
-                  subtitle: 'Preselected for new expenses',
+                  subtitle: 'Shown as your default in Accounts & Cards',
                   valueLabel:
                       _accountNameForId(prefs.defaultExpenseAccountId) ??
                       'Auto',
-                  onTap: () => _pickDefaultAccount(
-                    context,
-                    currentId: prefs.defaultExpenseAccountId,
-                    onPicked: prefs.setDefaultExpenseAccountId,
-                    title: 'Default expense account',
+                  onTap: () => _pickDefaultExpenseAccount(context, prefs),
+                ),
+                SettingsTile(
+                  icon: Icons.account_balance_wallet_rounded,
+                  title: 'Accounts & Cards',
+                  valueLabel: _accountsSummary(),
+                  onTap: onManageAccounts,
+                ),
+                SettingsTile(
+                  icon: Icons.category_rounded,
+                  title: 'Categories',
+                  valueLabel: _categoriesSummary(),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const CategoriesPage(),
+                    ),
                   ),
                 ),
                 SettingsTile(
-                  icon: Icons.inbox_rounded,
-                  title: 'Default Income Account',
-                  subtitle: 'Preselected for new income',
-                  valueLabel:
-                      _accountNameForId(prefs.defaultIncomeAccountId) ?? 'Auto',
-                  onTap: () => _pickDefaultAccount(
-                    context,
-                    currentId: prefs.defaultIncomeAccountId,
-                    onPicked: prefs.setDefaultIncomeAccountId,
-                    title: 'Default income account',
-                  ),
-                ),
-                SettingsTile(
-                  icon: Icons.compare_arrows_rounded,
-                  title: 'Default Transaction Type',
-                  subtitle: 'Starting tab on Add Transaction',
-                  valueLabel: prefs.defaultTransactionType.label,
-                  onTap: () => _pickDefaultTransactionType(context, prefs),
+                  icon: Icons.autorenew_rounded,
+                  title: 'Recurring Payments',
+                  onTap: onOpenRecurringManager,
                 ),
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
             SettingsSection(
-              title: 'Localization',
-              footnote: 'Used to group activity by day across the app.',
+              title: 'Budgets',
               children: [
                 SettingsTile(
-                  icon: Icons.schedule_rounded,
-                  title: 'Timezone',
-                  subtitle: 'Reminders, recurring payments & analytics',
-                  valueLabel: TimezoneOptions.labelFor(
-                    prefs.timezoneId,
-                    deviceLabel: deviceTz,
-                  ),
-                  onTap: () => showSettingsOptionSheet<String>(
-                    context: context,
-                    title: 'Timezone',
-                    subtitle: 'Used when grouping activity by day.',
-                    current: prefs.timezoneId,
-                    options: TimezoneOptions.all(
-                      deviceLabel: deviceTz,
-                    ).map((o) => o.id).toList(),
-                    labelFor: (id) =>
-                        TimezoneOptions.labelFor(id, deviceLabel: deviceTz),
-                    onPicked: prefs.setTimezoneId,
-                  ),
+                  icon: Icons.donut_small_rounded,
+                  title: 'Open Budgets',
+                  subtitle: 'Switches to the Budgets tab',
+                  onTap: onOpenBudgets,
                 ),
               ],
             ),
@@ -132,25 +141,10 @@ class FinancialPreferencesPage extends StatelessWidget {
     );
   }
 
-  Future<void> _pickDefaultTransactionType(
+  Future<void> _pickDefaultExpenseAccount(
     BuildContext context,
     SettingsPreferences prefs,
-  ) => showSettingsOptionSheet<DefaultTransactionType>(
-    context: context,
-    title: 'Default transaction type',
-    subtitle: 'The Add Transaction screen will open on this tab.',
-    current: prefs.defaultTransactionType,
-    options: DefaultTransactionType.values,
-    labelFor: (v) => v.label,
-    onPicked: prefs.setDefaultTransactionType,
-  );
-
-  Future<void> _pickDefaultAccount(
-    BuildContext context, {
-    required int? currentId,
-    required String title,
-    required Future<void> Function(int?) onPicked,
-  }) async {
+  ) async {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -173,14 +167,17 @@ class FinancialPreferencesPage extends StatelessWidget {
                     AppSpacing.xl,
                     AppSpacing.sm,
                   ),
-                  child: Text(title, style: AppTextStyles.headingSmall),
+                  child: Text(
+                    'Default expense account',
+                    style: AppTextStyles.headingSmall,
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.xl,
                   ),
                   child: Text(
-                    'Preselected when you open Add Transaction.',
+                    'Shown as your default account in Accounts & Cards.',
                     style: AppTextStyles.caption,
                   ),
                 ),
@@ -198,10 +195,10 @@ class FinancialPreferencesPage extends StatelessWidget {
                       SettingsAccountPickerRow(
                         title: 'Auto',
                         subtitle: 'Use the most recently used account',
-                        selected: currentId == null,
+                        selected: prefs.defaultExpenseAccountId == null,
                         icon: Icons.auto_awesome_rounded,
                         onTap: () async {
-                          await onPicked(null);
+                          await prefs.setDefaultExpenseAccountId(null);
                           if (!sheetContext.mounted) return;
                           Navigator.of(sheetContext).pop();
                         },
@@ -225,10 +222,13 @@ class FinancialPreferencesPage extends StatelessWidget {
                             child: SettingsAccountPickerRow(
                               title: account.name,
                               subtitle: account.type.label,
-                              selected: currentId == account.id,
+                              selected:
+                                  prefs.defaultExpenseAccountId == account.id,
                               icon: iconForAccountType(account.type),
                               onTap: () async {
-                                await onPicked(account.id);
+                                await prefs.setDefaultExpenseAccountId(
+                                  account.id,
+                                );
                                 if (!sheetContext.mounted) return;
                                 Navigator.of(sheetContext).pop();
                               },
@@ -252,5 +252,21 @@ class FinancialPreferencesPage extends StatelessWidget {
       if (a.id == id) return a.name;
     }
     return null;
+  }
+
+  String _accountsSummary() {
+    final total = accounts.length;
+    if (total == 0) return 'None yet';
+    if (total == 1) return '1 linked';
+    return '$total linked';
+  }
+
+  String _categoriesSummary() {
+    final total =
+        CategoryCatalog.instance.categories.length +
+        IncomeCategoryCatalog.instance.categories.length;
+    if (total == 0) return 'None yet';
+    if (total == 1) return '1 label';
+    return '$total labels';
   }
 }

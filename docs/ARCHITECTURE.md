@@ -18,7 +18,7 @@ flowchart TD
   gate --> splash[SplashScreen + SplashBootstrap]
   gate --> login[LoginPage via Auth0]
   gate --> home[ExpenseHomePage tab shell]
-  home --> tabs[Home · Transactions · Analytics · Settings]
+  home --> tabs[Home · Transactions · Analytics · Budgets · Settings]
   home --> push[Push routes: add transaction, accounts, recurring]
   services[Services layer] --> supa[SupabaseService]
   services --> auth[AuthService]
@@ -77,7 +77,7 @@ There is no named router (`go_router` / routes table). Navigation uses two patte
 
 ### Tab shell (`ExpenseHomePage`)
 
-Five bottom slots: **Home (0) · Transactions (1) · + FAB (2) · Analytics (3) · Settings (4)**. Tab bodies swap via `AnimatedSwitcher`. The centre FAB opens `AddTransactionPage`.
+Five bottom-nav tabs: **Home (0) · Transactions (1) · Analytics (2) · Budgets (3) · Settings (4)**, plus a centre FAB (not a tab index) that opens `AddTransactionPage`. Tab bodies swap via `AnimatedSwitcher`.
 
 Tab content is composed inline:
 
@@ -85,7 +85,8 @@ Tab content is composed inline:
 | --- | --- | --- |
 | 0 | Dashboard | `components/home/home_content.dart` |
 | 1 | Transaction list | `components/home/transactions_content.dart` |
-| 3 | Analytics | `screens/analytics/analytics_page.dart` |
+| 2 | Analytics | `screens/analytics/analytics_page.dart` |
+| 3 | Budgets | `screens/settings/sections/budgets_and_spending_page.dart` (`BudgetsAndSpendingContent` — filed under `settings/` despite being a primary tab, not a Settings subpage) |
 | 4 | Settings hub | `screens/settings/settings_page.dart` |
 
 ### Push routes

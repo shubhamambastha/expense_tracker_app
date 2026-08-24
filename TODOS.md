@@ -2,6 +2,32 @@
 
 ## Review
 
+### Swap the Delete Account placeholder support email before release
+
+**What:** `AppInfo.supportEmail` (or wherever T2 lands it) ships as an obviously-fake placeholder (`support@REPLACE-ME.com`) — swap it for the real founder support address before any release build.
+
+**Why:** No mechanism in the repo today (no CI grep, no lint rule) stops a build from shipping with the placeholder still in place — confirmed nothing named `REPLACE-ME` exists anywhere in the tree yet, so this is genuinely untracked once this PR lands. This is also the exact mailto: flow `docs/BACKLOG.md`'s "Delete my account" entry flags as relevant to Apple App Store Guideline 5.1.1(v) if this app is ever submitted — a broken/fake destination address on that specific flow is worse than most placeholders.
+
+**Context:** Surfaced by `/plan-eng-review`'s outside-voice pass (2026-08-24) on the Settings IA rebuild. Considered adding an automated CI guard for this instead of a TODO — deliberately chose the lighter, human-tracked option since this is a solo-founder pre-scale app and a CI step felt like more process than the risk currently warrants.
+
+**Effort:** S
+**Priority:** P1 (blocks any real release, not blocks-this-PR)
+**Depends on:** T2 (Delete Account mailto: implementation) landing first.
+
+---
+
+### Settings screens widget test coverage
+
+**What:** Widget tests for the rebuilt Settings pages (Profile, Money, Data & Privacy, Support) and specifically the new mailto: deletion-request error path (no mail client installed → `SnackbarHelper.showError`).
+
+**Why:** Zero widget tests exist for any Settings screen today (confirmed — `test/` has no references to any settings page). The `/plan-ceo-review` Settings IA rebuild (2026-08-24) touched every settings file and is a natural moment to have flagged this, but building the suite itself was explicitly deferred to keep that change focused. Matches the general test-coverage gap already tracked in `docs/BACKLOG.md`, scoped specifically to Settings here.
+
+**Effort:** L
+**Priority:** P3
+**Depends on:** None — unblocked, can start anytime.
+
+---
+
 ### Revive counterparties table + SourcePayerField autofill
 
 **What:** Wire the `counterparties` table and `SourcePayerField` component into the merchant field for autofill/recent-payer suggestions.

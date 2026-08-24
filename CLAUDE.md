@@ -46,7 +46,7 @@ There is no named router and no bundled `.env` — secrets are compile-time `--d
 
 ## Where things live
 
-- `lib/screens/home/expense_home_page.dart` — the tab shell (Home · Transactions · + FAB · Analytics · Settings) and the owner of most in-memory transaction/account state.
+- `lib/screens/home/expense_home_page.dart` — the tab shell (Home · Transactions · Analytics · Budgets · Settings, plus a centre FAB for Add Transaction) and the owner of most in-memory transaction/account state.
 - `lib/services/supabase_service.dart` — all Postgres CRUD.
 - `lib/services/auth_service.dart` + `components/common/auth_gate.dart` — Auth0 session and splash→login→app routing.
 - `sql/` — dated Supabase migration files (manually applied; see [docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md)).

@@ -1,47 +1,28 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:share_plus/share_plus.dart';
 
-import '../../components/common/states/states.dart';
 import '../../components/dialogs/add_account_dialog.dart';
-import '../../components/settings/currency_picker_sheet.dart';
 import '../../components/settings/profile_header_card.dart';
 import '../../components/settings/settings_danger_section.dart';
-import '../../components/settings/settings_guest_data_section.dart';
-import '../../components/settings/settings_info_tile.dart';
 import '../../components/settings/settings_section.dart';
 import '../../components/settings/settings_tile.dart';
+import '../../config/app_info.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
-import '../../models/category_budget.dart';
-import '../../models/transaction.dart';
-import '../../services/category_catalog.dart';
-import '../../services/income_category_catalog.dart';
-import '../../services/currency_settings.dart';
 import '../../services/settings_preferences.dart';
-import '../../services/supabase_service.dart';
-import '../../utils/data_export.dart';
-import '../../utils/snackbar_helper.dart';
 import 'sections/about_page.dart';
-import 'sections/appearance_page.dart';
-import 'sections/categories_page.dart';
-import 'sections/ai_assistant_page.dart';
-import 'sections/app_preferences_page.dart';
-import 'sections/financial_preferences_page.dart';
-import 'sections/notifications_page.dart';
+import 'sections/data_privacy_page.dart';
 import 'sections/edit_profile_page.dart';
 import 'sections/help_center_page.dart';
-import 'sections/security_page.dart';
+import 'sections/money_page.dart';
 import '../../utils/profile_identity.dart';
 
 /// Premium Settings *hub*.
 ///
-/// Renders the profile header, grouped section cards (Preferences / Data /
-/// Security / Support / About), and the destructive Sign Out row. Each
-/// entry pushes a dedicated sub-screen so the surface area stays calm and
-/// users scroll for context, not content.
+/// Renders the profile header, grouped section cards (Money / Data &
+/// Privacy / Support), and the destructive Sign Out row. Each entry pushes
+/// a dedicated sub-screen so the surface area stays calm and users scroll
+/// for context, not content.
 ///
 /// All persistence still flows through [SettingsPreferences],
 /// [CurrencySettings], and [CategoryCatalog] — only the shell has changed.
@@ -52,6 +33,7 @@ class SettingsPage extends StatelessWidget {
     required this.onAddAccount,
     required this.onManageAccounts,
     required this.onOpenRecurringManager,
+    required this.onOpenBudgets,
     required this.onSignOut,
     required this.onAccountReset,
     required this.onGuestDataChanged,
@@ -69,212 +51,121 @@ class SettingsPage extends StatelessWidget {
   /// Subscriptions section uses).
   final VoidCallback onOpenRecurringManager;
 
+  /// Leaves the Settings tab entirely and switches to the Budgets tab —
+  /// Budgets is a sibling primary tab, not a Settings subpage.
+  final VoidCallback onOpenBudgets;
+
   final VoidCallback onSignOut;
 
-  /// Called after Help Center's "Reset My Account" wipes the user's data,
-  /// so the tab shell can clear its in-memory transactions/accounts.
+  /// Called after Data & Privacy's "Reset My Account" wipes the user's
+  /// data, so the tab shell can clear its in-memory transactions/accounts.
   final VoidCallback onAccountReset;
 
-  /// Called after a manual guest-data import from the "Guest data" section
-  /// so the tab shell can reload transactions/accounts.
+  /// Called after a manual guest-data import from Data & Privacy's "Guest
+  /// data" section so the tab shell can reload transactions/accounts.
   final VoidCallback onGuestDataChanged;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([
-        CurrencySettings.instance,
-        SettingsPreferences.instance,
-        CategoryCatalog.instance,
-        IncomeCategoryCatalog.instance,
-      ]),
+      listenable: SettingsPreferences.instance,
       builder: (context, _) {
-        final currency = CurrencySettings.instance;
-        final prefs = SettingsPreferences.instance;
-
         return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.xxxl,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.xxxl,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Text('Settings', style: AppTextStyles.headingLarge),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              const SizedBox(height: AppSpacing.md),
+              ProfileHeaderCard(
+                initial: _profileInitial(),
+                displayName: _displayName(),
+                email: _email(),
+                onEditProfile: () => _open(context, const EditProfilePage()),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              SettingsSection(
+                title: 'Money',
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.sm,
-                    ),
-                    child: Text('Settings', style: AppTextStyles.headingLarge),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  ProfileHeaderCard(
-                    initial: _profileInitial(),
-                    displayName: _displayName(),
-                    email: _email(),
-                    onEditProfile: () =>
-                        _open(context, const EditProfilePage()),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  SettingsSection(
-                    title: 'Preferences',
-                    children: [
-                      SettingsTile(
-                        icon: Icons.attach_money_rounded,
-                        title: 'Currency',
-                        valueLabel: currency.currencyCode,
-                        onTap: () => showCurrencyPickerSheet(context),
-                      ),
-                      SettingsTile(
-                        icon: Icons.dark_mode_rounded,
-                        title: 'Appearance',
-                        valueLabel: prefs.themeMode == ThemeMode.light
-                            ? 'Light'
-                            : 'Dark',
-                        onTap: () => _open(context, const AppearancePage()),
-                      ),
-                      SettingsTile(
-                        icon: Icons.notifications_rounded,
-                        title: 'Notifications',
-                        valueLabel: _notifSummary(prefs),
-                        onTap: () => _open(context, const NotificationsPage()),
-                      ),
-                      SettingsTile(
-                        icon: Icons.payments_rounded,
-                        title: 'Financial Preferences',
-                        subtitle: 'Transaction defaults, multi-currency',
-                        onTap: () => _open(
-                          context,
-                          FinancialPreferencesPage(accounts: accounts),
-                        ),
-                      ),
-                      SettingsTile(
-                        icon: Icons.psychology_rounded,
-                        title: 'AI Assistant',
-                        valueLabel: prefs.aiAssistantEnabled ? 'On' : 'Off',
-                        onTap: () => _open(context, const AiAssistantPage()),
-                      ),
-                      SettingsTile(
-                        icon: Icons.tune_rounded,
-                        title: 'App Preferences',
-                        subtitle: 'Haptics, density',
-                        onTap: () => _open(context, const AppPreferencesPage()),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  SettingsSection(
-                    title: 'Data',
-                    children: [
-                      SettingsTile(
-                        icon: Icons.account_balance_wallet_rounded,
-                        title: 'Accounts & Cards',
-                        valueLabel: _accountsSummary(),
-                        onTap: onManageAccounts,
-                      ),
-                      SettingsTile(
-                        icon: Icons.category_rounded,
-                        title: 'Categories',
-                        valueLabel: _categoriesSummary(),
-                        onTap: () => _open(context, const CategoriesPage()),
-                      ),
-                      SettingsTile(
-                        icon: Icons.autorenew_rounded,
-                        title: 'Recurring Payments',
-                        onTap: onOpenRecurringManager,
-                      ),
-                      SettingsTile(
-                        icon: Icons.file_download_rounded,
-                        title: 'Export Data',
-                        onTap: () => _exportData(context),
-                      ),
-                      const SettingsInfoTile(
-                        icon: Icons.cloud_done_rounded,
-                        title: 'Sync Status',
-                        subtitle: 'All changes synced',
-                        statusPill: 'Synced',
-                      ),
-                      const SettingsInfoTile(
-                        icon: Icons.offline_bolt_rounded,
-                        title: 'Offline Data',
-                        subtitle:
-                            'Reads and writes work offline — synced when '
-                            'you reconnect',
-                        statusPill: 'Local-first',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  SettingsSection(
-                    title: 'Security',
-                    children: [
-                      SettingsTile(
-                        icon: Icons.fingerprint_rounded,
-                        title: 'Security',
-                        subtitle: 'App lock and session',
-                        valueLabel: prefs.appLockEnabled ? 'On' : 'Off',
-                        onTap: () => _open(context, const SecurityPage()),
-                      ),
-                      SettingsTile(
-                        icon: Icons.cloud_done_rounded,
-                        title: 'Backup & Sync',
-                        futureReady: true,
-                        onTap: () => _stub(context, 'Backup & Sync'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  SettingsGuestDataSection(onImported: onGuestDataChanged),
-                  const SizedBox(height: AppSpacing.lg),
-                  SettingsSection(
-                    title: 'Support',
-                    children: [
-                      SettingsTile(
-                        icon: Icons.help_outline_rounded,
-                        title: 'Help Center',
-                        subtitle: 'Feedback, contact, offline mode, account tools',
-                        onTap: () => _open(
-                          context,
-                          HelpCenterPage(onAccountReset: onAccountReset),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  SettingsSection(
-                    title: 'About',
-                    children: [
-                      SettingsTile(
-                        icon: Icons.info_outline_rounded,
-                        title: 'About',
-                        onTap: () => _open(context, const AboutPage()),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  SettingsDangerSection(onLogout: onSignOut),
-                  const SizedBox(height: AppSpacing.xl),
-                  Center(
-                    child: Text(
-                      'Version 1.0.0 (1)',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textTertiary,
+                  SettingsTile(
+                    icon: Icons.account_balance_wallet_rounded,
+                    title: 'Money',
+                    subtitle: 'Currency, appearance, accounts, recurring',
+                    onTap: () => _open(
+                      context,
+                      MoneyPage(
+                        accounts: accounts,
+                        onManageAccounts: onManageAccounts,
+                        onOpenRecurringManager: onOpenRecurringManager,
+                        onOpenBudgets: onOpenBudgets,
                       ),
                     ),
                   ),
                 ],
               ),
-            )
-            .animate()
-            .fadeIn(duration: AppDurations.page)
-            .slideY(
-              begin: 0.02,
-              end: 0,
-              duration: AppDurations.page,
-              curve: AppCurves.spring,
-            );
+              const SizedBox(height: AppSpacing.lg),
+              SettingsSection(
+                title: 'Data & Privacy',
+                children: [
+                  SettingsTile(
+                    icon: Icons.privacy_tip_rounded,
+                    title: 'Data & Privacy',
+                    subtitle: 'Export, backup, and account actions',
+                    onTap: () => _open(
+                      context,
+                      DataPrivacyPage(
+                        onAccountReset: onAccountReset,
+                        onGuestDataChanged: onGuestDataChanged,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              SettingsSection(
+                title: 'Support',
+                children: [
+                  SettingsTile(
+                    icon: Icons.help_outline_rounded,
+                    title: 'Help Center',
+                    subtitle: 'Feedback, contact, offline mode',
+                    onTap: () => _open(context, const HelpCenterPage()),
+                  ),
+                  SettingsTile(
+                    icon: Icons.info_outline_rounded,
+                    title: 'About',
+                    onTap: () => _open(context, const AboutPage()),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              SettingsDangerSection(onLogout: onSignOut),
+              const SizedBox(height: AppSpacing.xl),
+              Center(
+                child: Text(
+                  'Version ${AppInfo.version} (${AppInfo.buildNumber})',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ).animate().fadeIn(duration: AppDurations.page).slideY(
+          begin: 0.02,
+          end: 0,
+          duration: AppDurations.page,
+          curve: AppCurves.spring,
+        );
       },
     );
   }
@@ -285,98 +176,6 @@ class SettingsPage extends StatelessWidget {
 
   void _open(BuildContext context, Widget page) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
-  }
-
-  void _stub(BuildContext context, String label) {
-    SnackbarHelper.showMessage(context, '$label is coming soon');
-  }
-
-  /// Fetches everything this user owns fresh from Supabase (not the
-  /// in-memory `accounts` list, which may be stale/paginated), serializes it
-  /// to CSV, and hands it to the OS share sheet.
-  Future<void> _exportData(BuildContext context) async {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: AppLoadingIndicator()),
-    );
-
-    try {
-      final results = await Future.wait([
-        SupabaseService.fetchTransactions(),
-        SupabaseService.fetchAccounts(includeArchived: true),
-        SupabaseService.fetchCategoryBudgets(),
-      ]);
-      final transactions = results[0] as List<Transaction>;
-      final exportAccounts = results[1] as List<Account>;
-      final budgets = results[2] as List<CategoryBudget>;
-
-      final tempDir = Directory.systemTemp;
-      final files = <XFile>[
-        await _writeCsv(
-          tempDir,
-          'transactions.csv',
-          transactionsToCsv(transactions),
-        ),
-        await _writeCsv(
-          tempDir,
-          'accounts.csv',
-          accountsToCsv(exportAccounts),
-        ),
-        await _writeCsv(
-          tempDir,
-          'budgets.csv',
-          categoryBudgetsToCsv(budgets),
-        ),
-      ];
-
-      if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
-      await SharePlus.instance.share(
-        ShareParams(files: files, subject: 'My expense data export'),
-      );
-    } catch (_) {
-      if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
-      SnackbarHelper.showError(context, 'Could not export your data. Please try again.');
-    }
-  }
-
-  Future<XFile> _writeCsv(Directory dir, String name, String csv) async {
-    final file = await File('${dir.path}/$name').writeAsString(csv);
-    return XFile(file.path, mimeType: 'text/csv');
-  }
-
-  // ---------------------------------------------------------------------------
-  // Hub summaries (right-side value chips)
-  // ---------------------------------------------------------------------------
-
-  String _categoriesSummary() {
-    final total =
-        CategoryCatalog.instance.categories.length +
-        IncomeCategoryCatalog.instance.categories.length;
-    if (total == 0) return 'None yet';
-    if (total == 1) return '1 label';
-    return '$total labels';
-  }
-
-  String _accountsSummary() {
-    final total = accounts.length;
-    if (total == 0) return 'None yet';
-    if (total == 1) return '1 linked';
-    return '$total linked';
-  }
-
-  String _notifSummary(SettingsPreferences prefs) {
-    final count = [
-      prefs.notifRecurringEnabled,
-      prefs.notifSalaryEnabled,
-      prefs.notifBudgetEnabled,
-      prefs.notifInsightsEnabled,
-    ].where((v) => v).length;
-    if (count == 0) return 'All off';
-    if (count == 4) return 'All on';
-    return '$count of 4';
   }
 
   // ---------------------------------------------------------------------------

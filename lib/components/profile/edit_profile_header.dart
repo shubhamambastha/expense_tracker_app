@@ -142,7 +142,7 @@ class _AvatarButton extends StatelessWidget {
                 child: const Icon(
                   Icons.camera_alt_rounded,
                   size: 14,
-                  color: Color(0xFF003328),
+                  color: AppColors.onAccent,
                 ),
               ),
             ),

@@ -116,14 +116,14 @@ class _PrimarySaveButton extends StatelessWidget {
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(0xFF003328),
+                        AppColors.onAccent,
                       ),
                     ),
                   )
                 : Text(
                     label,
                     style: AppTextStyles.button.copyWith(
-                      color: const Color(0xFF003328),
+                      color: AppColors.onAccent,
                       fontWeight: FontWeight.w800,
                     ),
                   ),

@@ -97,6 +97,12 @@ class AppColors {
   /// need to vary like the old per-accent dark literals did.
   static const onPrimary = Color(0xFFFFFFFF);
 
+  /// Dark foreground for content drawn on flat [primary] fills or the
+  /// primary→secondary gradient (e.g. the sticky save CTA, the avatar
+  /// camera badge) — kept distinct from [onPrimary] because these small,
+  /// icon-scale accents read better with a dark mark than white.
+  static const onAccent = Color(0xFF003328);
+
   // Container tints (subtle accent-tinted fills, derived so they follow
   // the active accent/brightness instead of being hand-picked hex values)
   static Color get primarySoft => Color.alphaBlend(primary.withAlpha(46), surface);

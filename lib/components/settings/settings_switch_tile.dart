@@ -13,6 +13,7 @@ class SettingsSwitchTile extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.enabled = true,
+    this.futureReady = false,
   });
 
   final IconData icon;
@@ -22,12 +23,17 @@ class SettingsSwitchTile extends StatelessWidget {
   final ValueChanged<bool> onChanged;
   final bool enabled;
 
+  /// Swaps the switch for a small "Soon" pill so the affordance is honest
+  /// when the setting isn't wired to anything yet. Mirrors
+  /// [SettingsTile.futureReady].
+  final bool futureReady;
+
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.primary;
 
     return InkWell(
-      onTap: enabled ? () => onChanged(!value) : null,
+      onTap: (enabled && !futureReady) ? () => onChanged(!value) : null,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 60),
         child: Padding(
@@ -70,10 +76,33 @@ class SettingsSwitchTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              Switch.adaptive(
-                value: value,
-                onChanged: enabled ? onChanged : null,
-              ),
+              if (futureReady)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary.withAlpha(28),
+                    borderRadius: AppRadii.pillRadius,
+                    border: Border.all(
+                      color: AppColors.secondary.withAlpha(70),
+                    ),
+                  ),
+                  child: Text(
+                    'Soon',
+                    style: AppTextStyles.label.copyWith(
+                      color: AppColors.secondary,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                )
+              else
+                Switch.adaptive(
+                  value: value,
+                  onChanged: enabled ? onChanged : null,
+                ),
             ],
           ),
         ),

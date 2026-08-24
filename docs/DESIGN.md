@@ -69,35 +69,38 @@ Token classes are private-constructor (`AppColors._()`) static-only namespaces. 
 
 ## Color
 
-All colors are dark-mode only. The app is single-theme by design.
+Colors resolve dynamically off `AppColors.configure(brightness, accent)` (called once per rebuild from `main.dart`) rather than fixed `const` values — the app now supports Light/Dark (`AppearancePage`'s Theme section) and a user-selectable accent (`AppAccent.teal` / `.blue` / `.purple`, Appearance page's Accent Color section). Every `AppColors.xxx` call site is a getter, so it picks up theme changes automatically. Values below are the dark-theme defaults (teal accent); light-theme values are noted where they differ.
 
 ### Tokens
 
-| Token | Hex | Usage |
-| --- | --- | --- |
-| `AppColors.background` | `#0F1115` | App scaffold, status bar, deepest layer |
-| `AppColors.surface` | `#171A21` | Cards, dialogs, sheets, nav bar |
-| `AppColors.surfaceSecondary` | `#1E232D` | Inputs, chips, nested fills, segmented tracks |
-| `AppColors.primary` | `#00C896` | Primary actions, selected states, charts accent A |
-| `AppColors.secondary` | `#00B8D9` | Secondary accents, recurring badges, charts accent B |
-| `AppColors.textPrimary` | `#F5F7FA` | Headlines, body, icons |
-| `AppColors.textSecondary` | `#A8B0BF` | Captions, labels, helper text, inactive icons |
-| `AppColors.border` | `#262C36` | Card borders, dividers, input outlines |
-| `AppColors.divider` | `#262C36` | Alias for border (semantic clarity) |
-| `AppColors.danger` | `#FF5C7A` | Destructive actions, error text, delete swipe |
-| `AppColors.warning` | `#FFB547` | Cautionary state, warning snackbars |
-| `AppColors.success` | `#00C896` | Confirmation, success snackbars |
+| Token | Dark | Light | Usage |
+| --- | --- | --- | --- |
+| `AppColors.background` | `#000000` | `#F2F2F7` | App scaffold, status bar, deepest layer |
+| `AppColors.surface` | `#1C1C1E` | `#FFFFFF` | Cards, dialogs, sheets, nav bar |
+| `AppColors.surfaceSecondary` | `#2C2C2E` | `#E5E5EA` | Inputs, chips, nested fills, segmented tracks |
+| `AppColors.primary` | accent-driven — teal `#00C896` / blue `#0A84FF` / purple `#AF52DE` | same | Primary actions, selected states, charts accent A |
+| `AppColors.secondary` | `#0A84FF` (fixed, all accents) | same | Secondary accents, recurring badges, charts accent B |
+| `AppColors.textPrimary` | `#FFFFFF` | `#000000` | Headlines, body, icons |
+| `AppColors.textSecondary` | `#EBEBF5` @ 60% | `#3C3C43` @ 60% | Captions, labels, helper text, inactive icons |
+| `AppColors.textTertiary` | `#EBEBF5` @ 30% | `#3C3C43` @ 35% | Faint metadata (e.g. version string) |
+| `AppColors.border` | `#545458` @ 55% | `#3C3C43` @ 12% | Card borders, dividers, input outlines |
+| `AppColors.divider` | same as border | same as border | Alias for border (semantic clarity) |
+| `AppColors.danger` | `#FF3B30` | same | Destructive actions, error text, delete swipe |
+| `AppColors.warning` | `#FF9500` | same | Cautionary state, warning snackbars |
+| `AppColors.success` | `#34C759` | same | Confirmation, success snackbars |
+| `AppColors.onPrimary` | `#FFFFFF` | same | Foreground on `primary`-filled surfaces — white reads cleanly across all 3 accents |
+| `AppColors.onAccent` | `#003328` | same | Dark foreground for small icon-scale marks on `primary` fills/gradients (sticky CTA text, avatar camera badge) — reads better dark than white at that scale |
 
 ### Container tints
 
-Pre-mixed dark fills used as soft accent backgrounds in destructive containers, success badges, etc.
+Pre-mixed accent-tinted fills, derived via `Color.alphaBlend` so they follow the active accent/brightness instead of being hand-picked hex values.
 
-| Token | Hex |
+| Token | Derivation |
 | --- | --- |
-| `AppColors.primarySoft` | `#002820` |
-| `AppColors.secondarySoft` | `#002632` |
-| `AppColors.dangerSoft` | `#351720` |
-| `AppColors.warningSoft` | `#3A2A12` |
+| `AppColors.primarySoft` | `primary` @ 18% alpha blended onto `surface` |
+| `AppColors.secondarySoft` | `secondary` @ 18% alpha blended onto `surface` |
+| `AppColors.dangerSoft` | `danger` @ 18% alpha blended onto `surface` |
+| `AppColors.warningSoft` | `warning` @ 18% alpha blended onto `surface` |
 
 ### Usage rules
 
@@ -105,12 +108,13 @@ Pre-mixed dark fills used as soft accent backgrounds in destructive containers, 
 - **Text on surfaces:** always `textPrimary` for content, `textSecondary` for supporting text. Avoid raw white/grey.
 - **Borders preferred over shadows.** Most cards combine `border` + a single subtle shadow; never use both heavy borders and dramatic elevation.
 - **Semantic colors are reserved.** `danger`/`warning`/`success` must map to real meaning — don't reuse them for decoration.
+- **Never hardcode a hex value that already has a token** — including `onAccent`'s `#003328`. If you need dark-on-accent contrast, reach for `AppColors.onAccent` rather than repeating the literal.
 
 ---
 
 ## Typography
 
-**Family:** Inter (bundled offline at `assets/fonts/Inter-*.ttf`, weights 400–900).
+**Family:** iOS system font (`.SF Pro Text`, with `Helvetica Neue` as fallback) — matches the iOS-native redesign direction. Not bundled; resolves to the platform system font.
 
 All text styles are exposed from `AppTextStyles`. Use them directly or via `Theme.of(context).textTheme.*` (already wired to the same scale in `AppTheme`).
 
@@ -118,22 +122,22 @@ All text styles are exposed from `AppTextStyles`. Use them directly or via `Them
 
 | Token | Size | Weight | Used for |
 | --- | --- | --- | --- |
-| `displayLarge` | 40 | 700 | Hero amounts on detail screens |
-| `displayMedium` | 36 | 700 | Reserved |
-| `displaySmall` | 32 | 700 | Dashboard totals, amount input |
-| `headingLarge` | 24 | 600 | Page titles |
-| `headingMedium` | 22 | 600 | Section headers |
-| `headingSmall` | 20 | 600 | Card titles, sheet titles |
-| `bodyLarge` | 16 | 500 | Primary body, list titles |
-| `bodyMedium` | 14 | 500 | Default body, button labels |
+| `displayLarge` | 34 | 800 | Hero amounts on detail screens |
+| `displayMedium` | 32 | 800 | Reserved |
+| `displaySmall` | 30 | 800 | Dashboard totals, amount input |
+| `headingLarge` | 24 | 700 | Page titles |
+| `headingMedium` | 19 | 700 | Section headers |
+| `headingSmall` | 17 | 700 | Card titles, sheet titles |
+| `bodyLarge` | 16 | 600 | Primary body, list titles |
+| `bodyMedium` | 15 | 600 | Default body, button labels |
 | `bodySmall` | 14 | 400 | Secondary body |
-| `caption` | 12 | 400 | Captions, helper text |
+| `caption` | 12 | 600 | Captions, helper text |
 | `label` | 12 | 600 | Uppercase-ish labels, metric captions |
 | `button` | 15 | 600 | Button labels (applied automatically by theme) |
 
 ### Rules
 
-- Never set font family on a `TextStyle` — Inter is the app default.
+- Never set font family on a `TextStyle` — the iOS system font is the app default.
 - Prefer `AppTextStyles.*` for new widgets; `theme.textTheme.*` is fine for inherited components (it maps to the same tokens).
 - Letter spacing is baked into display + heading tokens (slightly negative for premium feel). Don't override unless intentional.
 
@@ -304,10 +308,12 @@ import 'package:expense_tracker_app/components/common/states/states.dart';
 
 | Widget | Use for |
 | --- | --- |
-| `SettingsTile` | Tappable row with icon, optional `valueLabel`, chevron |
-| `SettingsSwitchTile` | Toggle row |
+| `SettingsTile` | Tappable row with icon, optional `valueLabel`, chevron. `futureReady: true` swaps the chevron/switch for a "Soon" pill — use for any setting not yet backed by real functionality, never ship a live-looking control for dead logic |
+| `SettingsSwitchTile` | Toggle row — also supports `futureReady` |
 | `SettingsInfoTile` | Read-only info row |
-| `SettingsDangerSection` | Destructive actions grouped at bottom |
+| `SettingsDangerSection` | Destructive actions grouped at bottom (red-tinted card) — e.g. Sign Out |
+| `SettingsDeleteAccountTile` / `SettingsDeleteAccountSection` | Danger-tinted row + red-card wrapper for account deletion, with a typed-confirmation dialog |
+| `SettingsGuestDataSection` | Conditional section — renders nothing unless a signed-in real user has unmigrated guest data sitting locally |
 
 ### Transaction form & list
 

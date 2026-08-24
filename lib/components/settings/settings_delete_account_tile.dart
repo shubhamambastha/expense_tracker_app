@@ -11,7 +11,9 @@ class SettingsDeleteAccountTile extends StatelessWidget {
     required this.onDeleteConfirmed,
   });
 
-  final VoidCallback onDeleteConfirmed;
+  /// Async so the caller can await a real action (e.g. launching a mailto:
+  /// request) and show its own error state — mounted-guarded by the caller.
+  final Future<void> Function() onDeleteConfirmed;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +29,7 @@ class SettingsDeleteAccountTile extends StatelessWidget {
   Future<void> _confirmDelete(BuildContext context) async {
     final confirmed = await showConfirmDeleteAccountDialog(context);
     if (confirmed) {
-      onDeleteConfirmed();
+      await onDeleteConfirmed();
     }
   }
 }
@@ -39,7 +41,7 @@ class SettingsDeleteAccountSection extends StatelessWidget {
     required this.onDeleteConfirmed,
   });
 
-  final VoidCallback onDeleteConfirmed;
+  final Future<void> Function() onDeleteConfirmed;
 
   @override
   Widget build(BuildContext context) {

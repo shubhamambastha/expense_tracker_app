@@ -694,10 +694,20 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       onAddAccount: _openAddAccountDialog,
       onManageAccounts: _openAccountsManager,
       onOpenRecurringManager: _openRecurringManager,
+      onOpenBudgets: _openBudgetsFromSettings,
       onSignOut: widget.onSignOut,
       onAccountReset: _onAccountReset,
       onGuestDataChanged: _onAccountReset,
     );
+  }
+
+  /// Leaves Settings entirely and switches to the Budgets tab. Money is
+  /// pushed 2 Navigator levels deep from the Settings tab body, so a plain
+  /// [_switchToTab] call wouldn't be visible — the pushed route would still
+  /// sit on top. Pop back to the tab shell first, then switch.
+  void _openBudgetsFromSettings() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    _switchToTab(3);
   }
 
   /// After Help Center's "Reset My Account" wipes Supabase data, drop the

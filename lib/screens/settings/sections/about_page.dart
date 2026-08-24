@@ -4,6 +4,7 @@ import '../../../components/settings/settings_info_tile.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_tile.dart';
+import '../../../config/app_info.dart';
 import '../../../config/design_tokens.dart';
 import '../../../utils/snackbar_helper.dart';
 
@@ -22,7 +23,7 @@ class AboutPage extends StatelessWidget {
             SettingsInfoTile(
               icon: Icons.info_outline_rounded,
               title: 'App Version',
-              valueLabel: 'v1.0.0 (1)',
+              valueLabel: AppInfo.versionLabel,
             ),
           ],
         ),

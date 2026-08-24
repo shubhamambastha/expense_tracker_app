@@ -1,42 +1,23 @@
 import 'package:flutter/material.dart';
 
-import '../../../components/dialogs/confirm_reset_account_dialog.dart';
-import '../../../components/settings/settings_delete_account_tile.dart';
 import '../../../components/settings/settings_info_tile.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_tile.dart';
 import '../../../config/design_tokens.dart';
-import '../../../services/auth_service.dart';
-import '../../../services/category_catalog.dart';
-import '../../../services/income_category_catalog.dart';
-import '../../../services/supabase_service.dart';
 import '../../../utils/snackbar_helper.dart';
 
 /// Help Center: single home for support — feedback channels, contact/rating
-/// links, offline behaviour, and account tools (reset/delete). Everything
-/// that used to be spread across "Contact Us", "Rate the App", and
-/// "Support & Feedback" now lives here so Settings' Support section only
-/// needs one entry point.
-class HelpCenterPage extends StatefulWidget {
-  const HelpCenterPage({super.key, required this.onAccountReset});
-
-  /// Called after a successful reset so the caller can clear its in-memory
-  /// transaction/account state and reload.
-  final VoidCallback onAccountReset;
-
-  @override
-  State<HelpCenterPage> createState() => _HelpCenterPageState();
-}
-
-class _HelpCenterPageState extends State<HelpCenterPage> {
-  bool _resetting = false;
+/// links, and offline behaviour. Account tools (reset/delete) live in Data
+/// & Privacy instead — this page only needs one entry point for support.
+class HelpCenterPage extends StatelessWidget {
+  const HelpCenterPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return SettingsSubpageScaffold(
       title: 'Help Center',
-      subtitle: 'Answers, feedback channels, and account tools.',
+      subtitle: 'Answers and feedback channels.',
       children: [
         SettingsSection(
           title: 'Talk to us',
@@ -76,31 +57,14 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
           title: 'Data',
           children: const [
             SettingsInfoTile(
-              icon: Icons.cloud_off_rounded,
-              title: 'Offline Mode',
-              subtitle: 'Reads/writes work without internet — synced later',
-              statusPill: 'Local-first',
+              icon: Icons.wifi_rounded,
+              title: 'Signed-in Accounts',
+              subtitle:
+                  'Every read and write goes straight to your account — an '
+                  'internet connection is required. Guest mode is the only '
+                  'offline option; it stores everything on this device.',
             ),
           ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        SettingsSection(
-          title: 'Danger Zone',
-          children: [
-            SettingsTile(
-              icon: Icons.restart_alt_rounded,
-              title: 'Reset My Account',
-              subtitle: _resetting
-                  ? 'Resetting…'
-                  : 'Erase transactions, accounts, categories & budgets',
-              destructive: true,
-              onTap: _resetting ? null : _confirmReset,
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        SettingsDeleteAccountSection(
-          onDeleteConfirmed: () => _stub(context, 'Account deletion'),
         ),
       ],
     );
@@ -108,31 +72,5 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
 
   void _stub(BuildContext context, String label) {
     SnackbarHelper.showMessage(context, '$label is coming soon');
-  }
-
-  Future<void> _confirmReset() async {
-    final confirmed = await showConfirmResetAccountDialog(context);
-    if (!confirmed || !mounted) return;
-
-    setState(() => _resetting = true);
-    try {
-      // Not requireUserId() — a guest has no Auth0 session, and
-      // resetUserData()/syncForUser() are already guest-branched, so any
-      // non-empty placeholder is fine here (see SupabaseService._isGuest).
-      final userId = AuthService.instance.currentSession?.userId ?? 'guest';
-      await SupabaseService.resetUserData();
-      await Future.wait([
-        CategoryCatalog.instance.syncForUser(userId),
-        IncomeCategoryCatalog.instance.syncForUser(userId),
-      ]);
-      widget.onAccountReset();
-      if (!mounted) return;
-      SnackbarHelper.showSuccess(context, 'Your account has been reset');
-    } catch (error) {
-      if (!mounted) return;
-      SnackbarHelper.showError(context, 'Could not reset your account: $error');
-    } finally {
-      if (mounted) setState(() => _resetting = false);
-    }
   }
 }

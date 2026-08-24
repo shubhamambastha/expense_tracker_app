@@ -96,6 +96,7 @@ class _BudgetsAndSpendingContentState
                   subtitle: 'Warn when nearing or over a budget',
                   value: prefs.overspendingAlertsEnabled,
                   onChanged: prefs.setOverspendingAlertsEnabled,
+                  futureReady: true,
                 ),
               ],
             ),
@@ -231,7 +232,6 @@ class _MonthlyLimitSheetState extends State<_MonthlyLimitSheet> {
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: AppColors.border),
                         foregroundColor: AppColors.textPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text('Clear'),
                     ),
@@ -253,9 +253,6 @@ class _MonthlyLimitSheetState extends State<_MonthlyLimitSheet> {
                         if (!context.mounted) return;
                         Navigator.of(context).pop(true);
                       },
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
                       child: const Text('Save'),
                     ),
                   ),
