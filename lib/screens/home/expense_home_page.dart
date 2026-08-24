@@ -765,6 +765,14 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
               duration: AppDurations.page,
               switchInCurve: AppCurves.emphasized,
               switchOutCurve: Curves.easeIn,
+              layoutBuilder: (currentChild, previousChildren) => Stack(
+                alignment: Alignment.topCenter,
+                fit: StackFit.expand,
+                children: [
+                  ...previousChildren,
+                  ?currentChild,
+                ],
+              ),
               transitionBuilder: (child, animation) {
                 return FadeTransition(
                   opacity: animation,
