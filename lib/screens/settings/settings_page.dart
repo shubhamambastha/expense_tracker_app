@@ -9,6 +9,7 @@ import '../../components/settings/settings_tile.dart';
 import '../../config/app_info.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
+import '../../services/auth_service.dart';
 import '../../services/settings_preferences.dart';
 import 'sections/about_page.dart';
 import 'sections/data_privacy_page.dart';
@@ -92,6 +93,23 @@ class SettingsPage extends StatelessWidget {
                 email: _email(),
                 onEditProfile: () => _open(context, const EditProfilePage()),
               ),
+              if (AuthService.instance.isGuest.value) ...[
+                const SizedBox(height: AppSpacing.xl),
+                SettingsSection(
+                  title: 'Sync',
+                  footnote:
+                      'Your guest data stays on this device and can be '
+                      'imported once you sign in.',
+                  children: [
+                    SettingsTile(
+                      icon: Icons.cloud_sync_rounded,
+                      title: 'Sign in to sync',
+                      subtitle: 'Back up your data and use it on other devices',
+                      onTap: () => _confirmSignIn(context),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: AppSpacing.xl),
               SettingsSection(
                 title: 'Money',
@@ -176,6 +194,35 @@ class SettingsPage extends StatelessWidget {
 
   void _open(BuildContext context, Widget page) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  }
+
+  /// Exits guest mode and lands on the login screen — the same transition
+  /// [onSignOut] already performs for a guest (see `AuthGate._signOut`),
+  /// just reached via a correctly-labelled "Sign in" entry point instead of
+  /// the Danger section's "Sign Out" row. Guest data is left untouched and
+  /// gets offered for import once the user actually signs in.
+  Future<void> _confirmSignIn(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sign In'),
+        content: const Text(
+          "You'll be taken to the sign in screen. Your guest data stays on "
+          'this device and can be imported after you sign in.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) onSignOut();
   }
 
   // ---------------------------------------------------------------------------

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../config/design_tokens.dart';
 
 /// Wrapper for every Settings sub-screen (e.g. Financial Preferences).
 ///
 /// Provides a minimal back-aware app bar that matches the rest of the
-/// premium dark theme, a scrollable body with consistent padding, and a
-/// subtle fade-in so navigating between sections feels deliberate.
+/// premium dark theme and a scrollable body with consistent padding. No
+/// entrance animation of its own — the push route already slides/fades the
+/// whole page in, so animating the body too just produces a blank flash.
 class SettingsSubpageScaffold extends StatelessWidget {
   const SettingsSubpageScaffold({
     super.key,
@@ -55,15 +55,7 @@ class SettingsSubpageScaffold extends StatelessWidget {
                   ],
                   ...children,
                 ],
-              )
-                  .animate()
-                  .fadeIn(duration: AppDurations.page)
-                  .slideY(
-                    begin: 0.02,
-                    end: 0,
-                    duration: AppDurations.page,
-                    curve: AppCurves.spring,
-                  ),
+              ),
             ),
           ),
         ],
