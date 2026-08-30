@@ -69,3 +69,17 @@
 **Effort:** M
 **Priority:** P2
 **Depends on:** None — but blocks auto-detection, price-change insights, and the Home detection card specifically. Does not block the baseline picker, retroactive tagging, or onboarding tooltip, which are unaffected by this finding.
+
+---
+
+### Push notification for the proactive insight digest
+
+**What:** Add `flutter_local_notifications` (or equivalent), a persisted 7-day cadence gate, and iOS/Android permission handling so the home-tab insight card can also push a notification, not just render in-app.
+
+**Why:** `docs/designs/proactive-insight-digest.md`'s Approach B scopes v1 as an in-app home-tab card only — no new dependency, cadence is copy-only (live-computed on every app-open, no persisted gate). Push is the explicit fast-follow once the card's insight quality is validated, not a v1 requirement.
+
+**Context:** Surfaced by `/plan-eng-review` (2026-08-28) on the proactive insight digest design. Doubly gated: behind v1 (the home card) shipping, which is itself now gated behind a validation check (see the design doc's Sequencing section — log a week, confirm `generateInsights()` has something meaningful to say, before building anything).
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** v1 (home-tab insight card) shipping and being validated first; v1 itself depends on the Sequencing validation check in the design doc.
