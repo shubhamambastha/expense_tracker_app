@@ -206,25 +206,21 @@ class DashboardAggregations {
         monthlyRecurringIncomeTotal(transactions, now: clock);
   }
 
-  /// "How much can I spend today" — this month's discretionary budget
-  /// (income minus active recurring commitments) accrued day by day through
-  /// the month, minus non-recurring spending so far. Resets each calendar
-  /// month; can go negative on an overspending month.
+  /// "How much can I spend today" — this month's income so far minus every
+  /// expense logged this month (recurring or not). A plain running balance,
+  /// not a daily-accrued allowance: with no recurring commitments logged yet,
+  /// a day-accrual model reads as overspent early in the month even when
+  /// money is still left, since it paces income out day by day while
+  /// counting spend in full immediately. Resets each calendar month; can go
+  /// negative on an overspending month.
   static double spendableToday(
     List<Transaction> transactions, {
     DateTime? now,
   }) {
     final clock = now ?? DateTime.now();
     final income = totalMonthIncome(transactions, now: clock);
-    final recurring = monthlyRecurringExpenseTotal(transactions, now: clock);
-    final monthlyDiscretionary = income - recurring;
-
-    final daysInMonth = DateTime(clock.year, clock.month + 1, 0).day;
-    final dailyAllowance = monthlyDiscretionary / daysInMonth;
-    final accrued = dailyAllowance * clock.day;
-
-    final spent = discretionaryMonthSpend(transactions, now: clock);
-    return accrued - spent;
+    final spent = monthSpend(transactions, now: clock);
+    return income - spent;
   }
 
   /// Running balance for [account]: opening balance + incoming - outgoing.

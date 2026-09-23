@@ -30,7 +30,10 @@ class SpendingRoomCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DashboardSectionHeader(title: 'Spending Room'),
+        const DashboardSectionHeader(
+          title: 'Spending Room',
+          subtitle: "Based on this month's income minus expenses",
+        ),
         const SizedBox(height: AppSpacing.md),
         DecoratedBox(
           decoration: BoxDecoration(

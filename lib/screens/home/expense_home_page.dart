@@ -541,7 +541,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           onAddExpense: () =>
               _openAddTransactionPage(kind: TransactionKind.expense),
           onOpenRecurring: _openRecurringManager,
-          onOpenAnalytics: () => _switchToTab(2),
           onOpenBudgets: _openBudgetSettings,
           onTapTransaction: _openTransactionDetail,
           onViewAllTransactions: () => _switchToTab(1),
@@ -552,7 +551,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _switchToTab(int index) {
-    if (index < 0 || index > 4) return;
+    if (index < 0 || index > 3) return;
     setState(() => _selectedIndex = index);
   }
 
@@ -597,7 +596,14 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     await _refreshDashboard();
   }
 
-  void _openBudgetSettings() => _switchToTab(3);
+  /// Budgets no longer has its own bottom-nav tab (folded in with Analytics
+  /// to remove the duplicate "Analytics" entry point on Home) — pushed as a
+  /// full-screen route instead, from wherever it's requested.
+  void _openBudgetSettings() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const _BudgetsPage()),
+    );
+  }
 
   void _handleInsightAction(FinancialInsight insight) {
     final payload = insight.actionPayload ?? '';
@@ -694,20 +700,11 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       onAddAccount: _openAddAccountDialog,
       onManageAccounts: _openAccountsManager,
       onOpenRecurringManager: _openRecurringManager,
-      onOpenBudgets: _openBudgetsFromSettings,
+      onOpenBudgets: _openBudgetSettings,
       onSignOut: widget.onSignOut,
       onAccountReset: _onAccountReset,
       onGuestDataChanged: _onAccountReset,
     );
-  }
-
-  /// Leaves Settings entirely and switches to the Budgets tab. Money is
-  /// pushed 2 Navigator levels deep from the Settings tab body, so a plain
-  /// [_switchToTab] call wouldn't be visible — the pushed route would still
-  /// sit on top. Pop back to the tab shell first, then switch.
-  void _openBudgetsFromSettings() {
-    Navigator.of(context).popUntil((route) => route.isFirst);
-    _switchToTab(3);
   }
 
   /// After Help Center's "Reset My Account" wipes Supabase data, drop the
@@ -721,31 +718,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     _loadTransactions();
   }
 
-  Widget _buildBudgetsContent(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.xxxl,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            child: Text('Budgets', style: AppTextStyles.headingLarge),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          const BudgetsAndSpendingContent(),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBody(BuildContext context) {
     switch (_selectedIndex) {
       case 1:
@@ -753,8 +725,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       case 2:
         return _buildAnalyticsContent(context);
       case 3:
-        return _buildBudgetsContent(context);
-      case 4:
         return _buildSettingsContent(context);
       case 0:
       default:
@@ -848,20 +818,48 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                       index: 2,
                     ),
                     _buildBottomBarItem(
-                      icon: Icons.donut_small_rounded,
-                      label: 'Budgets',
-                      index: 3,
-                    ),
-                    _buildBottomBarItem(
                       icon: Icons.settings_rounded,
                       label: 'Settings',
-                      index: 4,
+                      index: 3,
                     ),
                   ],
                 ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pushed full-screen Budgets destination — used to reach budgets now that
+/// they no longer have their own bottom-nav tab.
+class _BudgetsPage extends StatelessWidget {
+  const _BudgetsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        title: Text('Budgets', style: AppTextStyles.headingSmall),
+      ),
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.xxxl,
+          ),
+          child: const BudgetsAndSpendingContent(),
         ),
       ),
     );

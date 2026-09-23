@@ -272,17 +272,10 @@ void main() {
   });
 
   group('spendableToday', () {
-    test('matches the worked example: income 500, recurring 190, 31 days', () {
+    test('is a plain running balance, not accrued by day of month', () {
       final transactions = [
         _income(500, DateTime(2027, 1, 1)),
-        _expense(
-          190,
-          DateTime(2027, 1, 1),
-          category: 'EMI',
-          isRecurring: true,
-          recurrenceFrequency: RecurrenceFrequency.monthly,
-          recurrenceStartDate: DateTime(2027, 1, 1),
-        ),
+        _expense(190, DateTime(2027, 1, 1), category: 'EMI'),
       ];
 
       final day1 = DashboardAggregations.spendableToday(
@@ -298,22 +291,15 @@ void main() {
         now: DateTime(2027, 1, 31),
       );
 
-      expect(day1, closeTo(10, 0.001));
-      expect(day2, closeTo(20, 0.001));
+      expect(day1, closeTo(310, 0.001));
+      expect(day2, closeTo(310, 0.001));
       expect(day31, closeTo(310, 0.001));
     });
 
-    test('goes negative when discretionary spend exceeds the accrued amount', () {
+    test('goes negative when overall spend exceeds income', () {
       final transactions = [
         _income(500, DateTime(2027, 1, 1)),
-        _expense(
-          190,
-          DateTime(2027, 1, 1),
-          category: 'EMI',
-          isRecurring: true,
-          recurrenceFrequency: RecurrenceFrequency.monthly,
-          recurrenceStartDate: DateTime(2027, 1, 1),
-        ),
+        _expense(190, DateTime(2027, 1, 1), category: 'EMI'),
         _expense(50, DateTime(2027, 1, 1)),
       ];
 
@@ -321,8 +307,13 @@ void main() {
         transactions,
         now: DateTime(2027, 1, 1),
       );
-      expect(result, closeTo(10 - 50, 0.001));
-      expect(result, lessThan(0));
+      expect(result, closeTo(500 - 190 - 50, 0.001));
+
+      final overspent = DashboardAggregations.spendableToday(
+        [...transactions, _expense(300, DateTime(2027, 1, 1))],
+        now: DateTime(2027, 1, 1),
+      );
+      expect(overspent, lessThan(0));
     });
   });
 }

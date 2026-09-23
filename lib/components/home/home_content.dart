@@ -34,7 +34,6 @@ class HomeContent extends StatelessWidget {
     required this.onRefresh,
     required this.onAddExpense,
     required this.onOpenRecurring,
-    required this.onOpenAnalytics,
     required this.onOpenBudgets,
     required this.onTapTransaction,
     required this.onViewAllTransactions,
@@ -48,7 +47,6 @@ class HomeContent extends StatelessWidget {
   final Future<void> Function() onRefresh;
   final VoidCallback onAddExpense;
   final VoidCallback onOpenRecurring;
-  final VoidCallback onOpenAnalytics;
   final VoidCallback onOpenBudgets;
   final void Function(Transaction tx) onTapTransaction;
   final VoidCallback onViewAllTransactions;
@@ -172,7 +170,7 @@ class HomeContent extends StatelessWidget {
       QuickActionsRow(
         onAddExpense: onAddExpense,
         onRecurring: onOpenRecurring,
-        onAnalytics: onOpenAnalytics,
+        onBudget: onOpenBudgets,
       ),
       const SizedBox(height: AppSpacing.xxl),
       BudgetsSummarySection(
@@ -205,7 +203,7 @@ class HomeContent extends StatelessWidget {
       QuickActionsRow(
         onAddExpense: onAddExpense,
         onRecurring: onOpenRecurring,
-        onAnalytics: onOpenAnalytics,
+        onBudget: onOpenBudgets,
       ),
     ];
   }
