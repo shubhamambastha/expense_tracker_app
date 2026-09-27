@@ -773,58 +773,127 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(
-          AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.sm,
-        ),
-        child: DecoratedBox(
-          decoration: ShapeDecoration(
-            color: Colors.transparent,
-            shape: AppRadii.cardBorder,
-            shadows: AppShadows.card,
-          ),
-          child: ClipRRect(
-            borderRadius: AppRadii.cardRadius,
-            // Standard iOS translucent tab-bar chrome — blur only, no
-            // saturate boost (ImageFilter has no direct saturate knob).
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface.withAlpha(230),
-                  borderRadius: AppRadii.cardRadius,
-                  border: Border.all(color: AppColors.border),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                child: Row(
-                  children: [
-                    _buildBottomBarItem(
-                      icon: Icons.dashboard_rounded,
-                      label: 'Home',
-                      index: 0,
+      bottomNavigationBar: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
+            child: DecoratedBox(
+              decoration: ShapeDecoration(
+                color: Colors.transparent,
+                shape: AppRadii.cardBorder,
+                shadows: AppShadows.card,
+              ),
+              child: ClipRRect(
+                borderRadius: AppRadii.cardRadius,
+                // Standard iOS translucent tab-bar chrome — blur only, no
+                // saturate boost (ImageFilter has no direct saturate knob).
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface.withAlpha(230),
+                      borderRadius: AppRadii.cardRadius,
+                      border: Border.all(color: AppColors.border),
                     ),
-                    _buildBottomBarItem(
-                      icon: Icons.list_alt_rounded,
-                      label: 'Transactions',
-                      index: 1,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.xs,
                     ),
-                    _buildBottomBarItem(
-                      icon: Icons.insights_rounded,
-                      label: 'Analytics',
-                      index: 2,
+                    child: Row(
+                      children: [
+                        _buildBottomBarItem(
+                          icon: Icons.dashboard_rounded,
+                          label: 'Home',
+                          index: 0,
+                        ),
+                        _buildBottomBarItem(
+                          icon: Icons.list_alt_rounded,
+                          label: 'Transactions',
+                          index: 1,
+                        ),
+                        // Reserves room for the raised Add Expense button
+                        // overlaid above — not a tab, so no _selectedIndex.
+                        const Expanded(child: SizedBox(height: 60)),
+                        _buildBottomBarItem(
+                          icon: Icons.insights_rounded,
+                          label: 'Analytics',
+                          index: 2,
+                        ),
+                        _buildBottomBarItem(
+                          icon: Icons.settings_rounded,
+                          label: 'Settings',
+                          index: 3,
+                        ),
+                      ],
                     ),
-                    _buildBottomBarItem(
-                      icon: Icons.settings_rounded,
-                      label: 'Settings',
-                      index: 3,
-                    ),
-                  ],
+                  ),
                 ),
               ),
+            ),
+          ),
+          Positioned(
+            top: -22,
+            child: _AddExpenseFab(
+              onTap: () =>
+                  _openAddTransactionPage(kind: TransactionKind.expense),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Raised, accent-colored center action in the nav bar — visually distinct
+/// from the tab items so it reads as a direct shortcut to the most frequent
+/// action (logging an expense), not another screen to switch to.
+class _AddExpenseFab extends StatelessWidget {
+  const _AddExpenseFab({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Add Expense',
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primary, AppColors.secondary],
+              ),
+              border: Border.all(color: AppColors.background, width: 4),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withAlpha(110),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.add_rounded,
+              color: Colors.white,
+              size: 30,
             ),
           ),
         ),

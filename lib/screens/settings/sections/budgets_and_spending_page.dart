@@ -60,7 +60,7 @@ class _BudgetsAndSpendingContentState
                 ),
                 SettingsTile(
                   icon: Icons.donut_small_rounded,
-                  title: 'Category Budgets',
+                  title: 'Add Category Budgets',
                   subtitle: 'Food, Shopping, Travel…',
                   valueLabel: budgets.isEmpty
                       ? 'None'
