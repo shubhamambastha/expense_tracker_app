@@ -29,9 +29,6 @@ class BudgetsSummarySection extends StatelessWidget {
       children: [
         DashboardSectionHeader(
           title: 'Budgets',
-          subtitle: items.isEmpty
-              ? null
-              : 'Also comes out of your Spending Room above',
           actionLabel: items.isEmpty ? null : 'See all',
           onActionTap: items.isEmpty ? null : onSeeAll,
         ),
