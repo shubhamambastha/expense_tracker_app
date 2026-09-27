@@ -2,28 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../../../config/design_tokens.dart';
 
-/// Thumb-sized shortcuts: add expense, jump to recurring, jump to budgets.
+/// Thumb-sized shortcuts: jump to recurring, jump to budgets.
 class QuickActionsRow extends StatelessWidget {
   const QuickActionsRow({
     super.key,
-    required this.onAddExpense,
     required this.onRecurring,
     required this.onBudget,
   });
 
-  final VoidCallback onAddExpense;
   final VoidCallback onRecurring;
   final VoidCallback onBudget;
 
   @override
   Widget build(BuildContext context) {
     final specs = [
-      _QuickActionSpec(
-        label: 'Add Expense',
-        icon: Icons.add_rounded,
-        tint: AppColors.danger,
-        onTap: onAddExpense,
-      ),
       _QuickActionSpec(
         label: 'Recurring',
         icon: Icons.repeat_rounded,

@@ -168,7 +168,6 @@ class HomeContent extends StatelessWidget {
         },
       ),
       QuickActionsRow(
-        onAddExpense: onAddExpense,
         onRecurring: onOpenRecurring,
         onBudget: onOpenBudgets,
       ),
@@ -201,7 +200,6 @@ class HomeContent extends StatelessWidget {
       ),
       const SizedBox(height: AppSpacing.xxl),
       QuickActionsRow(
-        onAddExpense: onAddExpense,
         onRecurring: onOpenRecurring,
         onBudget: onOpenBudgets,
       ),
