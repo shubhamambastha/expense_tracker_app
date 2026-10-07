@@ -533,10 +533,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         ),
         slivers: [
           SliverToBoxAdapter(
-            child: _TransactionsAppBar(
-              onCalendar: _openDateFilter,
-              onAdd: widget.onAddTransaction,
-            ),
+            child: _TransactionsAppBar(onCalendar: _openDateFilter),
           ),
           SliverPersistentHeader(
             pinned: true,
@@ -649,10 +646,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 }
 
 class _TransactionsAppBar extends StatelessWidget {
-  const _TransactionsAppBar({required this.onCalendar, this.onAdd});
+  const _TransactionsAppBar({required this.onCalendar});
 
   final VoidCallback onCalendar;
-  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -678,13 +674,6 @@ class _TransactionsAppBar extends StatelessWidget {
             onPressed: onCalendar,
             icon: const Icon(Icons.calendar_month_rounded),
           ),
-          if (onAdd != null)
-            IconButton(
-              tooltip: 'Add transaction',
-              onPressed: onAdd,
-              icon: const Icon(Icons.add_circle_rounded),
-              color: AppColors.primary,
-            ),
         ],
       ),
     );
