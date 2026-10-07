@@ -63,6 +63,14 @@ class AnalyticsContent extends StatefulWidget {
 class _AnalyticsContentState extends State<AnalyticsContent> {
   AnalyticsRange _range = AnalyticsRange.thisMonth;
   ResolvedRange? _customRange;
+  final _pageController = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickCustomRange() async {
     final now = DateTime.now();
@@ -128,6 +136,58 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
     final isEmptyAccount =
         widget.transactions.isEmpty && widget.accounts.isEmpty;
 
+    if (isEmptyAccount) {
+      return _scrollPage(_onboarding(resolved), topPadding: AppSpacing.lg);
+    }
+
+    final pages = _pages(resolved);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+            0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AnalyticsHeader(
+                range: _range,
+                resolvedRange: resolved,
+                onAddTransaction: widget.onAddTransaction,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              TimeRangeSelector(
+                selected: _range,
+                onChanged: (next) => setState(() => _range = next),
+                onPickCustom: _pickCustomRange,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _PageIndicator(
+                titles: [for (final p in pages) p.title],
+                current: _page,
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: PageView(
+            controller: _pageController,
+            onPageChanged: (i) => setState(() => _page = i),
+            children: [
+              for (final p in pages)
+                _scrollPage([p.child], topPadding: AppSpacing.lg),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _scrollPage(List<Widget> children, {required double topPadding}) {
     return RefreshIndicator(
       onRefresh: widget.onRefresh,
       color: AppColors.primary,
@@ -138,17 +198,13 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
         ),
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: EdgeInsets.fromLTRB(
               AppSpacing.lg,
-              AppSpacing.lg,
+              topPadding,
               AppSpacing.lg,
               AppSpacing.xxxl,
             ),
-            sliver: SliverList.list(
-              children: isEmptyAccount
-                  ? _onboarding(resolved)
-                  : _sections(resolved),
-            ),
+            sliver: SliverList.list(children: children),
           ),
         ],
       ),
@@ -173,7 +229,7 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
     ];
   }
 
-  List<Widget> _sections(ResolvedRange resolved) {
+  List<_AnalyticsPage> _pages(ResolvedRange resolved) {
     final transactions = widget.transactions;
     final overview = AnalyticsAggregations.overview(
       transactions: transactions,
@@ -214,72 +270,115 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
     );
 
     return [
-      AnalyticsHeader(
-        range: _range,
-        resolvedRange: resolved,
-        onAddTransaction: widget.onAddTransaction,
+      _AnalyticsPage(
+        'Overview',
+        SpendingOverviewSection(overview: overview, rangeLabel: _range.label),
       ),
-      const SizedBox(height: AppSpacing.lg),
-      TimeRangeSelector(
-        selected: _range,
-        onChanged: (next) => setState(() => _range = next),
-        onPickCustom: _pickCustomRange,
+      _AnalyticsPage(
+        'Expenses',
+        ExpenseBreakdownSection(
+          slices: slices,
+          range: resolved,
+          allTransactions: transactions,
+          onTapTransaction: widget.onTapTransaction,
+          colorForCategory: CategoryCatalog.instance.colorForName,
+          iconForCategory: CategoryCatalog.instance.iconForName,
+        ),
       ),
-      const SizedBox(height: AppSpacing.xxl),
-      SpendingOverviewSection(
-        overview: overview,
-        rangeLabel: _range.label,
+      _AnalyticsPage(
+        'Income',
+        ExpenseBreakdownSection(
+          slices: incomeSlices,
+          range: resolved,
+          allTransactions: transactions,
+          onTapTransaction: widget.onTapTransaction,
+          colorForCategory: IncomeCategoryCatalog.instance.colorForName,
+          iconForCategory: IncomeCategoryCatalog.instance.iconForName,
+          kind: TransactionKind.income,
+          title: 'Where it came from',
+          subtitle: 'Tap a category to see the story behind it.',
+          emptyText:
+              'No income in this window yet — categories will appear as you log income.',
+        ),
       ),
-      const SizedBox(height: AppSpacing.xxl),
-      ExpenseBreakdownSection(
-        slices: slices,
-        range: resolved,
-        allTransactions: transactions,
-        onTapTransaction: widget.onTapTransaction,
-        colorForCategory: CategoryCatalog.instance.colorForName,
-        iconForCategory: CategoryCatalog.instance.iconForName,
+      _AnalyticsPage(
+        'Income vs Expense',
+        IncomeVsExpenseSection(
+          buckets: buckets,
+          overview: overview,
+          rangeIsMultiMonth: _range.isMultiMonth,
+        ),
       ),
-      const SizedBox(height: AppSpacing.xxl),
-      ExpenseBreakdownSection(
-        slices: incomeSlices,
-        range: resolved,
-        allTransactions: transactions,
-        onTapTransaction: widget.onTapTransaction,
-        colorForCategory: IncomeCategoryCatalog.instance.colorForName,
-        iconForCategory: IncomeCategoryCatalog.instance.iconForName,
-        kind: TransactionKind.income,
-        title: 'Where it came from',
-        subtitle: 'Tap a category to see the story behind it.',
-        emptyText:
-            'No income in this window yet — categories will appear as you log income.',
+      _AnalyticsPage(
+        'Budgets',
+        BudgetAnalyticsSection(
+          budgets: widget.categoryBudgets,
+          spendByCategory: budgetSpend,
+          onOpenBudgetSettings: widget.onOpenBudgetSettings,
+        ),
       ),
-      const SizedBox(height: AppSpacing.xxl),
-      IncomeVsExpenseSection(
-        buckets: buckets,
-        overview: overview,
-        rangeIsMultiMonth: _range.isMultiMonth,
+      _AnalyticsPage(
+        'Recurring',
+        SubscriptionsSection(
+          summary: recurring,
+          accounts: widget.accounts,
+          onTapItem: widget.onTapTransaction,
+          onViewAll: widget.onOpenRecurringManager,
+        ),
       ),
-      const SizedBox(height: AppSpacing.xxl),
-      BudgetAnalyticsSection(
-        budgets: widget.categoryBudgets,
-        spendByCategory: budgetSpend,
-        onOpenBudgetSettings: widget.onOpenBudgetSettings,
+      _AnalyticsPage(
+        'Insights',
+        BehavioralInsightsSection(
+          insights: insights,
+          weekdayAverages: weekdayAverages,
+          onAction: widget.onInsightAction,
+        ),
       ),
-      const SizedBox(height: AppSpacing.xxl),
-      SubscriptionsSection(
-        summary: recurring,
-        accounts: widget.accounts,
-        onTapItem: widget.onTapTransaction,
-        onViewAll: widget.onOpenRecurringManager,
-      ),
-      const SizedBox(height: AppSpacing.xxl),
-      BehavioralInsightsSection(
-        insights: insights,
-        weekdayAverages: weekdayAverages,
-        onAction: widget.onInsightAction,
-      ),
-      const SizedBox(height: AppSpacing.xxl),
-      TrendAnalysisSection(buckets: longTrend),
+      _AnalyticsPage('Trends', TrendAnalysisSection(buckets: longTrend)),
     ];
+  }
+}
+
+class _AnalyticsPage {
+  const _AnalyticsPage(this.title, this.child);
+
+  final String title;
+  final Widget child;
+}
+
+/// Dots plus the current page's title, so a swipe-only layout still tells
+/// users where they are and how many views there are.
+class _PageIndicator extends StatelessWidget {
+  const _PageIndicator({required this.titles, required this.current});
+
+  final List<String> titles;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            titles[current.clamp(0, titles.length - 1)],
+            style: AppTextStyles.label.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        for (var i = 0; i < titles.length; i++)
+          AnimatedContainer(
+            duration: AppDurations.short,
+            margin: const EdgeInsets.only(left: 5),
+            width: i == current ? 16 : 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: i == current ? AppColors.primary : AppColors.border,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+      ],
+    );
   }
 }
