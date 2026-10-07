@@ -1,5 +1,6 @@
 import '../models/category_budget.dart';
 import '../models/transaction.dart';
+import '../models/transaction_draft.dart' show TransactionKind;
 import 'recurrence_normalization.dart';
 import 'transaction_subtype_helpers.dart';
 
@@ -258,6 +259,7 @@ class AnalyticsAggregations {
   static List<CategorySlice> categoryBreakdown({
     required List<Transaction> transactions,
     required ResolvedRange range,
+    TransactionKind kind = TransactionKind.expense,
   }) {
     final inWindow = _within(transactions, range);
     final prior = _within(transactions, range.previous);
@@ -266,7 +268,7 @@ class AnalyticsAggregations {
     final counts = <String, int>{};
     var grandTotal = 0.0;
     for (final tx in inWindow) {
-      if (!tx.isExpense) continue;
+      if (tx.kind != kind) continue;
       final key = (tx.category ?? 'Other').trim().isEmpty
           ? 'Other'
           : tx.category!.trim();
@@ -278,7 +280,7 @@ class AnalyticsAggregations {
 
     final priorTotals = <String, double>{};
     for (final tx in prior) {
-      if (!tx.isExpense) continue;
+      if (tx.kind != kind) continue;
       final key = (tx.category ?? 'Other').trim().isEmpty
           ? 'Other'
           : tx.category!.trim();
@@ -306,10 +308,11 @@ class AnalyticsAggregations {
     required List<Transaction> transactions,
     required ResolvedRange range,
     required String category,
+    TransactionKind kind = TransactionKind.expense,
   }) {
     final key = category.trim().toLowerCase();
     final out = transactions.where((tx) {
-      if (!tx.isExpense) return false;
+      if (tx.kind != kind) return false;
       if (!range.contains(tx.date)) return false;
       final cat = (tx.category ?? 'Other').trim().toLowerCase();
       return cat == key;
@@ -325,12 +328,13 @@ class AnalyticsAggregations {
     required String category,
     int months = 6,
     DateTime? now,
+    TransactionKind kind = TransactionKind.expense,
   }) {
     final clock = now ?? DateTime.now();
     final key = category.trim().toLowerCase();
     final buckets = List<double>.filled(months, 0.0);
     for (final tx in transactions) {
-      if (!tx.isExpense) continue;
+      if (tx.kind != kind) continue;
       if ((tx.category ?? 'Other').trim().toLowerCase() != key) continue;
       final monthsBack = (clock.year - tx.date.year) * 12 +
           (clock.month - tx.date.month);

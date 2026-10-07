@@ -4,6 +4,9 @@ import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/category_budget.dart';
 import '../../models/transaction.dart';
+import '../../models/transaction_draft.dart' show TransactionKind;
+import '../../services/category_catalog.dart';
+import '../../services/income_category_catalog.dart';
 import '../../utils/analytics_aggregations.dart';
 import '../../utils/financial_insights.dart';
 import 'analytics_empty_state.dart';
@@ -180,6 +183,11 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
       transactions: transactions,
       range: resolved,
     );
+    final incomeSlices = AnalyticsAggregations.categoryBreakdown(
+      transactions: transactions,
+      range: resolved,
+      kind: TransactionKind.income,
+    );
     final buckets = AnalyticsAggregations.incomeVsExpenseBuckets(
       transactions: transactions,
       range: resolved,
@@ -228,6 +236,22 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
         range: resolved,
         allTransactions: transactions,
         onTapTransaction: widget.onTapTransaction,
+        colorForCategory: CategoryCatalog.instance.colorForName,
+        iconForCategory: CategoryCatalog.instance.iconForName,
+      ),
+      const SizedBox(height: AppSpacing.xxl),
+      ExpenseBreakdownSection(
+        slices: incomeSlices,
+        range: resolved,
+        allTransactions: transactions,
+        onTapTransaction: widget.onTapTransaction,
+        colorForCategory: IncomeCategoryCatalog.instance.colorForName,
+        iconForCategory: IncomeCategoryCatalog.instance.iconForName,
+        kind: TransactionKind.income,
+        title: 'Where it came from',
+        subtitle: 'Tap a category to see the story behind it.',
+        emptyText:
+            'No income in this window yet — categories will appear as you log income.',
       ),
       const SizedBox(height: AppSpacing.xxl),
       IncomeVsExpenseSection(

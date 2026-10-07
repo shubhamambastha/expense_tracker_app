@@ -3,7 +3,7 @@ import 'package:intl/intl.dart' as intl;
 
 import '../../config/design_tokens.dart';
 import '../../models/transaction.dart';
-import '../../services/category_catalog.dart';
+import '../../models/transaction_draft.dart' show TransactionKind;
 import '../../services/currency_settings.dart';
 import '../../utils/analytics_aggregations.dart';
 import '../home/dashboard/dashboard_section_header.dart';
@@ -21,12 +21,29 @@ class ExpenseBreakdownSection extends StatefulWidget {
     required this.range,
     required this.allTransactions,
     required this.onTapTransaction,
+    required this.colorForCategory,
+    required this.iconForCategory,
+    this.kind = TransactionKind.expense,
+    this.title = 'Where it went',
+    this.subtitle = 'Tap a category to see the story behind it.',
+    this.emptyText =
+        'No spending in this window yet — categories will appear as you log expenses.',
   });
 
   final List<CategorySlice> slices;
   final ResolvedRange range;
   final List<Transaction> allTransactions;
   final void Function(Transaction transaction) onTapTransaction;
+  final Color Function(String category) colorForCategory;
+  final IconData Function(String category) iconForCategory;
+
+  /// Which transactions this breakdown covers — expense (default) or income.
+  /// Drives the aggregation filter, the amount sign, and which direction of
+  /// change reads as good news.
+  final TransactionKind kind;
+  final String title;
+  final String subtitle;
+  final String emptyText;
 
   @override
   State<ExpenseBreakdownSection> createState() =>
@@ -40,7 +57,7 @@ class _ExpenseBreakdownSectionState extends State<ExpenseBreakdownSection> {
   Widget build(BuildContext context) {
     final slices = widget.slices;
     if (slices.isEmpty) {
-      return _EmptyBreakdownCard();
+      return _EmptyBreakdownCard(title: widget.title, emptyText: widget.emptyText);
     }
     final total = slices.fold<double>(0, (sum, s) => sum + s.total);
     final categoryTotals = {
@@ -49,15 +66,14 @@ class _ExpenseBreakdownSectionState extends State<ExpenseBreakdownSection> {
     final entries = slices
         .map((s) => MapEntry<String, double>(s.category, s.total))
         .toList(growable: false);
-    final catalog = CategoryCatalog.instance;
-    Color colorForCategory(String name) => catalog.colorForName(name);
+    final colorForCategory = widget.colorForCategory;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DashboardSectionHeader(
-          title: 'Where it went',
-          subtitle: 'Tap a category to see the story behind it.',
+          title: widget.title,
+          subtitle: widget.subtitle,
         ),
         const SizedBox(height: AppSpacing.md),
         AnalyticsSectionCard(
@@ -91,6 +107,7 @@ class _ExpenseBreakdownSectionState extends State<ExpenseBreakdownSection> {
                       child: _BreakdownLegend(
                         slices: slices,
                         total: total,
+                        colorForCategory: colorForCategory,
                       ),
                     ),
                   ],
@@ -107,6 +124,9 @@ class _ExpenseBreakdownSectionState extends State<ExpenseBreakdownSection> {
                 _CategoryRow(
                   slice: slices[i],
                   isExpanded: slices[i].category == _expandedCategory,
+                  colorForCategory: colorForCategory,
+                  iconForCategory: widget.iconForCategory,
+                  kind: widget.kind,
                   onTap: () {
                     setState(() {
                       _expandedCategory = _expandedCategory == slices[i].category
@@ -120,6 +140,8 @@ class _ExpenseBreakdownSectionState extends State<ExpenseBreakdownSection> {
                       range: widget.range,
                       transactions: widget.allTransactions,
                       onTapTransaction: widget.onTapTransaction,
+                      colorForCategory: colorForCategory,
+                      kind: widget.kind,
                     );
                   },
                 ),
@@ -143,15 +165,16 @@ class _BreakdownLegend extends StatelessWidget {
   const _BreakdownLegend({
     required this.slices,
     required this.total,
+    required this.colorForCategory,
   });
 
   final List<CategorySlice> slices;
   final double total;
+  final Color Function(String category) colorForCategory;
 
   @override
   Widget build(BuildContext context) {
     final visible = slices.take(4).toList();
-    final catalog = CategoryCatalog.instance;
     final currency = CurrencySettings.instance;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -166,7 +189,7 @@ class _BreakdownLegend extends StatelessWidget {
                   width: 9,
                   height: 9,
                   decoration: BoxDecoration(
-                    color: catalog.colorForName(slice.category),
+                    color: colorForCategory(slice.category),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -221,17 +244,23 @@ class _CategoryRow extends StatelessWidget {
     required this.isExpanded,
     required this.onTap,
     required this.builder,
+    required this.colorForCategory,
+    required this.iconForCategory,
+    required this.kind,
   });
 
   final CategorySlice slice;
   final bool isExpanded;
   final VoidCallback onTap;
   final Widget Function() builder;
+  final Color Function(String category) colorForCategory;
+  final IconData Function(String category) iconForCategory;
+  final TransactionKind kind;
 
   @override
   Widget build(BuildContext context) {
-    final color = CategoryCatalog.instance.colorForName(slice.category);
-    final icon = CategoryCatalog.instance.iconForName(slice.category);
+    final color = colorForCategory(slice.category);
+    final icon = iconForCategory(slice.category);
     final currency = CurrencySettings.instance;
     final deltaLabel = _deltaLabel(slice.deltaPct);
 
@@ -345,10 +374,15 @@ class _CategoryRow extends StatelessWidget {
     return '$dir $pct% vs last period';
   }
 
+  /// More expense is a warning, more income is a success — inverted logic
+  /// for the same "went up" delta depending on which flow this row is.
   Color _deltaColor(double? delta) {
     if (delta == null) return AppColors.textSecondary;
     if (delta.abs() < 0.05) return AppColors.textSecondary;
-    return delta >= 0 ? AppColors.warning : AppColors.success;
+    final isIncome = kind == TransactionKind.income;
+    final rose = delta >= 0;
+    if (isIncome) return rose ? AppColors.success : AppColors.warning;
+    return rose ? AppColors.warning : AppColors.success;
   }
 }
 
@@ -358,25 +392,31 @@ class _CategoryDetail extends StatelessWidget {
     required this.range,
     required this.transactions,
     required this.onTapTransaction,
+    required this.colorForCategory,
+    required this.kind,
   });
 
   final CategorySlice slice;
   final ResolvedRange range;
   final List<Transaction> transactions;
   final void Function(Transaction tx) onTapTransaction;
+  final Color Function(String category) colorForCategory;
+  final TransactionKind kind;
 
   @override
   Widget build(BuildContext context) {
-    final color = CategoryCatalog.instance.colorForName(slice.category);
+    final color = colorForCategory(slice.category);
     final monthly = AnalyticsAggregations.categoryMonthlyTrend(
       transactions: transactions,
       category: slice.category,
       months: 6,
+      kind: kind,
     );
     final inRange = AnalyticsAggregations.transactionsForCategory(
       transactions: transactions,
       range: range,
       category: slice.category,
+      kind: kind,
     ).take(3).toList();
     final insightText = _insight(slice);
 
@@ -441,6 +481,7 @@ class _CategoryDetail extends StatelessWidget {
               _MiniTransactionRow(
                 transaction: tx,
                 onTap: () => onTapTransaction(tx),
+                isIncome: kind == TransactionKind.income,
               ),
           ],
         ],
@@ -451,14 +492,23 @@ class _CategoryDetail extends StatelessWidget {
   String _insight(CategorySlice slice) {
     final pctOfTotal = (slice.share * 100).round();
     final delta = slice.deltaPct;
-    final base = '${slice.category} took $pctOfTotal% of your outflow.';
+    final isIncome = kind == TransactionKind.income;
+    final noun = isIncome ? 'income' : 'outflow';
+    final verb = isIncome ? 'brought in' : 'took';
+    final base = '${slice.category} $verb $pctOfTotal% of your $noun.';
     if (delta == null) return base;
     final pct = (delta.abs() * 100).round();
-    if (pct < 5) return '$base Spending is steady vs last period.';
-    if (delta >= 0) {
-      return '$base Spending climbed $pct% vs last period — worth a glance.';
+    if (pct < 5) {
+      return '$base ${isIncome ? 'Income is' : 'Spending is'} steady vs last period.';
     }
-    return '$base Spending eased $pct% — nice trim.';
+    if (delta >= 0) {
+      return isIncome
+          ? '$base Up $pct% vs last period — nice.'
+          : '$base Spending climbed $pct% vs last period — worth a glance.';
+    }
+    return isIncome
+        ? '$base Down $pct% vs last period — worth a glance.'
+        : '$base Spending eased $pct% — nice trim.';
   }
 }
 
@@ -466,10 +516,12 @@ class _MiniTransactionRow extends StatelessWidget {
   const _MiniTransactionRow({
     required this.transaction,
     required this.onTap,
+    this.isIncome = false,
   });
 
   final Transaction transaction;
   final VoidCallback onTap;
+  final bool isIncome;
 
   @override
   Widget build(BuildContext context) {
@@ -501,7 +553,7 @@ class _MiniTransactionRow extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.md),
               Text(
-                '-${currency.formatCompact(transaction.amount)}',
+                '${isIncome ? '+' : '-'}${currency.formatCompact(transaction.amount)}',
                 style: AppTextStyles.label.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w800,
@@ -517,13 +569,18 @@ class _MiniTransactionRow extends StatelessWidget {
 }
 
 class _EmptyBreakdownCard extends StatelessWidget {
+  const _EmptyBreakdownCard({required this.title, required this.emptyText});
+
+  final String title;
+  final String emptyText;
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DashboardSectionHeader(
-          title: 'Where it went',
+        DashboardSectionHeader(
+          title: title,
         ),
         const SizedBox(height: AppSpacing.md),
         AnalyticsSectionCard(
@@ -545,7 +602,7 @@ class _EmptyBreakdownCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
-                  'No spending in this window yet — categories will appear as you log expenses.',
+                  emptyText,
                   style: AppTextStyles.bodySmall,
                 ),
               ),
