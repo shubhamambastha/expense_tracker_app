@@ -276,6 +276,7 @@ class _IncomeFields extends StatelessWidget {
       categories: names,
       selected: categoryName,
       addCategoryTitle: 'Add income category',
+      collapsedCount: 4,
       iconFor: catalog.iconForName,
       colorFor: catalog.colorForName,
       onAddCategory: (name, iconKey) =>
@@ -498,7 +499,15 @@ Future<String?> _showCategoryPicker({
   required IconData Function(String name) iconFor,
   required Color Function(String name) colorFor,
   required Future<void> Function(String name, String iconKey) onAddCategory,
+  int? collapsedCount,
 }) {
+  // Collapse only when it hides something, and stay expanded if the current
+  // selection would otherwise be hidden.
+  final canCollapse =
+      collapsedCount != null && categories.length > collapsedCount;
+  var expanded =
+      !canCollapse ||
+      (selected != null && categories.indexOf(selected) >= collapsedCount);
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
@@ -523,18 +532,30 @@ Future<String?> _showCategoryPicker({
                 child: Text(title, style: AppTextStyles.headingSmall),
               ),
               Flexible(
-                child: ListView.separated(
+                child: StatefulBuilder(
+                  builder: (context, setSheetState) {
+                    final visible = expanded
+                        ? categories
+                        : categories.take(collapsedCount!).toList();
+                    final showMore = !expanded;
+                    return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
                     0,
                     AppSpacing.lg,
                     AppSpacing.md,
                   ),
-                  itemCount: categories.length + 1,
+                  itemCount: visible.length + (showMore ? 1 : 0) + 1,
                   separatorBuilder: (_, _) =>
                       const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
-                    if (index == categories.length) {
+                    if (showMore && index == visible.length) {
+                      return _MoreCategoriesRow(
+                        hiddenCount: categories.length - visible.length,
+                        onTap: () => setSheetState(() => expanded = true),
+                      );
+                    }
+                    if (index == visible.length + (showMore ? 1 : 0)) {
                       return _AddCategoryRow(
                         onTap: () async {
                           String? createdName;
@@ -554,7 +575,7 @@ Future<String?> _showCategoryPicker({
                         },
                       );
                     }
-                    final name = categories[index];
+                    final name = visible[index];
                     final isSelected = name == selected;
                     return SettingsSelectableRow(
                       label: name,
@@ -562,6 +583,8 @@ Future<String?> _showCategoryPicker({
                       icon: iconFor(name),
                       iconColor: colorFor(name),
                       onTap: () => Navigator.of(sheetContext).pop(name),
+                    );
+                  },
                     );
                   },
                 ),
@@ -572,6 +595,45 @@ Future<String?> _showCategoryPicker({
       );
     },
   );
+}
+
+/// Collapsed-list footer: reveals the less common categories in place.
+class _MoreCategoriesRow extends StatelessWidget {
+  const _MoreCategoriesRow({required this.hiddenCount, required this.onTap});
+
+  final int hiddenCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.expand_more_rounded,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              'More ($hiddenCount)',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Trailing row in the category picker that opens the add-category overlay.
