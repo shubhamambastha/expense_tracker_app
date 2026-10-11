@@ -45,6 +45,11 @@ class ApiService {
     if (!AppConfig.hasApi) {
       throw Exception('Missing API_BASE_URL. Provide via --dart-define');
     }
+    // dart:io ignores iOS ATS and Android cleartext rules, so this is the
+    // only thing stopping a release build from sending tokens over plain HTTP.
+    if (kReleaseMode && !_baseUrl.startsWith('https://')) {
+      throw Exception('API_BASE_URL must be https:// in release builds');
+    }
     await AuthService.instance.init();
   }
 
