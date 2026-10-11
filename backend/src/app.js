@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import { api } from './routes/index.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
@@ -13,6 +14,8 @@ app.use((req, res, next) => {
   });
   next();
 });
+// Dart's HttpClient asks for gzip by default; full-list JSON shrinks ~90%.
+app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.get('/health', (req, res) => res.send('ok'));
 app.use('/v1', api);
