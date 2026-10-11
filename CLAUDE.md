@@ -1,6 +1,6 @@
 # expense_tracker_app
 
-Flutter expense tracker with Auth0 login, a Node REST API (`backend/`), and Supabase Postgres behind it. Dark-theme-only, no state-management framework (`ChangeNotifier`/`ValueNotifier` singletons + local `setState`).
+Flutter expense tracker with Auth0 login (or an on-device guest mode), a Node REST API (`backend/`), and Supabase Postgres behind it. Light/dark theme with a user-picked accent, no state-management framework (`ChangeNotifier`/`ValueNotifier` singletons + local `setState`).
 
 Full docs live in `docs/` — read them before making non-trivial changes:
 
@@ -10,7 +10,10 @@ Full docs live in `docs/` — read them before making non-trivial changes:
 | [docs/DESIGN.md](./docs/DESIGN.md) | Design tokens, shared UI primitives, motion, component catalog |
 | [docs/BACKEND.md](./docs/BACKEND.md) | Node API: endpoints, auth flow, run/deploy, trade-offs |
 | [docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md) | Postgres schema, ER diagram, migration order |
-| [docs/BACKLOG.md](./docs/BACKLOG.md) | Known gaps, half-finished features, next-up work |
+| [docs/FEATURES.md](./docs/FEATURES.md) | Business/validation rules per feature, cited to the code |
+| [docs/BACKLOG.md](./docs/BACKLOG.md) | Known gaps, half-finished features, structural debt |
+| [TODOS.md](./TODOS.md) | Review follow-ups with priority/effort |
+| [docs/designs/](./docs/designs/) | Point-in-time design docs (guest mode, onboarding, insight digest) |
 | [docs/auth0_setup.md](./docs/auth0_setup.md) | Auth0 tenant & callback setup |
 | [docs/supabase_setup.md](./docs/supabase_setup.md) | Supabase project, RLS, CI secrets |
 
@@ -43,7 +46,7 @@ There is no named router and no bundled `.env` — secrets are compile-time `--d
 
 - **Layers**: `screens/` own navigation and orchestration; `components/` are UI-only (no direct API calls, receive callbacks); `services/` are singletons, one per backend/cross-cutting concern; `utils/` are pure functions safe to unit test without widget binding. See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md#layer-rules) for the full rules.
 - **Design tokens only** — never hardcode a hex color, radius, duration, or font in a widget. Everything comes from `lib/config/design_tokens.dart` (`AppColors`, `AppRadii`, `AppSpacing`, `AppTextStyles`, `AppShadows`, `AppDurations`, `AppCurves`). See [docs/DESIGN.md](./docs/DESIGN.md).
-- **Feature flags**: compile-time toggles in `lib/config/feature_flags.dart` — no remote config. Check this file before assuming a feature is fully shipped (e.g. `transferVisible` currently hides transfers from new-entry UI).
+- **Feature flags**: compile-time toggles in `lib/config/feature_flags.dart` — no remote config. Check this file before assuming a feature is fully shipped (e.g. `transferVisible` currently hides transfers from new-entry UI; `guestModeEnabled` and `postLoginOnboardingEnabled` are kill switches).
 - **Snackbars**: always go through `SnackbarHelper` (`lib/utils/snackbar_helper.dart`) — never call `ScaffoldMessenger` directly.
 - **Empty/loading/error UX**: use the shared barrel `components/common/states/states.dart` rather than one-off spinners/empty widgets.
 - **User scoping**: the backend (`backend/src/app.js`) forces `user_id = <Auth0 sub from the bearer token>` on every query, and Supabase RLS checks the same token again. The app never sends `user_id`. If data leaks across users or comes back empty, check the token the app sends and the backend's `auth` middleware first.
@@ -51,10 +54,11 @@ There is no named router and no bundled `.env` — secrets are compile-time `--d
 
 ## Where things live
 
-- `lib/screens/home/expense_home_page.dart` — the tab shell (Home · Transactions · Analytics · Budgets · Settings, plus a centre FAB for Add Transaction) and the owner of most in-memory transaction/account state.
+- `lib/screens/home/expense_home_page.dart` — the tab shell (Home · Transactions · Analytics · Settings, plus a centre Add button; Budgets is a pushed route, not a tab) and the owner of most in-memory transaction/account state.
 - `lib/services/api_service.dart` — every data read/write for signed-in users (HTTP → `backend/`); guest mode branches to `GuestStore`.
 - `backend/src/app.js` — the whole Node API (Express 5): JWT verification, column whitelists, routes.
-- `lib/services/auth_service.dart` + `components/common/auth_gate.dart` — Auth0 session and splash→login→app routing.
+- `lib/services/auth_service.dart` + `components/common/auth_gate.dart` — Auth0/guest session and splash → login → onboarding wizard → app routing.
+- `lib/services/guest_store.dart` + `guest_migration_service.dart` — guest-mode on-device storage and its replay into a real account on first sign-in.
 - `sql/` — dated Supabase migration files (manually applied; see [docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md)).
 - `ios/AddExpenseWidget/` — iOS home-screen widget that deep-links into the add-expense flow.
 

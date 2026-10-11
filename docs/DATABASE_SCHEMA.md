@@ -60,6 +60,7 @@ mindmap
       user_settings
         default_currency_code
         preferences jsonb
+        onboarding_completed_at
     Autofill
       counterparties
         merchant employer client person generic
@@ -315,10 +316,13 @@ user_settings
 ├── user_id                  text PK
 ├── default_currency_code    default 'USD' (app often uses INR locally)
 ├── preferences              jsonb {}     app toggles / enums blob
+├── onboarding_completed_at  timestamptz  NULL = show the post-login wizard
 └── updated_at               timestamptz
 ```
 
-**Dart:** `user_settings.dart` · **Local mirror:** `SettingsPreferences` + SharedPreferences · **SQL:** `user_settings_table.sql`, `20260527_user_settings_preferences.sql`
+`onboarding_completed_at` is a real column, not a `preferences` key, because `SettingsPreferences` rewrites the whole `preferences` blob on every sync and would drop it. The migration backfills existing rows to `now()` so current users never see the wizard.
+
+**Dart:** `user_settings.dart` · **Local mirror:** `SettingsPreferences` + SharedPreferences · **SQL:** `user_settings_table.sql`, `20260527_user_settings_preferences.sql`, `20260824_onboarding_completed_at.sql`
 
 ---
 
@@ -388,7 +392,10 @@ Run in Supabase SQL editor (fresh project → existing project):
 12. 20260528_recurring_events.sql
 13. 20260528_recurring_close.sql
 14. 20260529_auth0_user_id_text.sql   ← required for Auth0 third-party auth
+15. 20260824_onboarding_completed_at.sql
 ```
+
+On an existing database, apply only the files after the last one you ran.
 
 ---
 
@@ -403,7 +410,8 @@ Run in Supabase SQL editor (fresh project → existing project):
 | Budgets | `category_budgets` | `CategoryBudgetService` |
 | Analytics | `transactions` (aggregated) | `analytics_aggregations.dart` |
 | Recurring manager | `transactions`, `recurring_events` | `recurring_management.dart`, `upcoming_payments.dart` |
-| Autofill chips | `counterparties`, `transactions` | `SourcePayerField` |
+| Autofill chips | `counterparties`, `transactions` | `SourcePayerField` (built but unused, no API route yet; see [TODOS.md](../TODOS.md)) |
+| Onboarding wizard | `user_settings.onboarding_completed_at` | `OnboardingWizardStatus` |
 | App preferences | `user_settings` | `SettingsPreferences`, `CurrencySettings` |
 
 ---

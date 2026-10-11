@@ -88,15 +88,15 @@
 
 ### Swap the Delete Account placeholder support email before release
 
-**What:** `AppInfo.supportEmail` (or wherever T2 lands it) ships as an obviously-fake placeholder (`support@REPLACE-ME.com`) — swap it for the real founder support address before any release build.
+**What:** `AppInfo.supportEmail` (`lib/config/app_info.dart`) is still the obviously-fake placeholder `support@REPLACE-ME.com` — swap it for the real founder support address before any release build. The Delete Account `mailto:` and its no-mail-app error message both use it.
 
-**Why:** No mechanism in the repo today (no CI grep, no lint rule) stops a build from shipping with the placeholder still in place — confirmed nothing named `REPLACE-ME` exists anywhere in the tree yet, so this is genuinely untracked once this PR lands. This is also the exact mailto: flow `docs/BACKLOG.md`'s "Delete my account" entry flags as relevant to Apple App Store Guideline 5.1.1(v) if this app is ever submitted — a broken/fake destination address on that specific flow is worse than most placeholders.
+**Why:** No mechanism in the repo today (no CI grep, no lint rule) stops a build from shipping with the placeholder still in place. This is also the exact mailto: flow `docs/BACKLOG.md`'s "Delete my account" entry flags as relevant to Apple App Store Guideline 5.1.1(v) if this app is ever submitted — a broken/fake destination address on that specific flow is worse than most placeholders.
 
 **Context:** Surfaced by `/plan-eng-review`'s outside-voice pass (2026-08-24) on the Settings IA rebuild. Considered adding an automated CI guard for this instead of a TODO — deliberately chose the lighter, human-tracked option since this is a solo-founder pre-scale app and a CI step felt like more process than the risk currently warrants.
 
 **Effort:** S
 **Priority:** P1 (blocks any real release, not blocks-this-PR)
-**Depends on:** T2 (Delete Account mailto: implementation) landing first.
+**Depends on:** None (the Delete Account mailto: flow shipped 2026-08-24).
 
 ---
 

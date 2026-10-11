@@ -16,13 +16,15 @@ flowchart TD
   init --> app[ExpenseTrackerApp]
   app --> gate[AuthGate]
   gate --> splash[SplashScreen + SplashBootstrap]
-  gate --> login[LoginPage via Auth0]
+  gate --> login[LoginPage: Auth0 or Continue as guest]
+  gate --> wizard[OnboardingWizardPage, first run only]
   gate --> home[ExpenseHomePage tab shell]
   home --> tabs[Home · Transactions · Analytics · Settings]
   home --> push[Push routes: add transaction, accounts, recurring, budgets]
   services[Services layer] --> api[ApiService]
   services --> auth[AuthService]
   api -->|REST + Bearer ID token| node[backend/ Node API]
+  api -->|guest mode| guest[(GuestStore, on-device)]
   node --> db[(Supabase Postgres)]
   auth --> auth0[Auth0 Universal Login]
   auth -->|ID token| api
@@ -59,15 +61,20 @@ Compile-time secrets come from `--dart-define` (see `config.dev.json.example` an
 
 **Auth0** handles login. `ApiService` sends the Auth0 ID token as `Authorization: Bearer …` on every request. The Node API verifies it, derives `user_id` from `sub`, and forwards the same token to Supabase so RLS still applies. See [BACKEND.md](./BACKEND.md).
 
+**Guest mode** ("Continue as guest", behind `FeatureFlags.guestModeEnabled`) skips Auth0. `AuthService.isGuest` is persisted, and every `ApiService` method branches to `GuestStore` (SharedPreferences, no network) when it's true. On the first real sign-in with guest data present, `GuestMigrationService` offers to replay it into the account (all-or-nothing, rolls back on failure); declined data stays local and can be imported later from Settings → Data & Privacy. Design: [designs/guest-mode.md](./designs/guest-mode.md).
+
 | Piece | Location | Role |
 | --- | --- | --- |
 | `AuthService` | `services/auth_service.dart` | Auth0 SDK, credential storage, `AppSession` notifier |
-| `AuthGate` | `components/common/auth_gate.dart` | Routes splash → login → app based on session |
+| `AuthGate` | `components/common/auth_gate.dart` | Routes splash → login → onboarding wizard → app based on session / guest flag |
 | `SplashBootstrap` | `services/splash_bootstrap.dart` | Offline-first startup: restore session, sync prefs, pick destination |
-| `LoginPage` | `screens/auth/login_page.dart` | Auth0 Universal Login entry |
+| `LoginPage` | `screens/auth/login_page.dart` | Auth0 Universal Login entry + "Continue as guest" |
+| `OnboardingWizardPage` | `screens/onboarding/onboarding_wizard_page.dart` | First-run wizard: name → currency → budget → accounts → income → recurring. Shown once per account (`OnboardingWizardStatus`; `user_settings.onboarding_completed_at` remotely) |
 | `auth` middleware | `backend/src/app.js` | Verifies the JWT and scopes every query to Auth0 `sub` |
 
 On sign-in, `AuthGate` syncs user-scoped singletons (`CategoryCatalog`, `IncomeCategoryCatalog`, `CategoryBudgetService`, `CurrencySettings`, `SettingsPreferences`). On sign-out, each calls `onSignedOut()` to clear in-memory state.
+
+`SplashBootstrap` still has a separate, unused pre-login `SplashDestination.onboarding` (+ `onboarding_complete` pref); `AuthGate` maps it to login. It is not the post-login wizard, see [BACKLOG.md](./BACKLOG.md).
 
 ---
 
@@ -77,7 +84,7 @@ There is no named router (`go_router` / routes table). Navigation uses two patte
 
 ### Tab shell (`ExpenseHomePage`)
 
-Five bottom-nav tabs: **Home (0) · Transactions (1) · Analytics (2) · Budgets (3) · Settings (4)**, plus a centre FAB (not a tab index) that opens `AddTransactionPage`. Tab bodies swap via `AnimatedSwitcher`.
+Four bottom-nav tabs: **Home (0) · Transactions (1) · Analytics (2) · Settings (3)**, plus a raised centre Add button (not a tab index) that opens `AddTransactionPage` for an expense. Tab bodies swap via `AnimatedSwitcher`.
 
 Tab content is composed inline:
 
@@ -86,8 +93,9 @@ Tab content is composed inline:
 | 0 | Dashboard | `components/home/home_content.dart` |
 | 1 | Transaction list | `components/home/transactions_content.dart` |
 | 2 | Analytics | `screens/analytics/analytics_page.dart` |
-| 3 | Budgets | `screens/settings/sections/budgets_and_spending_page.dart` (`BudgetsAndSpendingContent` — filed under `settings/` despite being a primary tab, not a Settings subpage) |
-| 4 | Settings hub | `screens/settings/settings_page.dart` |
+| 3 | Settings hub | `screens/settings/settings_page.dart` |
+
+Budgets is no longer a tab. `_openBudgetSettings()` pushes a private `_BudgetsPage` (in `expense_home_page.dart`) that wraps `BudgetsAndSpendingContent` from `screens/settings/sections/budgets_and_spending_page.dart`. Home, Analytics and Settings → Money all open it.
 
 ### Push routes
 
@@ -96,7 +104,8 @@ Full-screen flows use `Navigator.push` from the home shell or settings:
 - `screens/transaction/add_transaction_page.dart` — create / edit transactions
 - `screens/accounts/` — list, detail, add/edit bank/credit/wallet accounts
 - `screens/recurring/recurring_payments_page.dart` — subscriptions, EMIs, upcoming timeline
-- `screens/settings/sections/` — settings sub-pages (categories, budgets, profile, etc.)
+- Budgets — see above
+- `screens/settings/sections/` — settings sub-pages: Appearance, Money, Categories, Data & Privacy, Help Center, About, Edit Profile
 
 Sheets and dialogs (`showModalBottomSheet`, custom overlays) live under `components/dialogs/` and feature folders (e.g. `transaction_detail_sheet.dart`).
 
@@ -109,8 +118,9 @@ lib/
 ├── main.dart
 ├── config/
 │   ├── design_tokens.dart          # Colors, spacing, typography tokens
-│   ├── theme.dart                  # AppTheme.darkTheme (Material 3)
-│   └── feature_flags.dart          # Compile-time UI toggles (see Feature flags)
+│   ├── theme.dart                  # AppTheme.darkTheme / lightTheme (Material 3)
+│   ├── feature_flags.dart          # Compile-time UI toggles (see Feature flags)
+│   └── app_info.dart               # App version + support email (placeholder, see TODOS.md)
 ├── models/                         # Domain types & API (snake_case row) mappers
 ├── services/                       # Singletons: auth, sync, preferences
 ├── screens/                        # Full pages & navigation owners
@@ -120,7 +130,7 @@ lib/
 backend/                            # Node REST API (see BACKEND.md)
 sql/                                # Supabase migrations (see DATABASE_SCHEMA.md)
 docs/                               # Architecture, backend, schema, design & setup docs
-ios/AddExpenseWidget/              # iOS home-screen widget (deep link → add expense)
+ios/AddExpenseWidget/               # iOS home-screen widget (deep link → add expense)
 ```
 
 ### `lib/models/`
@@ -143,15 +153,21 @@ ios/AddExpenseWidget/              # iOS home-screen widget (deep link → add e
 | Service | Pattern | Purpose |
 | --- | --- | --- |
 | `ApiService` | Static methods | All data CRUD over HTTP to `backend/` (guest → `GuestStore`) |
-| `AuthService` | Singleton + `ValueNotifier` | Auth0 session |
+| `AuthService` | Singleton + `ValueNotifier` | Auth0 session + persisted `isGuest` flag |
+| `GuestStore` | Singleton | Guest-mode mirror of every table in SharedPreferences (negative local ids) |
+| `GuestMigrationService` | Singleton | Replays guest data into a real account, with rollback |
 | `SplashBootstrap` | Singleton | Startup orchestration |
 | `CategoryCatalog` | Singleton + `ChangeNotifier` | Expense categories (local + remote) |
 | `IncomeCategoryCatalog` | Singleton + `ChangeNotifier` | Income categories |
+| `CategorySyncCache` | Generic helper | Shared remote-first load / local fallback / single-flight sync for both catalogs |
 | `CategoryBudgetService` | Singleton + `ChangeNotifier` | Category budgets |
 | `CurrencySettings` | Singleton + `ChangeNotifier` | Display currency |
-| `SettingsPreferences` | Singleton + `ChangeNotifier` | App preferences (timezone, etc.) |
+| `SettingsPreferences` | Singleton + `ChangeNotifier` | App preferences (theme, accent, monthly limit, toggles), synced to `user_settings.preferences` |
+| `OnboardingWizardStatus` | Singleton | Whether the post-login wizard is done (local flag first, then remote column) |
+| `OnboardingAnalytics` | Singleton | Local-only wizard counters, never sent anywhere |
 | `TransactionListPreferences` | Singleton | Transactions tab sort/filter prefs |
 | `DeepLinkService` | Singleton | App link listener |
+| `SplashBootstrap` / `TransactionListPreferences` | Singleton | Startup orchestration / Transactions tab sort & filter prefs |
 | `AppLaunchIntentHolder` | Singleton + `ValueNotifier` | Parsed widget intents |
 
 ### `lib/screens/`
@@ -159,6 +175,7 @@ ios/AddExpenseWidget/              # iOS home-screen widget (deep link → add e
 | Folder | Screens |
 | --- | --- |
 | `auth/` | `login_page.dart`, `splash_screen.dart` |
+| `onboarding/` | `onboarding_wizard_page.dart` — 6-step first-run wizard |
 | `home/` | `expense_home_page.dart` — main tab shell & data owner |
 | `transaction/` | `add_transaction_page.dart` |
 | `accounts/` | List, detail, credit detail, add/edit |
@@ -172,7 +189,7 @@ Feature-grouped reusable widgets. Screens compose these; they do not call `ApiSe
 
 | Folder | Responsibility |
 | --- | --- |
-| `common/` | `auth_gate`, `error_app`, `compact_header`, `states/` (empty/loading/error UX) |
+| `common/` | `auth_gate`, `error_app`, `compact_header`, `subscription_badge`, `states/` (empty/loading/error UX) |
 | `home/` | Dashboard + transactions tab content |
 | `home/dashboard/` | Hero card, recent transactions, quick actions, budget sheet |
 | `transaction/` | Add form fields, list item, detail sheet + sections |
@@ -181,6 +198,7 @@ Feature-grouped reusable widgets. Screens compose these; they do not call `ApiSe
 | `recurring/` | Subscription/EMI cards, timeline, add sheet |
 | `settings/` | Settings rows, sections, subpage scaffold |
 | `profile/` | Profile edit widgets |
+| `onboarding/` | Wizard step widgets + shared step scaffold / progress header |
 | `auth/` | Login form |
 | `dialogs/` | Shared modals and confirmation sheets |
 
@@ -190,22 +208,25 @@ Pure functions and small helpers — no Flutter widget trees except where UI-adj
 
 | Area | Files |
 | --- | --- |
-| Config | `app_config.dart`, `constants.dart` |
+| Config | `app_config.dart`, `constants.dart`, `auth0_urls.dart` |
 | Validation | `validators.dart` |
 | UX | `snackbar_helper.dart`, `category_style.dart` |
 | Aggregations | `dashboard_aggregations.dart`, `analytics_aggregations.dart`, `financial_insights.dart` |
-| Domain | `recurring_management.dart`, `upcoming_payments.dart`, `account_management.dart`, `transaction_filter_logic.dart`, `transaction_grouping.dart`, `transaction_subtype_helpers.dart`, `income_flow_helpers.dart`, `recurrence_normalization.dart` |
-| Formatting | `transaction_date_format.dart`, `timezone_options.dart`, `profile_identity.dart` |
+| Domain | `recurring_management.dart`, `upcoming_payments.dart`, `account_management.dart`, `transaction_filter_logic.dart`, `transaction_grouping.dart`, `transaction_subtype_helpers.dart`, `income_flow_helpers.dart`, `recurrence_normalization.dart`, `emi_schedule_helpers.dart`, `subscription_catalog.dart` |
+| Settings & data | `data_export.dart` (CSV), `account_deletion_request.dart` (mailto), `onboarding_locale_currency.dart` |
+| Formatting | `transaction_date_format.dart`, `profile_identity.dart` |
 
 ---
 
 ## Feature flags
 
-`lib/config/feature_flags.dart` holds compile-time UI toggles — no remote config, just a static class flipped in source. Current flag:
+`lib/config/feature_flags.dart` holds compile-time UI toggles — no remote config, just a static class flipped in source. Current flags:
 
 | Flag | Default | Effect |
 | --- | --- | --- |
 | `FeatureFlags.transferVisible` | `false` | Hides `transfer` from the quick actions, type selector, and filters. Existing transfer transactions still display/edit normally; `normalizeKind()` downgrades new transfers to `expense`. |
+| `FeatureFlags.guestModeEnabled` | `true` | Shows "Continue as guest" on the login screen. Kill switch for the guest data path. |
+| `FeatureFlags.postLoginOnboardingEnabled` | `true` | When `false`, `AuthGate` skips the onboarding wizard and every user goes straight to the dashboard. |
 
 Screens read flags directly (e.g. `expense_home_page.dart` guards the transfer quick action) rather than threading a config object through the widget tree. Add new flags as additional static `const bool` fields plus any derived helper methods, following the same pattern.
 
@@ -225,7 +246,7 @@ Migrations are dated SQL files in `sql/`, applied manually to Supabase. For the 
 | `income_categories` | `IncomeCategory` | Same pattern for income |
 | `category_budgets` | `CategoryBudget` | Monthly limits per category |
 | `recurring_events` | `RecurringEvent` | Supplemental recurring metadata |
-| `user_settings` | `UserSettings` | Remote preference blob |
+| `user_settings` | `UserSettings` | Currency, `preferences` jsonb, `onboarding_completed_at` |
 
 Legacy `expenses` table SQL remains for reference; the app reads/writes `transactions`.
 
@@ -305,6 +326,7 @@ main.dart
     ├── screens/auth/splash_screen.dart
     ├── screens/auth/login_page.dart
     │   └── components/auth/login_form.dart
+    ├── screens/onboarding/onboarding_wizard_page.dart
     └── screens/home/expense_home_page.dart
         ├── services/api_service.dart
         ├── components/home/home_content.dart
@@ -351,6 +373,8 @@ main.dart
 | App won't start / config error | `main.dart`, `app_config.dart`, `--dart-define` values |
 | Stuck on splash | `splash_bootstrap.dart`, `auth_service.dart` |
 | Login / session issues | `auth_gate.dart`, `auth_service.dart`, Auth0 callback config |
+| Onboarding wizard shows again / never shows | `onboarding_wizard_status.dart`, `user_settings.onboarding_completed_at`, `FeatureFlags.postLoginOnboardingEnabled` |
+| Guest data missing after sign-in | `guest_migration_service.dart`, Settings → Data & Privacy guest-data section |
 | Data not saving | `api_service.dart` (`ApiException` status), backend logs, Supabase RLS policies |
 | Wrong user scope | `auth` middleware in `backend/src/app.js` (`user_id` := token `sub`) and Supabase RLS policies |
 | Dashboard numbers wrong | `utils/dashboard_aggregations.dart`, `financial_insights.dart` |
@@ -382,7 +406,6 @@ main.dart
 | Localization | `flutter gen-l10n` + ARB files |
 | Offline | Local cache layer (Drift/isar) synced through the API |
 | Biometrics | Hook planned in `SplashBootstrapResult.requiresBiometricUnlock` |
-| Onboarding | `SplashDestination.onboarding` reserved in bootstrap |
 
 ---
 
