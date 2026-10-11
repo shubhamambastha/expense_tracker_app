@@ -155,7 +155,7 @@ A single app-wide default display currency — not per-transaction or per-accoun
 
 Auth0 handles identity; Supabase stores data; every row is scoped by the Auth0 `sub` claim as `user_id`.
 
-- The app never sends `user_id`. Every request carries the Auth0 ID token, and the backend verifies it and forces `user_id` = token `sub` on every query. Signed-out calls fail in `api_service.dart::_send` before any network request (`backend/src/app.js` `auth`).
+- The app never sends `user_id`. Every request carries the Auth0 ID token, and the backend verifies it and forces `user_id` = token `sub` on every query. Signed-out calls fail in `api_service.dart::_send` before any network request (`backend/src/middleware/auth.js`).
 - The backend forwards the same token to Supabase so Postgres RLS enforces the scoping again. RLS is the real enforcement point, since the anon key + an Auth0 token can still reach PostgREST directly ([BACKEND.md](./BACKEND.md)).
 - On sign-in, `AuthGate` triggers `syncForUser()` on every user-scoped singleton (`CategoryCatalog`, `IncomeCategoryCatalog`, `CategoryBudgetService`, `CurrencySettings`, `SettingsPreferences`) so cached state reflects the newly signed-in user.
 - On sign-out, each of those singletons runs `onSignedOut()`, clearing in-memory state (and, for catalogs, reloading local unsynced defaults) so no data from the previous session lingers in memory for a subsequent sign-in.

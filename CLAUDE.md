@@ -46,14 +46,14 @@ There is no named router and no bundled `.env` — secrets are compile-time `--d
 - **Feature flags**: compile-time toggles in `lib/config/feature_flags.dart` — no remote config. Check this file before assuming a feature is fully shipped (e.g. `transferVisible` currently hides transfers from new-entry UI).
 - **Snackbars**: always go through `SnackbarHelper` (`lib/utils/snackbar_helper.dart`) — never call `ScaffoldMessenger` directly.
 - **Empty/loading/error UX**: use the shared barrel `components/common/states/states.dart` rather than one-off spinners/empty widgets.
-- **User scoping**: the backend (`backend/src/app.js`) forces `user_id = <Auth0 sub from the bearer token>` on every query, and Supabase RLS checks the same token again. The app never sends `user_id`. If data leaks across users or comes back empty, check the token the app sends and the backend's `auth` middleware first.
+- **User scoping**: the backend (`backend/src/db.js` helpers, used by every route in `backend/src/routes/`) forces `user_id = <Auth0 sub from the bearer token>` on every query, and Supabase RLS checks the same token again. The app never sends `user_id`. If data leaks across users or comes back empty, check the token the app sends and the backend's `auth` middleware first.
 - Run `flutter analyze` before considering a change done — the project is expected to stay lint-clean.
 
 ## Where things live
 
 - `lib/screens/home/expense_home_page.dart` — the tab shell (Home · Transactions · Analytics · Budgets · Settings, plus a centre FAB for Add Transaction) and the owner of most in-memory transaction/account state.
 - `lib/services/api_service.dart` — every data read/write for signed-in users (HTTP → `backend/`); guest mode branches to `GuestStore`.
-- `backend/src/app.js` — the whole Node API (Express 5): JWT verification, column whitelists, routes.
+- `backend/src/` — the Node API (Express 5): `middleware/auth.js` (JWT verification), `routes/<resource>.js` (routes + that table's column whitelist), `db.js` (user-scoped query helpers). Layout in [docs/BACKEND.md](./docs/BACKEND.md#code-layout).
 - `lib/services/auth_service.dart` + `components/common/auth_gate.dart` — Auth0 session and splash→login→app routing.
 - `sql/` — dated Supabase migration files (manually applied; see [docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md)).
 - `ios/AddExpenseWidget/` — iOS home-screen widget that deep-links into the add-expense flow.

@@ -65,7 +65,7 @@ Compile-time secrets come from `--dart-define` (see `config.dev.json.example` an
 | `AuthGate` | `components/common/auth_gate.dart` | Routes splash → login → app based on session |
 | `SplashBootstrap` | `services/splash_bootstrap.dart` | Offline-first startup: restore session, sync prefs, pick destination |
 | `LoginPage` | `screens/auth/login_page.dart` | Auth0 Universal Login entry |
-| `auth` middleware | `backend/src/app.js` | Verifies the JWT and scopes every query to Auth0 `sub` |
+| `auth` middleware | `backend/src/middleware/auth.js` | Verifies the JWT and scopes every query to Auth0 `sub` |
 
 On sign-in, `AuthGate` syncs user-scoped singletons (`CategoryCatalog`, `IncomeCategoryCatalog`, `CategoryBudgetService`, `CurrencySettings`, `SettingsPreferences`). On sign-out, each calls `onSignedOut()` to clear in-memory state.
 
@@ -332,7 +332,7 @@ main.dart
 
 ### New database entity
 1. Add migration in `sql/` (with RLS on `user_id`)
-2. Add routes + a column whitelist entry in `backend/src/app.js`
+2. Add `backend/src/routes/<resource>.js` (routes + column whitelist) and mount it in `backend/src/routes/index.js`
 3. Add model in `lib/models/`
 4. Add methods to `ApiService` (and `GuestStore` for guest mode)
 5. Optionally add a `ChangeNotifier` singleton if the data is user-global and cached
@@ -352,7 +352,7 @@ main.dart
 | Stuck on splash | `splash_bootstrap.dart`, `auth_service.dart` |
 | Login / session issues | `auth_gate.dart`, `auth_service.dart`, Auth0 callback config |
 | Data not saving | `api_service.dart` (`ApiException` status), backend logs, Supabase RLS policies |
-| Wrong user scope | `auth` middleware in `backend/src/app.js` (`user_id` := token `sub`) and Supabase RLS policies |
+| Wrong user scope | `auth` middleware in `backend/src/middleware/auth.js` (`user_id` := token `sub`) and Supabase RLS policies |
 | Dashboard numbers wrong | `utils/dashboard_aggregations.dart`, `financial_insights.dart` |
 | Analytics charts empty | `utils/analytics_aggregations.dart`, `analytics_content.dart` |
 | Recurring timeline | `utils/upcoming_payments.dart`, `recurring_management.dart` |
