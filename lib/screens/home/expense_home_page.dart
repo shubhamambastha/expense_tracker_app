@@ -186,22 +186,24 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     });
 
     try {
-      final transactions = await ApiService.fetchTransactions();
-      List<Account> accounts = [];
-      try {
-        accounts = await ApiService.fetchAccounts();
-      } catch (error) {
-        if (mounted) {
-          SnackbarHelper.showMessage(
-            context,
-            'Could not load accounts: $error',
-          );
-        }
-      }
-      try {
-        await CategoryBudgetService.instance.refresh();
-      } catch (_) {
+      // One round trip instead of three; each keeps its own failure handling.
+      Object? accountsError;
+      final results = await Future.wait([
+        ApiService.fetchTransactions(),
+        ApiService.fetchAccounts().catchError((Object error) {
+          accountsError = error;
+          return <Account>[];
+        }),
         // Non-fatal: dashboard simply renders no budgets.
+        CategoryBudgetService.instance.refresh().catchError((_) {}),
+      ]);
+      final transactions = results[0] as List<Transaction>;
+      final accounts = results[1] as List<Account>;
+      if (accountsError != null && mounted) {
+        SnackbarHelper.showMessage(
+          context,
+          'Could not load accounts: $accountsError',
+        );
       }
       if (!mounted) return;
       setState(() {

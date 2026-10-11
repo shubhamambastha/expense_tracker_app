@@ -4,7 +4,7 @@ import '../../config/design_tokens.dart';
 
 /// Source / payer input for income mode with dynamic label and quick picks.
 ///
-/// Lives outside [TransactionDetailsCard] so income entry stays lightweight:
+/// Lives outside the transaction details card so income entry stays lightweight:
 /// amount → category → deposit account → payer → details.
 class SourcePayerField extends StatelessWidget {
   const SourcePayerField({
