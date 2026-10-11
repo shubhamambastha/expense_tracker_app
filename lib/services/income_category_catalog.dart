@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/income_category.dart';
 import '../utils/category_style.dart';
 import 'category_sync_cache.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 /// Per-user income categories synced with Supabase.
 class IncomeCategoryCatalog extends ChangeNotifier {
@@ -25,10 +25,10 @@ class IncomeCategoryCatalog extends ChangeNotifier {
       idOf: (c) => c.id,
       nameOf: (c) => c.name,
       isDefaultOf: (c) => c.isDefault,
-      ensureDefaultsRemote: SupabaseService.ensureDefaultIncomeCategories,
-      fetchRemote: SupabaseService.fetchIncomeCategories,
-      insertRemote: SupabaseService.insertIncomeCategory,
-      deleteRemote: SupabaseService.deleteIncomeCategory,
+      ensureDefaultsRemote: ApiService.ensureDefaultIncomeCategories,
+      fetchRemote: ApiService.fetchIncomeCategories,
+      insertRemote: ApiService.insertIncomeCategory,
+      deleteRemote: ApiService.deleteIncomeCategory,
       onChanged: notifyListeners,
       debugLabel: 'IncomeCategoryCatalog',
     );

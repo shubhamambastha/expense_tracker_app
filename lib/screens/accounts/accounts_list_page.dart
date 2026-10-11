@@ -16,7 +16,7 @@ import '../../components/common/states/loading_state.dart';
 import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/recurring_event.dart';
-import '../../services/supabase_service.dart';
+import '../../services/api_service.dart';
 import '../../utils/account_management.dart';
 import '../../utils/snackbar_helper.dart';
 import '../../utils/transaction_subtype_helpers.dart';
@@ -66,7 +66,7 @@ class _AccountsListPageState extends State<AccountsListPage> {
 
   Future<void> _bootstrap() async {
     try {
-      final events = await SupabaseService.fetchRecurringEvents();
+      final events = await ApiService.fetchRecurringEvents();
       if (!mounted) return;
       setState(() {
         _events = events;
@@ -82,9 +82,9 @@ class _AccountsListPageState extends State<AccountsListPage> {
   Future<void> _refreshAll() async {
     try {
       final results = await Future.wait([
-        SupabaseService.fetchAccounts(),
-        SupabaseService.fetchTransactions(),
-        SupabaseService.fetchRecurringEvents(),
+        ApiService.fetchAccounts(),
+        ApiService.fetchTransactions(),
+        ApiService.fetchRecurringEvents(),
       ]);
       if (!mounted) return;
       setState(() {
@@ -132,9 +132,9 @@ class _AccountsListPageState extends State<AccountsListPage> {
 
   Future<void> _saveAccount(Account account) async {
     if (account.id == null) {
-      await SupabaseService.insertAccount(account);
+      await ApiService.insertAccount(account);
     } else {
-      await SupabaseService.updateAccount(account);
+      await ApiService.updateAccount(account);
     }
     if (mounted) {
       SnackbarHelper.showSuccess(context, 'Account saved');
@@ -157,7 +157,7 @@ class _AccountsListPageState extends State<AccountsListPage> {
 
   Future<void> _archiveAccount(Account account) async {
     try {
-      await SupabaseService.archiveAccount(account);
+      await ApiService.archiveAccount(account);
       if (!mounted) return;
       SnackbarHelper.showSuccess(context, '${account.displayName} archived');
       await _refreshAll();

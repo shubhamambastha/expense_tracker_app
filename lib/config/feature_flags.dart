@@ -9,7 +9,7 @@ class FeatureFlags {
   static const bool transferVisible = false;
 
   /// When false, "Continue as guest" is hidden from the login screen and the
-  /// guest data path in [SupabaseService] is never exercised. One-line kill
+  /// guest data path in [ApiService] is never exercised. One-line kill
   /// switch, not a gradual rollout gate.
   static const bool guestModeEnabled = true;
 

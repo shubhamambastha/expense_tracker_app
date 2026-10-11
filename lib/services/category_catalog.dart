@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/expense_category.dart';
 import '../utils/category_style.dart';
 import 'category_sync_cache.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 /// Per-user expense categories synced with Supabase.
 class CategoryCatalog extends ChangeNotifier {
@@ -25,10 +25,10 @@ class CategoryCatalog extends ChangeNotifier {
       idOf: (c) => c.id,
       nameOf: (c) => c.name,
       isDefaultOf: (c) => c.isDefault,
-      ensureDefaultsRemote: SupabaseService.ensureDefaultCategories,
-      fetchRemote: SupabaseService.fetchCategories,
-      insertRemote: SupabaseService.insertCategory,
-      deleteRemote: SupabaseService.deleteCategory,
+      ensureDefaultsRemote: ApiService.ensureDefaultCategories,
+      fetchRemote: ApiService.fetchCategories,
+      insertRemote: ApiService.insertCategory,
+      deleteRemote: ApiService.deleteCategory,
       onChanged: notifyListeners,
       debugLabel: 'CategoryCatalog',
     );

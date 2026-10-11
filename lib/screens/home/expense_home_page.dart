@@ -23,7 +23,7 @@ import '../../services/app_launch_intent.dart';
 import '../../utils/dashboard_aggregations.dart';
 import '../../services/deep_link_service.dart';
 import '../../services/auth_service.dart';
-import '../../services/supabase_service.dart';
+import '../../services/api_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/financial_insights.dart';
 import '../../utils/recurring_management.dart';
@@ -186,10 +186,10 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     });
 
     try {
-      final transactions = await SupabaseService.fetchTransactions();
+      final transactions = await ApiService.fetchTransactions();
       List<Account> accounts = [];
       try {
-        accounts = await SupabaseService.fetchAccounts();
+        accounts = await ApiService.fetchAccounts();
       } catch (error) {
         if (mounted) {
           SnackbarHelper.showMessage(
@@ -229,7 +229,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
   Future<void> _insertTransaction(Transaction transaction) async {
     try {
-      final saved = await SupabaseService.insertTransaction(transaction);
+      final saved = await ApiService.insertTransaction(transaction);
       if (!mounted) return;
       setState(() {
         _transactions.insert(0, saved);
@@ -247,7 +247,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
   Future<void> _replaceTransaction(Transaction transaction) async {
     try {
-      final updated = await SupabaseService.updateTransaction(transaction);
+      final updated = await ApiService.updateTransaction(transaction);
       if (!mounted) return;
       setState(() {
         final idx = _transactions.indexWhere((t) => t.id == transaction.id);
@@ -285,7 +285,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
     setState(() => _taggingTransactionId = transaction.id);
     try {
-      final saved = await SupabaseService.updateTransaction(updated);
+      final saved = await ApiService.updateTransaction(updated);
       if (!mounted) return;
       setState(() {
         final idx = _transactions.indexWhere((t) => t.id == saved.id);
@@ -307,8 +307,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   Future<void> _saveAccount(Account account) async {
     try {
       final savedAccount = account.id == null
-          ? await SupabaseService.insertAccount(account)
-          : await SupabaseService.updateAccount(account);
+          ? await ApiService.insertAccount(account)
+          : await ApiService.updateAccount(account);
       if (!mounted) return;
       setState(() {
         if (account.id == null) {
@@ -507,7 +507,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
     if (confirmed != true) return;
     try {
-      await SupabaseService.deleteTransaction(transaction.id!);
+      await ApiService.deleteTransaction(transaction.id!);
       if (!mounted) return;
       setState(() => _transactions.removeWhere((t) => t.id == transaction.id));
       SnackbarHelper.showSuccess(context, AppConstants.expenseDeleted);

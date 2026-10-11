@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/category_budget.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 /// In-memory cache of the signed-in user's category budgets, kept in sync
 /// with `public.category_budgets`. Mirrors [CategoryCatalog]'s shape so the
@@ -41,7 +41,7 @@ class CategoryBudgetService extends ChangeNotifier {
 
   Future<void> _refresh() async {
     try {
-      final remote = await SupabaseService.fetchCategoryBudgets();
+      final remote = await ApiService.fetchCategoryBudgets();
       _budgets
         ..clear()
         ..addAll(remote);
@@ -73,7 +73,7 @@ class CategoryBudgetService extends ChangeNotifier {
       currencyCode: currencyCode,
     );
 
-    final saved = await SupabaseService.upsertCategoryBudget(draft);
+    final saved = await ApiService.upsertCategoryBudget(draft);
     final idx = _budgets.indexWhere(
       (b) => b.categoryName.toLowerCase() == saved.categoryName.toLowerCase(),
     );
@@ -93,7 +93,7 @@ class CategoryBudgetService extends ChangeNotifier {
 
   Future<void> remove(CategoryBudget budget) async {
     if (budget.id == null) return;
-    await SupabaseService.deleteCategoryBudget(budget.id!);
+    await ApiService.deleteCategoryBudget(budget.id!);
     _budgets.removeWhere((b) => b.id == budget.id);
     notifyListeners();
   }

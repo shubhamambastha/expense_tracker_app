@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/design_tokens.dart';
 import 'currency_settings.dart';
 import 'auth_service.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 /// App-wide preferences singleton.
 ///
@@ -69,7 +69,7 @@ class SettingsPreferences extends ChangeNotifier {
     }
 
     try {
-      final remote = await SupabaseService.fetchUserSettings();
+      final remote = await ApiService.fetchUserSettings();
       if (remote == null) {
         await _pushFullRemote();
       } else if (remote.preferences.isEmpty) {
@@ -301,7 +301,7 @@ class SettingsPreferences extends ChangeNotifier {
   Future<void> _pushFullRemote() async {
     if (AuthService.instance.currentSession == null) return;
     final code = CurrencySettings.instance.currencyCode;
-    await SupabaseService.upsertUserSettings(
+    await ApiService.upsertUserSettings(
       code,
       preferences: preferencesToJson(),
     );
@@ -314,7 +314,7 @@ class SettingsPreferences extends ChangeNotifier {
       _remoteSyncTimer = null;
       try {
         final code = CurrencySettings.instance.currencyCode;
-        await SupabaseService.upsertUserSettings(
+        await ApiService.upsertUserSettings(
           code,
           preferences: preferencesToJson(),
         );

@@ -88,7 +88,7 @@ class SplashBootstrap {
 
   /// [CategoryCatalog]/[IncomeCategoryCatalog].syncForUser take a userId
   /// parameter that only ever gets forwarded to argument-less remote calls
-  /// (`SupabaseService.ensureDefaultCategories()`, etc.) — it's structurally
+  /// (`ApiService.ensureDefaultCategories()`, etc.) — it's structurally
   /// required but never actually read. Any non-empty placeholder is safe.
   static const _guestSyncPlaceholder = 'guest';
 
@@ -168,7 +168,7 @@ class SplashBootstrap {
   }
 
   /// Loads guest category/budget state from [GuestStore] (via the already
-  /// guest-branched [SupabaseService] methods). Unlike [_warmUserData] this
+  /// guest-branched [ApiService] methods). Unlike [_warmUserData] this
   /// is purely local — no timeout needed, nothing can hang. `CurrencySettings`
   /// and `SettingsPreferences` need no guest-specific call here: [load]
   /// already restored them from their session-independent local cache, and

@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'auth_service.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 /// A supported currency for display and expense input.
 class CurrencyOption {
@@ -150,13 +150,13 @@ class CurrencySettings extends ChangeNotifier {
     _activeUserId = userId;
 
     try {
-      final remote = await SupabaseService.fetchUserSettings();
+      final remote = await ApiService.fetchUserSettings();
       if (remote != null && isSupportedCode(remote.defaultCurrencyCode)) {
         await _applyCode(remote.defaultCurrencyCode, persistRemote: false);
         return;
       }
 
-      await SupabaseService.upsertUserSettings(_code);
+      await ApiService.upsertUserSettings(_code);
       await _cacheLocally(userId, _code);
     } catch (error) {
       debugPrint('CurrencySettings.syncForUser failed: $error');
@@ -182,7 +182,7 @@ class CurrencySettings extends ChangeNotifier {
 
     if (persistRemote && userId != null) {
       try {
-        await SupabaseService.upsertUserSettings(code);
+        await ApiService.upsertUserSettings(code);
       } catch (error) {
         debugPrint('CurrencySettings.setCurrency remote save failed: $error');
       }
