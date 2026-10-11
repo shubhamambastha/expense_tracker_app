@@ -60,7 +60,8 @@ All under `/v1`, all require `Authorization: Bearer <token>`. Bodies are the sam
 | `GET /settings` | `fetchUserSettings` (also read for `onboardingCompletedAt`) | row or `null` |
 | `PATCH /settings` | `upsertUserSettings`, `markOnboardingComplete` | upserts only the columns sent |
 | `DELETE /data` | `resetUserData` | "Reset My Account", keeps settings |
-| `GET /health` | — | unauthenticated, for host health checks |
+| `GET /health` | — | unauthenticated liveness check for the host (Node is up) |
+| `GET /health/db` | — | unauthenticated, for an external uptime monitor: 200 only if Supabase answers too (anonymous query, RLS returns no rows, no retries) |
 
 Errors are JSON `{ "error": "...", "code": "<postgres/PostgREST code>" }`. Status codes:
 
@@ -117,9 +118,13 @@ Then set `API_BASE_URL` in `config.dev.json` to match where the app runs:
 
 ## Deploy
 
-Any Node 22+ host (Render, Railway, Fly.io, a VM): `npm ci && npm start`, set the four env vars from `.env.example` (`PORT` is usually injected by the host), and point the host's health check at `/health`. Release builds need an **HTTPS** `API_BASE_URL` set as the `API_BASE_URL` GitHub secret for CI.
+Any Node 22+ host (Render, Railway, Fly.io, a VM): `npm ci && npm start`, set the four env vars from `.env.example` (`PORT` is usually injected by the host), and point the host's health check at `/health`. Point an external uptime monitor at `/health/db` instead, so it also catches a Supabase outage. Release builds need an **HTTPS** `API_BASE_URL` set as the `API_BASE_URL` GitHub secret for CI.
 
 The backend uses the Supabase **anon** key plus the user's token, never the service-role key, so a leaked backend env can't bypass RLS.
+
+## Logs
+
+Each request writes one JSON line to stdout: `level`, `message`, `method`, `path` (numeric ids collapsed to `:id`), `status`, `ms`, `user` (Auth0 `sub`, absent on 401). `/health*` is skipped. Errors add a second line with `message`, `code`, `status`, plus `stack` on 5xx. Headers, bodies, and PostgREST's `details`/`hint` are never logged: those carry the bearer token or echo a whole row of someone's finances. On Railway, filter with `@level:error`, `@status:500`, `@path:/v1/budgets`, `@user:"auth0|…"`. Incident steps are in [RUNBOOK.md](./RUNBOOK.md).
 
 ## Trade-offs & what to revisit
 
@@ -131,4 +136,5 @@ The backend uses the Supabase **anon** key plus the user's token, never the serv
 | `DELETE /data` deletes table by table | Same behavior as before | Partial wipes become a real problem. Move to a single Postgres function (one transaction) |
 | Category default seeds stay in Dart | Guest mode needs the same seed list on-device | Seeding moves fully server-side (e.g. on first `GET /settings`) |
 | Client still aggregates dashboards/analytics; list endpoints page through Supabase's `max_rows` cap server-side and return everything | Unchanged, all logic stays in `lib/utils/*_aggregations.dart` | Transaction counts make full-list fetches slow. Add paginated/aggregate endpoints |
-| No rate limiting, CORS, or request logging | Mobile-only client, small user base | Opening to web clients (add CORS) or seeing abuse (add `express-rate-limit`) |
+| No rate limiting or CORS | Mobile-only client, small user base | Opening to web clients (add CORS) or seeing abuse (add `express-rate-limit`) |
+| Logs are stdout JSON only (no APM, no log drain) | Railway parses JSON lines into filterable fields for free | You need alerting on error rate or latency. Add Sentry or a log drain |

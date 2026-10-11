@@ -10,6 +10,9 @@ export const clientFor = (token) => createClient(SUPABASE_URL, SUPABASE_ANON_KEY
   global: { fetch: fetchWithTimeout },
 });
 
+// No user token, so RLS hides every row: all the deep health check needs is an answer.
+export const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: fetchWithTimeout } });
+
 export async function must(query) {
   const { data, error, status } = await query;
   if (error) {
