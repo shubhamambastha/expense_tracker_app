@@ -266,7 +266,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       options: DateFilterPreset.values,
       labelFor: (p) => p.label,
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
 
     if (picked == DateFilterPreset.custom) {
       final start = await showDatePicker(
