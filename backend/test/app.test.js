@@ -73,6 +73,15 @@ test('health is public', async () => {
   assert.equal(res.status, 200);
 });
 
+test('every response carries the security headers, including errors', async () => {
+  for (const path of ['/health', '/nope', '/v1/transactions']) {
+    const res = await fetch(base + path);
+    assert.match(res.headers.get('strict-transport-security'), /max-age=\d+/, path);
+    assert.equal(res.headers.get('x-content-type-options'), 'nosniff', path);
+    assert.match(res.headers.get('content-security-policy'), /default-src 'none'/, path);
+  }
+});
+
 test('every data route rejects requests without a valid token', async () => {
   for (const [method, path] of [
     ['GET', '/v1/transactions'],
