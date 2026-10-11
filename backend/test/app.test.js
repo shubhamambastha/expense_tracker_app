@@ -1,0 +1,301 @@
+import { test, before, after, beforeEach } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { generateKeyPair, exportJWK, SignJWT } from 'jose';
+
+Object.assign(process.env, {
+  SUPABASE_URL: 'http://supabase.test',
+  SUPABASE_ANON_KEY: 'anon',
+  AUTH0_DOMAIN: 'tenant.test',
+  AUTH0_CLIENT_ID: 'client',
+});
+
+// Fake Auth0 JWKS + PostgREST by intercepting the global fetch that jose and
+// supabase-js both call. Requests to the API under test pass through.
+const key = await generateKeyPair('RS256');
+const jwk = { ...(await exportJWK(key.publicKey)), kid: 'k1', alg: 'RS256' };
+let calls = [];
+let respond = null; // (call) => Response | undefined, per test
+let jwksDown = false;
+const realFetch = globalThis.fetch;
+globalThis.fetch = async (input, init = {}) => {
+  const url = new URL(typeof input === 'string' ? input : input.url);
+  if (url.host === 'tenant.test') {
+    if (jwksDown) throw new TypeError('fetch failed');
+    return Response.json({ keys: [jwk] });
+  }
+  if (url.host !== 'supabase.test') return realFetch(input, init);
+  const headers = new Headers(init.headers);
+  const call = {
+    method: init.method ?? 'GET',
+    table: url.pathname.replace('/rest/v1/', ''),
+    params: Object.fromEntries(url.searchParams),
+    auth: headers.get('authorization'),
+    prefer: headers.get('prefer') ?? '',
+    body: init.body ? JSON.parse(init.body) : undefined,
+  };
+  calls.push(call);
+  const custom = respond?.(call);
+  if (custom) return custom;
+  const single = (headers.get('accept') ?? '').includes('pgrst.object');
+  return Response.json(single ? { id: 1 } : [{ id: 1 }]);
+};
+const pgError = (status, code, message = `pg ${code}`) => Response.json({ code, message }, { status });
+
+const { app } = await import('../src/app.js');
+
+const SUB = 'auth0|me';
+const sign = ({ privateKey = key.privateKey, iss = 'https://tenant.test/', aud = 'client', exp = '5m' } = {}) =>
+  new SignJWT({}).setProtectedHeader({ alg: 'RS256', kid: 'k1' })
+    .setIssuer(iss).setAudience(aud).setSubject(SUB).setExpirationTime(exp).sign(privateKey);
+
+let server, base, token;
+before(async () => {
+  token = await sign();
+  await new Promise((resolve) => {
+    server = app.listen(0, () => {
+      base = `http://127.0.0.1:${server.address().port}`;
+      resolve();
+    });
+  });
+});
+after(() => server.close());
+beforeEach(() => { calls = []; respond = null; });
+
+const call = (method, path, body, auth = token) => realFetch(base + path, {
+  method,
+  headers: { Authorization: `Bearer ${auth}`, 'content-type': 'application/json' },
+  body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
+});
+
+test('health is public', async () => {
+  const res = await fetch(`${base}/health`);
+  assert.equal(res.status, 200);
+});
+
+test('every data route rejects requests without a valid token', async () => {
+  for (const [method, path] of [
+    ['GET', '/v1/transactions'],
+    ['POST', '/v1/accounts'],
+    ['PATCH', '/v1/settings'],
+    ['DELETE', '/v1/data'],
+  ]) {
+    const missing = await fetch(base + path, { method });
+    assert.equal(missing.status, 401, `${method} ${path} without token`);
+    const forged = await fetch(base + path, { method, headers: { Authorization: 'Bearer not.a.jwt' } });
+    assert.equal(forged.status, 401, `${method} ${path} with forged token`);
+  }
+});
+
+test('unknown routes return JSON 404', async () => {
+  const res = await fetch(`${base}/nope`);
+  assert.equal(res.status, 404);
+  assert.deepEqual(await res.json(), { error: 'Not found' });
+});
+
+// Must run before any token is verified: jose caches the JWKS once fetched.
+test('an Auth0 JWKS outage is a logged 500, not a 401 blaming the caller', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  jwksDown = true;
+  try {
+    const res = await call('GET', '/v1/transactions');
+    assert.equal(res.status, 500);
+    assert.equal(console.error.mock.callCount(), 1);
+  } finally {
+    jwksDown = false;
+  }
+  assert.equal(calls.length, 0);
+});
+
+test('well-formed JWTs failing verification are 401 and never reach the database', async () => {
+  const other = await generateKeyPair('RS256');
+  const cases = {
+    'signed by an unknown key': await sign({ privateKey: other.privateKey }),
+    'wrong issuer': await sign({ iss: 'https://evil.test/' }),
+    'wrong audience': await sign({ aud: 'someone-else' }),
+    expired: await sign({ exp: Math.floor(Date.now() / 1000) - 60 }),
+  };
+  for (const [name, bad] of Object.entries(cases)) {
+    const res = await call('GET', '/v1/transactions', undefined, bad);
+    assert.equal(res.status, 401, name);
+    assert.deepEqual(await res.json(), { error: 'Invalid or expired token' }, name);
+  }
+  assert.equal(calls.length, 0);
+});
+
+test('list routes scope to the token sub and forward the caller token for RLS', async () => {
+  const res = await call('GET', '/v1/transactions');
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), [{ id: 1 }]);
+  const [q] = calls;
+  assert.equal(q.table, 'transactions');
+  assert.equal(q.params.user_id, `eq.${SUB}`);
+  assert.equal(q.params.order, 'date.desc,id.asc');
+  assert.equal(q.auth, `Bearer ${token}`);
+});
+
+test('writes force user_id from the token and drop id / unknown columns', async () => {
+  const evil = { id: 99, user_id: 'auth0|evil', amount: 5, kind: 'expense', hacked: true };
+  const created = await call('POST', '/v1/transactions', evil);
+  assert.equal(created.status, 201);
+  assert.deepEqual(calls[0].body, { amount: 5, kind: 'expense', user_id: SUB });
+
+  const patched = await call('PATCH', '/v1/accounts/7', { is_archived: true, user_id: 'auth0|evil', id: 8 });
+  assert.equal(patched.status, 200);
+  assert.deepEqual(calls[1].body, { is_archived: true });
+  assert.equal(calls[1].params.id, 'eq.7');
+  assert.equal(calls[1].params.user_id, `eq.${SUB}`);
+});
+
+test('non-numeric ids 404 without touching the database', async () => {
+  for (const path of ['/v1/accounts/abc', '/v1/transactions/1.5', '/v1/budgets/1;drop', '/v1/accounts/1234567890123456789']) {
+    const res = await call('PATCH', path, { is_archived: true });
+    assert.equal(res.status, 404, path);
+  }
+  assert.equal(calls.length, 0);
+});
+
+test('PostgREST errors map to HTTP statuses; unmapped ones hide details behind a 500', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  t.mock.method(console, 'warn', () => {});
+  for (const [pgStatus, code, expected] of [
+    [406, 'PGRST116', 404], // someone else's / missing row
+    [409, '23505', 409],
+    [409, '23503', 409],
+    [403, '42501', 403],
+    [400, '22P02', 400],
+    [400, '23502', 400],
+    [400, '23514', 400],
+    [400, '22007', 400], // any PostgREST 4xx passes through (bad date)
+    [401, 'PGRST301', 401], // Supabase rejected the forwarded JWT
+    [500, 'XX000', 500],
+  ]) {
+    respond = () => pgError(pgStatus, code, 'secret detail');
+    const res = await call('PATCH', '/v1/transactions/1', { amount: 1 });
+    assert.equal(res.status, expected, code);
+    const body = await res.json();
+    assert.equal(body.code, code);
+    assert.ok(!body.error.includes('secret detail'), `${code} leaks the raw Postgres message`);
+    if (expected >= 500) assert.equal(body.error, 'Internal server error', code);
+  }
+  respond = () => { throw new TypeError('fetch failed'); }; // Supabase unreachable
+  const down = await call('PATCH', '/v1/transactions/1', { amount: 1 });
+  assert.equal(down.status, 500);
+  assert.equal((await down.json()).error, 'Internal server error');
+});
+
+test('list routes page past Supabase max_rows instead of silently truncating', async () => {
+  respond = (c) => {
+    const offset = Number(c.params.offset ?? 0);
+    const size = offset === 0 ? 1000 : 1;
+    return Response.json(Array.from({ length: size }, (_, i) => ({ id: offset + i + 1 })));
+  };
+  const res = await call('GET', '/v1/transactions');
+  const rows = await res.json();
+  assert.equal(rows.length, 1001);
+  assert.deepEqual(calls.map((c) => [c.params.offset ?? '0', c.params.limit]), [['0', '1000'], ['1000', '1000']]);
+});
+
+test('every list and per-id delete route is scoped to the caller', async () => {
+  for (const [path, table, order] of [
+    ['/v1/recurring-events', 'recurring_events', 'occurrence_date.desc,id.asc'],
+    ['/v1/budgets', 'category_budgets', 'category_name.asc,id.asc'],
+    ['/v1/categories/expense', 'expense_categories', 'sort_order.asc,name.asc,id.asc'],
+    ['/v1/categories/income', 'income_categories', 'sort_order.asc,name.asc,id.asc'],
+  ]) {
+    calls = [];
+    assert.equal((await call('GET', path)).status, 200, path);
+    assert.deepEqual([calls[0].table, calls[0].params.user_id, calls[0].params.order], [table, `eq.${SUB}`, order], path);
+  }
+  for (const [path, table] of [
+    ['/v1/transactions/5', 'transactions'],
+    ['/v1/recurring-events/5', 'recurring_events'],
+    ['/v1/accounts/5', 'accounts'],
+    ['/v1/budgets/5', 'category_budgets'],
+    ['/v1/categories/income/5', 'income_categories'],
+  ]) {
+    calls = [];
+    assert.equal((await call('DELETE', path)).status, 204, path);
+    assert.deepEqual([calls[0].method, calls[0].table, calls[0].params.id, calls[0].params.user_id], ['DELETE', table, 'eq.5', `eq.${SUB}`], path);
+  }
+});
+
+test('malformed and oversized JSON bodies are rejected with 4xx', async () => {
+  assert.equal((await call('POST', '/v1/transactions', '{bad')).status, 400);
+  assert.equal((await call('POST', '/v1/transactions', { note: 'x'.repeat(1.1e6) })).status, 413);
+  assert.equal(calls.length, 0);
+});
+
+test('accounts hide archived rows unless includeArchived=true', async () => {
+  await call('GET', '/v1/accounts');
+  await call('GET', '/v1/accounts?includeArchived=true');
+  assert.equal(calls[0].params.is_archived, 'eq.false');
+  assert.equal(calls[1].params.is_archived, undefined);
+  assert.equal(calls[1].params.user_id, `eq.${SUB}`);
+});
+
+test('recurring events and budgets upsert on their natural keys', async () => {
+  const ev = await call('POST', '/v1/recurring-events', { transaction_id: 3, occurrence_date: '2026-01-01', event_type: 'paid', id: 9 });
+  assert.equal(ev.status, 201);
+  assert.equal(calls[0].params.on_conflict, 'user_id,transaction_id,occurrence_date,event_type');
+  assert.match(calls[0].prefer, /resolution=merge-duplicates/);
+  assert.equal(calls[0].body.id, undefined);
+
+  const budget = await call('POST', '/v1/budgets', { category_name: 'Food', monthly_limit: 100 });
+  assert.equal(budget.status, 200);
+  assert.equal(calls[1].params.on_conflict, 'user_id,category_name');
+  assert.deepEqual(calls[1].body, { category_name: 'Food', monthly_limit: 100, user_id: SUB });
+});
+
+test('categories: bulk seed returns an array, single insert an object, defaults are undeletable', async () => {
+  const seeded = await call('POST', '/v1/categories/income', [{ name: 'Salary', is_default: true, user_id: 'x' }, { name: 'Gift' }]);
+  assert.equal(seeded.status, 201);
+  assert.deepEqual(await seeded.json(), [{ id: 1 }]);
+  assert.equal(calls[0].table, 'income_categories');
+  assert.deepEqual(calls[0].body, [{ name: 'Salary', is_default: true, user_id: SUB }, { name: 'Gift', user_id: SUB }]);
+
+  const one = await call('POST', '/v1/categories/expense', { name: 'Pets', icon: 'paw', sort_order: 9, is_default: false });
+  assert.equal(one.status, 201);
+  assert.deepEqual(await one.json(), { id: 1 });
+
+  const del = await call('DELETE', '/v1/categories/expense/3');
+  assert.equal(del.status, 204);
+  assert.equal(calls[2].params.is_default, 'eq.false');
+  assert.equal(calls[2].params.user_id, `eq.${SUB}`);
+});
+
+test('settings: GET with no row is null; PATCH sends only the columns given', async () => {
+  respond = (c) => (c.method === 'GET' ? Response.json([]) : undefined);
+  const got = await call('GET', '/v1/settings');
+  assert.equal(got.status, 200);
+  assert.equal(await got.json(), null);
+
+  // A currency-only update must not send `preferences`, or the stored blob would be wiped.
+  await call('PATCH', '/v1/settings', { default_currency_code: 'INR', user_id: 'x' });
+  assert.deepEqual(calls[1].body, { default_currency_code: 'INR', user_id: SUB });
+  assert.match(calls[1].prefer, /resolution=merge-duplicates/);
+});
+
+test('DELETE /data wipes every user table in FK order and stops on the first failure', async () => {
+  const res = await call('DELETE', '/v1/data');
+  assert.equal(res.status, 204);
+  assert.deepEqual(calls.map((c) => c.table), [
+    'recurring_events', 'transactions', 'accounts',
+    'category_budgets', 'expense_categories', 'income_categories',
+  ]);
+  assert.ok(calls.every((c) => c.method === 'DELETE' && c.params.user_id === `eq.${SUB}`));
+
+  calls = [];
+  respond = (c) => (c.table === 'transactions' ? pgError(409, '23503') : undefined);
+  const failed = await call('DELETE', '/v1/data');
+  assert.equal(failed.status, 409);
+  assert.deepEqual(calls.map((c) => c.table), ['recurring_events', 'transactions']);
+});
+
+test('the server refuses to boot without required env', () => {
+  const { status, stderr } = spawnSync(process.execPath, [
+    '--input-type=module', '-e', `await import(${JSON.stringify(new URL('../src/app.js', import.meta.url).href)})`,
+  ], { env: { PATH: process.env.PATH }, encoding: 'utf8' });
+  assert.notEqual(status, 0);
+  assert.match(stderr, /Missing env SUPABASE_URL/);
+});
