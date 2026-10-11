@@ -12,6 +12,7 @@ Full docs live in `docs/` — read them before making non-trivial changes:
 | [docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md) | Postgres schema, ER diagram, migration order |
 | [docs/FEATURES.md](./docs/FEATURES.md) | Business/validation rules per feature, cited to the code |
 | [docs/BACKLOG.md](./docs/BACKLOG.md) | Known gaps, half-finished features, structural debt |
+| [docs/RUNBOOK.md](./docs/RUNBOOK.md) | Incidents: where the logs are, symptom → cause → fix, rollback |
 | [TODOS.md](./TODOS.md) | Review follow-ups with priority/effort |
 | [docs/designs/](./docs/designs/) | Point-in-time design docs (guest mode, onboarding, insight digest) |
 | [docs/auth0_setup.md](./docs/auth0_setup.md) | Auth0 tenant & callback setup |

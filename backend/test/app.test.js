@@ -1,4 +1,4 @@
-import { test, before, after, beforeEach } from 'node:test';
+import { test, before, after, beforeEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { generateKeyPair, exportJWK, SignJWT } from 'jose';
@@ -43,6 +43,7 @@ globalThis.fetch = async (input, init = {}) => {
 const pgError = (status, code, message = `pg ${code}`) => Response.json({ code, message }, { status });
 
 const { app } = await import('../src/app.js');
+mock.method(console, 'info', () => {}); // request log lines; asserted on below
 
 const SUB = 'auth0|me';
 const sign = ({ privateKey = key.privateKey, iss = 'https://tenant.test/', aud = 'client', exp = '5m' } = {}) =>
@@ -71,6 +72,16 @@ const call = (method, path, body, auth = token) => realFetch(base + path, {
 test('health is public', async () => {
   const res = await fetch(`${base}/health`);
   assert.equal(res.status, 200);
+});
+
+test('/health/db proves Supabase answers, and 500s when it does not', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  const ok = await fetch(`${base}/health/db`);
+  assert.equal(ok.status, 200);
+  assert.equal(calls[0].table, 'user_settings');
+  respond = () => { throw new TypeError('fetch failed'); };
+  const down = await fetch(`${base}/health/db`);
+  assert.equal(down.status, 500);
 });
 
 test('every response carries the security headers, including errors', async () => {
@@ -248,6 +259,26 @@ test('large list responses are gzipped for clients that ask', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('content-encoding'), 'gzip');
   assert.equal((await res.json()).length, 50);
+});
+
+test('each request logs one JSON line, never the token; health checks are skipped', async () => {
+  console.info.mock.resetCalls();
+  await call('DELETE', '/v1/transactions/42');
+  await fetch(`${base}/health`);
+  await fetch(`${base}/v1/accounts?includeArchived=true`); // no token: 401
+  await new Promise(setImmediate);
+  const lines = console.info.mock.calls.map((c) => c.arguments[0]);
+  assert.equal(lines.length, 2);
+  assert.ok(lines.every((line) => !line.includes(token)), 'bearer token in the log');
+  const [deleted, rejected] = lines.map((line) => JSON.parse(line));
+  assert.equal(typeof deleted.ms, 'number');
+  assert.deepEqual({ ...deleted, ms: 0 }, {
+    level: 'info', message: 'DELETE /v1/transactions/:id 204', method: 'DELETE',
+    path: '/v1/transactions/:id', status: 204, ms: 0, user: SUB,
+  });
+  assert.equal(rejected.path, '/v1/accounts');
+  assert.equal(rejected.level, 'warn');
+  assert.equal(rejected.user, undefined);
 });
 
 test('accounts hide archived rows unless includeArchived=true', async () => {
