@@ -6,15 +6,14 @@ See also: [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) (mind-map schema reference)
 
 Login is handled by **Auth0**, not Supabase Auth. See [auth0_setup.md](auth0_setup.md) for dashboard steps.
 
-The Flutter app sends Auth0 **ID tokens** to Supabase via third-party Auth0 integration. Database `user_id` columns are **text** values matching the JWT `sub` claim (e.g. `auth0|…`).
+The Flutter app sends Auth0 **ID tokens** to the Node API ([BACKEND.md](./BACKEND.md)). The API verifies them and forwards them to Supabase, which validates them again via the third-party Auth0 integration. Database `user_id` columns are **text** values matching the JWT `sub` claim (e.g. `auth0|…`).
 
 ## GitHub Actions
 
 The workflow at `.github/workflows/ci.yml` uses repository Secrets to inject keys at build time.
 
 Add the following secrets in your GitHub repository settings -> Secrets:
-- `SUPABASE_URL` — your project URL (e.g. `https://abcd1234.supabase.co`)
-- `SUPABASE_ANON_KEY` — the anon/public key (never expose the service role key)
+- `API_BASE_URL` — deployed HTTPS URL of the Node API (Supabase keys live only in the backend host's env, see [BACKEND.md](./BACKEND.md#deploy))
 - `AUTH0_DOMAIN` — Auth0 tenant domain (e.g. `dev-abc.us.auth0.com`)
 - `AUTH0_CLIENT_ID` — Native application client ID
 
@@ -96,7 +95,7 @@ The app stores amounts as numbers; `user_settings.default_currency_code` control
 
 - Use anon key only for client operations you intend to allow.
 - Never put `service_role` key in the client or in public repos.
-- For privileged operations, implement a secure backend function (server) that uses the `service_role` key.
+- The app only reaches Supabase through the Node API ([BACKEND.md](./BACKEND.md)), which uses the anon key + the user's forwarded token. Supabase still accepts Auth0 tokens directly, though, so RLS remains the real enforcement point. Keep it on and correct. Use the `service_role` key only for privileged server-side jobs, never in the app.
 
 ## Local development
 
@@ -104,7 +103,7 @@ You can use `scripts/define_from_json.py` to run flutter with `--dart-define` va
 
 ```bash
 cp config.dev.json.example config.dev.json
-# edit config.dev.json with your keys
+# edit config.dev.json: API_BASE_URL + Auth0 keys (Supabase keys go in backend/.env)
 python3 scripts/define_from_json.py config.dev.json run
 ```
 

@@ -1,6 +1,6 @@
 # expense_tracker_app
 
-Flutter expense tracker with Auth0 login and Supabase persistence.
+Flutter expense tracker with Auth0 login and a Node REST API (`backend/`) over Supabase Postgres.
 
 ## Documentation
 
@@ -13,6 +13,7 @@ Flutter expense tracker with Auth0 login and Supabase persistence.
 | [docs/FEATURES.md](./docs/FEATURES.md) | Feature catalog with business/validation rules |
 | [docs/BACKLOG.md](./docs/BACKLOG.md) | Known gaps, flagged-off features, structural debt |
 | [docs/auth0_setup.md](./docs/auth0_setup.md) | Auth0 tenant & callback setup |
+| [docs/BACKEND.md](./docs/BACKEND.md) | Node API: endpoints, run locally, deploy |
 | [docs/supabase_setup.md](./docs/supabase_setup.md) | Supabase project, RLS, CI secrets |
 
 ## Getting started

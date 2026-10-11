@@ -1,6 +1,6 @@
 # Database Schema
 
-Mind-map view of the Supabase Postgres schema for the Expense Tracker app. Source SQL lives in [`sql/`](../sql/). App models in [`lib/models/`](../lib/models/).
+Mind-map view of the Supabase Postgres schema for the Expense Tracker app. The app reaches it only through the Node API ([BACKEND.md](./BACKEND.md)); RLS remains the enforcement point. Source SQL lives in [`sql/`](../sql/). App models in [`lib/models/`](../lib/models/).
 
 > **Auth note:** After `20260529_auth0_user_id_text.sql`, every `user_id` column is **`text`** (Auth0 JWT `sub`), not `uuid`. RLS uses `public.requesting_user_id()` → `auth.jwt() ->> 'sub'`.
 
@@ -396,7 +396,7 @@ Run in Supabase SQL editor (fresh project → existing project):
 
 | Feature | Primary tables | Service / model |
 | --- | --- | --- |
-| Dashboard & lists | `transactions`, `accounts`, `category_budgets` | `SupabaseService`, `dashboard_aggregations.dart` |
+| Dashboard & lists | `transactions`, `accounts`, `category_budgets` | `ApiService`, `dashboard_aggregations.dart` |
 | Add / edit transaction | `transactions`, `accounts` | `Transaction`, `TransactionDraft` |
 | Accounts & cards | `accounts` | `Account`, `account_management.dart` |
 | Categories settings | `expense_categories`, `income_categories` | `CategoryCatalog`, `IncomeCategoryCatalog` |

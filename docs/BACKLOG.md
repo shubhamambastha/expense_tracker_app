@@ -38,7 +38,7 @@ Last reviewed: 2026-08-19.
 | Item | Evidence | Notes |
 | --- | --- | --- |
 | `ExpenseHomePage` owns too much | `lib/screens/home/expense_home_page.dart` is ~900 lines and holds transactions/accounts state, all CRUD callbacks, and cross-tab navigation | Noted as a known trade-off in [ARCHITECTURE.md](./ARCHITECTURE.md#state-management). Extracting a dedicated controller/notifier is the natural next step before adding more tabs. |
-| Legacy `expenses` table/model | `lib/models/expense.dart` plus `fetchExpenses`/`insertExpense` adapters in `lib/services/supabase_service.dart`; `sql/` still has the old `expenses` table migration | The app reads/writes `transactions` exclusively now. Confirm nothing still calls the legacy adapters, then remove the model, adapters, and (separately, carefully) plan a data migration off the old table. |
+| Legacy `expenses` table | `sql/` still has the old `expenses` table migration (the Dart `Expense` model and adapters are gone) | The app reads/writes `transactions` exclusively. Plan a careful data migration off the old table, then drop it. |
 | No named router | No `go_router` or routes table — navigation is ad hoc `Navigator.push` + tab index | Fine for current scope; blocks deep-linking to arbitrary screens and web URL parity. Listed as a future direction in [ARCHITECTURE.md](./ARCHITECTURE.md#future-improvements). |
 | No offline cache | Every load hits Supabase directly; no local persistence layer beyond `shared_preferences` for small settings | A Drift/Isar cache with sync would improve cold-start and flaky-network UX. |
 
@@ -48,7 +48,7 @@ Last reviewed: 2026-08-19.
 
 | Item | Evidence | Notes |
 | --- | --- | --- |
-| Near-zero test coverage | `test/` has 2 files: `widget_test.dart` (pumps a hardcoded `MaterialApp` stub, not the real app) and `app_launch_intent_test.dart` | No coverage for `SupabaseService`, aggregation utils (`dashboard_aggregations.dart`, `analytics_aggregations.dart`, `financial_insights.dart`), or transaction/recurring/account flows. These are pure-logic files and cheap to test first. |
+| Near-zero test coverage | `test/` has 2 files: `widget_test.dart` (pumps a hardcoded `MaterialApp` stub, not the real app) and `app_launch_intent_test.dart` | Only the backend (`backend/test/`, node:test) and `ApiService`'s guest/decoding paths are tested. No coverage for aggregation utils (`dashboard_aggregations.dart`, `analytics_aggregations.dart`, `financial_insights.dart`), or transaction/recurring/account flows. These are pure-logic files and cheap to test first. |
 
 ---
 

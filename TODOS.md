@@ -1,5 +1,89 @@
 # TODOS
 
+## Backend API
+
+### Verify the `POST /budgets` upsert target exists in the live DB
+
+**What:** `backend/src/app.js` upserts budgets with `onConflict: 'user_id,category_name'`, but the only unique index in `sql/` is `idx_category_budgets_user_category ON (user_id, lower(category_name))`. Postgres can't use an expression index as an `ON CONFLICT (cols)` target, so unless the live DB has an extra plain constraint, every budget save fails with 42P10 (→ 500).
+
+**Why:** The old `SupabaseService.upsertCategoryBudget` used the same target, so this predates the backend. Review couldn't reach the live DB to confirm (connection timeout). If it's broken, budgets and the guest-migration budget replay fail silently.
+
+**Context:** Surfaced by the adversarial review during `/ship` of the Node backend (2026-10-11). Check with `select indexdef from pg_indexes where tablename = 'category_budgets'`. Fix options: a plain `UNIQUE (user_id, category_name)` with names normalised on write, or an upsert RPC.
+
+**Effort:** S
+**Priority:** P1
+**Depends on:** None.
+
+---
+
+### Enforce foreign-key ownership in Postgres
+
+**What:** `account_id`, `transfer_to_account_id`, `linked_account_id` and `recurring_events.transaction_id` can point at another user's row. FK checks bypass RLS, and sequential ids make 409-vs-201 an existence oracle. Add `UNIQUE (id, user_id)` on `accounts`/`transactions` and switch to composite FKs `(account_id, user_id) → accounts(id, user_id)`. Watch `ON DELETE SET NULL`: use `SET NULL (account_id)` (PG15+) so it doesn't null `user_id`.
+
+**Why:** No victim data is readable, since RLS hides the referenced rows. But one user can attach rows to another user's ids. This belongs in the DB (not the API), because PostgREST is still reachable directly with an Auth0 token.
+
+**Context:** Security specialist + red team during `/ship` of the Node backend (2026-10-11). Existed before the backend.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** A migration applied manually per `docs/DATABASE_SCHEMA.md`.
+
+---
+
+### Decide whether to close direct PostgREST access
+
+**What:** Supabase still accepts Auth0 ID tokens directly, and the anon key shipped in earlier builds, so the API's whitelists are advisory. Either revoke table privileges from `anon`/`authenticated` (the API then needs its own DB role or the service-role key), or keep RLS + DB constraints as the enforcement point (the current documented stance in `docs/BACKEND.md`).
+
+**Why:** Switching the backend to the service-role key without first revoking direct access would remove the only enforced guard.
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** "Enforce foreign-key ownership in Postgres".
+
+---
+
+### Onboarding completion can reset the user's currency to USD
+
+**What:** `markOnboardingComplete()` upserts only `onboarding_completed_at`. For a new user that inserts a `user_settings` row with the DB default `default_currency_code = 'USD'`, which `CurrencySettings.syncForUser` then adopts over the locally chosen currency.
+
+**Why:** Existed before the backend; flagged by adversarial review (2026-10-11). Fix: send the local currency in the same PATCH, or change the column default.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** None.
+
+---
+
+### Real-device QA of the API migration
+
+**What:** Manually walk the flows that the automated suite marks as uncovered: login → home loads every resource over real HTTP; an ID token expiring (renew + one retry on 401); guest → sign-in migration and its rollback; what the app shows when the API is down or slow (20s timeout).
+
+**Why:** These need a real device, a real Auth0 login and a running backend, so the coverage gate on the backend PR marked them intentionally uncovered (2026-10-11).
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** A deployed backend (or a local one on the LAN).
+
+---
+
+### Backend performance and robustness follow-ups
+
+**What:**
+- gzip responses (`compression` middleware) unless the host's proxy already does it.
+- Parallelize the dashboard's transactions/accounts/budgets fetch (`expense_home_page.dart`) with `Future.wait`.
+- Batch guest-migration inserts (array POSTs for transactions/accounts/events) instead of one request per row.
+- Idempotency keys on POSTs so a timed-out retry can't duplicate a transaction.
+- Make `DELETE /data` atomic via a single Postgres function.
+- Set `server.keepAliveTimeout` above the host load balancer's idle timeout.
+
+**Why:** Review findings from `/ship` of the Node backend (2026-10-11). None block launch, and several depend on the chosen host.
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** Picking a deploy host.
+
+---
+
 ## Review
 
 ### Swap the Delete Account placeholder support email before release
@@ -34,7 +118,7 @@
 
 **Why:** The Postgres schema (`sql/20260526_counterparties.sql`) and the UI component (`lib/components/transaction/source_payer_field.dart`) already exist, but neither is used anywhere — zero call sites in `lib/`. Real value sitting completely unused.
 
-**Context:** Surfaced during the `/plan-eng-review` for the subscription-picker feature (2026-08-19). This is a separate mechanism from the subscription picker's curated brand catalog — counterparties is meant to be general merchant-history autofill for *any* merchant (Swiggy, a landlord, a friend), not a fixed list of ~25 known brands. Reviving it properly needs its own scoping pass (does `SupabaseService` need new CRUD methods for `counterparties`? does the UI need a redesign since `SourcePayerField` was built speculatively and never integrated?).
+**Context:** Surfaced during the `/plan-eng-review` for the subscription-picker feature (2026-08-19). This is a separate mechanism from the subscription picker's curated brand catalog — counterparties is meant to be general merchant-history autofill for *any* merchant (Swiggy, a landlord, a friend), not a fixed list of ~25 known brands. Reviving it properly needs its own scoping pass (does `counterparties` need backend routes in `backend/src/app.js` plus `ApiService` methods? does the UI need a redesign since `SourcePayerField` was built speculatively and never integrated?).
 
 **Effort:** M
 **Priority:** P3

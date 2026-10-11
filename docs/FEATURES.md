@@ -16,7 +16,7 @@ One unified `Transaction` model covers all three kinds, persisted in `public.tra
 - Currency defaults to `INR` if the draft doesn't specify one; empty notes are stored as `null`, not `''` (`transaction.dart::toTransaction`).
 - Recurring fields (`recurrenceFrequency`, start/end date, reminder timing) are only written to the row when `isRecurring` is true — turning recurring off clears them on next save (`transaction.dart::toMap`).
 - Duplicating a transaction creates a new row (fresh `id`) dated "now", not the original transaction's date (`expense_home_page.dart::_duplicateTransaction`).
-- Deletes are hard deletes, scoped to the owning user (`supabase_service.dart::deleteTransaction`).
+- Deletes are hard deletes, scoped to the owning user by the backend (`api_service.dart::deleteTransaction` → `DELETE /v1/transactions/:id`).
 
 ### Filtering, search, sort, grouping
 
@@ -36,10 +36,10 @@ One unified `Transaction` model covers all three kinds, persisted in `public.tra
 `isRecurring` transactions represent a repeating schedule (subscription, EMI, or generic recurring expense). A separate `recurring_events` table records per-occurrence user actions (paid / skipped / snoozed) without touching the schedule row itself.
 
 - Subscription vs. EMI vs. "other recurring" is derived purely from a case-insensitive substring match on `category` ("emi" / "subscription") — there's no dedicated type column (`recurring_management.dart::classify`).
-- A schedule is **closed** (cancelled subscription, completed EMI, etc.) via a `closedAt` timestamp, not a delete. Closed schedules are excluded entirely — no card, no upcoming-timeline entry, no monthly-total contribution. Undo clears `closedAt` back to `null` (`recurring_management.dart::build` filters `tx.isClosed`; `supabase_service.dart::setTransactionClosed`).
+- A schedule is **closed** (cancelled subscription, completed EMI, etc.) via a `closedAt` timestamp, not a delete. Closed schedules are excluded entirely — no card, no upcoming-timeline entry, no monthly-total contribution. Undo clears `closedAt` back to `null` (`recurring_management.dart::build` filters `tx.isClosed`; `api_service.dart::setTransactionClosed`).
 - A schedule can independently be **paused** (`isPaused`). Paused schedules have no next due date and drop out of the upcoming timeline, but — unlike closed — still render as a card in the manager (`recurring_management.dart::nextDueWithEvents`, `RecurringScheduleItem.isAutoDeduct`).
 - **Next-due-date algorithm** (`recurring_management.dart::nextDueWithEvents`): walk forward from `recurrenceStartDate` (or `date`) one cycle at a time. For each candidate occurrence — if a `paid`/`skipped` event exists for that date, skip past it; if a `snoozed` event exists, defer to its `snoozeUntil` (unless that date has already lapsed, in which case the occurrence is treated as due today); otherwise return the first occurrence that isn't in the past. Capped at 500 iterations.
-- Recurring events are idempotent on `(user_id, transaction_id, occurrence_date, event_type)` — repeated taps on the same swipe action upsert rather than duplicate, backed by a unique index in `sql/20260528_recurring_events.sql` (`supabase_service.dart::insertRecurringEvent`).
+- Recurring events are idempotent on `(user_id, transaction_id, occurrence_date, event_type)` — repeated taps on the same swipe action upsert rather than duplicate, backed by a unique index in `sql/20260528_recurring_events.sql` (`api_service.dart::insertRecurringEvent`).
 - **"Auto-deduct" badge is inferred, not stored**: `reminderTiming == null` is read as "user didn't configure a manual reminder," which the UI treats as "this charge auto-deducts" (`upcoming_payments.dart` / `recurring_management.dart`, `UpcomingPaymentItem.isAutoDeduct`, `RecurringScheduleItem.isAutoDeduct`).
 - Monthly-equivalent normalization (used for manager totals, analytics, insights, and the home screen's Spending Room card alike): weekly ×4.33, daily ×30, quarterly ÷3, yearly ÷12; monthly/custom/unset unchanged. Shared from one source, `recurrence_normalization.dart::monthlyEquivalent`.
 - **EMI progress** is computed purely from user-entered start/end dates — not a real amortization schedule. Total months = inclusive month-diff between start and end; completed = months elapsed from start to now (clamped to total); remaining principal = remaining months × the transaction's flat per-installment amount (no interest modeling). Returns `null` if there's no end date or the category isn't EMI-classified (`recurring_management.dart::emiProgress`).
@@ -77,7 +77,7 @@ Balances and credit metrics are always computed on the fly from transaction hist
 - Statement/due-date labels: if the account's `statementDay`/`dueDay` (1–31) has already passed this month, the label rolls to next month (`account_management.dart::_nextDayOfMonth`, `billingLabels`).
 - An account is "due soon" when its computed due date is 0–7 days out, inclusive (`account_management.dart::dueSoon`).
 - Cash/bank/wallet balances are **clamped to ≥0** when rolled into the "Total available"/"Cash available" dashboard headline figures — a negative bank balance won't drag those totals negative (`account_management.dart::buildSnapshot`).
-- Archiving an account is a soft delete (`isArchived = true`); it preserves transaction foreign keys and is excluded from `fetchAccounts()` by default (`supabase_service.dart::fetchAccounts`).
+- Archiving an account is a soft delete (`isArchived = true`); it preserves transaction foreign keys and is excluded from `fetchAccounts()` by default (`api_service.dart::fetchAccounts`).
 - A wallet/UPI account is `type == other` with a non-null `walletProvider`; its display label falls back to `providerName`, then the wallet provider's label (`account.dart::isWallet`, `providerLabel`).
 - A credit card can be **linked** to a paying bank/wallet account via `linkedAccountId`. Paying a credit card bill from the dashboard shortcut pre-fills an expense draft against the linked account (falling back to the card itself if unlinked), labeled `"{card name} bill payment"` (`expense_home_page.dart::_payCreditBill`).
 
@@ -87,7 +87,7 @@ Balances and credit metrics are always computed on the fly from transaction hist
 
 Separate per-user catalogs for expense and income categories; identical rules apply to both (`category_catalog.dart` and `income_category_catalog.dart` are structurally 1:1).
 
-- Default categories are seeded **idempotently** — on sync, only default names missing from the user's catalog (case-insensitive match) are inserted; existing rows are untouched (`supabase_service.dart::ensureDefaultCategories` / `ensureDefaultIncomeCategories`).
+- Default categories are seeded **idempotently** — on sync, only default names missing from the user's catalog (case-insensitive match) are inserted; existing rows are untouched (`api_service.dart::ensureDefaultCategories` / `ensureDefaultIncomeCategories`).
 - Default categories cannot be deleted — enforced both client-side (`CategoryCatalog.deleteCategory` throws) and at the query level (`deleteCategory` filters `is_default = false`).
 - A custom category name must be non-empty and unique case-insensitively within the user's catalog, checked client-side before any network call (`category_catalog.dart::addCategory`).
 - If remote sync fails outright (e.g. first launch offline), the catalog falls back to an **in-memory, unpersisted** set of default categories so pickers never render empty (`category_catalog.dart::_syncForUser` catch path → `_loadLocalDefaults`).
@@ -99,7 +99,7 @@ Separate per-user catalogs for expense and income categories; identical rules ap
 
 One optional monthly spending limit per expense category name — no rollover, no per-account budgets.
 
-- At most one budget per `(user_id, category_name)`, enforced by a case-insensitive unique index; saving a budget for an already-budgeted category **replaces** it via upsert (`supabase_service.dart::upsertCategoryBudget`, `sql/20260527_dashboard_data.sql`).
+- At most one budget per `(user_id, category_name)`, enforced by a case-insensitive unique index; saving a budget for an already-budgeted category **replaces** it via upsert (`api_service.dart::upsertCategoryBudget`, `sql/20260527_dashboard_data.sql`).
 - A budget requires a selected category and a strictly positive amount, or the save is rejected client-side (`category_budget_service.dart::upsert`).
 - No rollover exists: "spent" is recomputed fresh from raw transactions for the target month every time — nothing persists a "remaining balance" across months (`analytics_aggregations.dart::budgetSpend`).
 - The dashboard's budget-proximity insight (below) only ever surfaces the **first** budget it encounters that's near/over limit — not all of them — because the loop returns on first match (`financial_insights.dart::_budgetProximity`).
@@ -155,8 +155,8 @@ A single app-wide default display currency — not per-transaction or per-accoun
 
 Auth0 handles identity; Supabase stores data; every row is scoped by the Auth0 `sub` claim as `user_id`.
 
-- Every Supabase read/write goes through `SupabaseService.requireUserId()`, which throws if there's no active session — there's no code path that queries without a user filter (`supabase_service.dart::requireUserId`, used in every method).
-- The Auth0 ID token is passed to Supabase via a custom `accessToken` callback so Postgres RLS can enforce the same scoping server-side (`supabase_service.dart::init`).
+- The app never sends `user_id`. Every request carries the Auth0 ID token, and the backend verifies it and forces `user_id` = token `sub` on every query. Signed-out calls fail in `api_service.dart::_send` before any network request (`backend/src/app.js` `auth`).
+- The backend forwards the same token to Supabase so Postgres RLS enforces the scoping again. RLS is the real enforcement point, since the anon key + an Auth0 token can still reach PostgREST directly ([BACKEND.md](./BACKEND.md)).
 - On sign-in, `AuthGate` triggers `syncForUser()` on every user-scoped singleton (`CategoryCatalog`, `IncomeCategoryCatalog`, `CategoryBudgetService`, `CurrencySettings`, `SettingsPreferences`) so cached state reflects the newly signed-in user.
 - On sign-out, each of those singletons runs `onSignedOut()`, clearing in-memory state (and, for catalogs, reloading local unsynced defaults) so no data from the previous session lingers in memory for a subsequent sign-in.
 - Login callback scheme differs by platform: Android always uses HTTPS app links; iOS/macOS use a custom URL scheme unless `AppConfig.auth0UseHttps` is explicitly set (`auth_service.dart::_useHttpsCallbacks`).
