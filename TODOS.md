@@ -4,7 +4,7 @@
 
 ### Verify the `POST /budgets` upsert target exists in the live DB
 
-**What:** `backend/src/app.js` upserts budgets with `onConflict: 'user_id,category_name'`, but the only unique index in `sql/` is `idx_category_budgets_user_category ON (user_id, lower(category_name))`. Postgres can't use an expression index as an `ON CONFLICT (cols)` target, so unless the live DB has an extra plain constraint, every budget save fails with 42P10 (→ 500).
+**What:** `backend/src/routes/budgets.js` upserts budgets with `onConflict: 'user_id,category_name'`, but the only unique index in `sql/` is `idx_category_budgets_user_category ON (user_id, lower(category_name))`. Postgres can't use an expression index as an `ON CONFLICT (cols)` target, so unless the live DB has an extra plain constraint, every budget save fails with 42P10 (→ 500).
 
 **Why:** The old `SupabaseService.upsertCategoryBudget` used the same target, so this predates the backend. Review couldn't reach the live DB to confirm (connection timeout). If it's broken, budgets and the guest-migration budget replay fail silently.
 
@@ -118,7 +118,7 @@
 
 **Why:** The Postgres schema (`sql/20260526_counterparties.sql`) and the UI component (`lib/components/transaction/source_payer_field.dart`) already exist, but neither is used anywhere — zero call sites in `lib/`. Real value sitting completely unused.
 
-**Context:** Surfaced during the `/plan-eng-review` for the subscription-picker feature (2026-08-19). This is a separate mechanism from the subscription picker's curated brand catalog — counterparties is meant to be general merchant-history autofill for *any* merchant (Swiggy, a landlord, a friend), not a fixed list of ~25 known brands. Reviving it properly needs its own scoping pass (does `counterparties` need backend routes in `backend/src/app.js` plus `ApiService` methods? does the UI need a redesign since `SourcePayerField` was built speculatively and never integrated?).
+**Context:** Surfaced during the `/plan-eng-review` for the subscription-picker feature (2026-08-19). This is a separate mechanism from the subscription picker's curated brand catalog — counterparties is meant to be general merchant-history autofill for *any* merchant (Swiggy, a landlord, a friend), not a fixed list of ~25 known brands. Reviving it properly needs its own scoping pass (does `counterparties` need a `backend/src/routes/` file plus `ApiService` methods? does the UI need a redesign since `SourcePayerField` was built speculatively and never integrated?).
 
 **Effort:** M
 **Priority:** P3

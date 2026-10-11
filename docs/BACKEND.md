@@ -74,6 +74,29 @@ Errors are JSON `{ "error": "...", "code": "<postgres/PostgREST code>" }`. Statu
 
 DELETE is idempotent: it returns 204 even when nothing matched, including attempts to delete a seeded default category, same as the old direct-Supabase behavior. Every Supabase call times out after 10s and every app request after 20s. The app surfaces `error` through `ApiException.toString()` → `SnackbarHelper.showError`.
 
+## Code layout
+
+```
+backend/src/
+├── server.js            # listen on PORT
+├── app.js               # express app: JSON body, /health, /v1, 404, error handler
+├── config.js            # required env, checked at import (missing → crash on boot)
+├── db.js                # per-request Supabase client + helpers: must/send/sendAll, pick, list/updateOwn/deleteOwn/row
+├── middleware/
+│   ├── auth.js          # Auth0 JWT → req.userId, req.db
+│   └── errors.js        # JSON 404 + error handler (fixed user-safe messages)
+└── routes/
+    ├── index.js         # /v1 router: auth, then mounts each resource
+    ├── resource-router.js  # Router whose :id must be a bigint
+    ├── transactions.js · recurring-events.js · accounts.js · budgets.js
+    ├── categories.js    # one factory, mounted for expense_ and income_categories
+    └── settings.js · data.js
+```
+
+Each route file owns its table's column whitelist. To add an entity: write `routes/<resource>.js` with `resourceRouter()` and the `db.js` helpers (they scope every query to `req.userId`), then mount it in `routes/index.js`.
+
+There is no controller/service layer. Every handler is one scoped query, so a service layer would only pass arguments through. Add one when a route gains real logic, e.g. multi-step writes.
+
 ## Run locally
 
 ```bash

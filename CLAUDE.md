@@ -49,7 +49,7 @@ There is no named router and no bundled `.env` — secrets are compile-time `--d
 - **Feature flags**: compile-time toggles in `lib/config/feature_flags.dart` — no remote config. Check this file before assuming a feature is fully shipped (e.g. `transferVisible` currently hides transfers from new-entry UI; `guestModeEnabled` and `postLoginOnboardingEnabled` are kill switches).
 - **Snackbars**: always go through `SnackbarHelper` (`lib/utils/snackbar_helper.dart`) — never call `ScaffoldMessenger` directly.
 - **Empty/loading/error UX**: use the shared barrel `components/common/states/states.dart` rather than one-off spinners/empty widgets.
-- **User scoping**: the backend (`backend/src/app.js`) forces `user_id = <Auth0 sub from the bearer token>` on every query, and Supabase RLS checks the same token again. The app never sends `user_id`. If data leaks across users or comes back empty, check the token the app sends and the backend's `auth` middleware first.
+- **User scoping**: the backend (`backend/src/db.js` helpers, used by every route in `backend/src/routes/`) forces `user_id = <Auth0 sub from the bearer token>` on every query, and Supabase RLS checks the same token again. The app never sends `user_id`. If data leaks across users or comes back empty, check the token the app sends and the backend's `auth` middleware first.
 - Run `flutter analyze` before considering a change done — the project is expected to stay lint-clean.
 
 ## Where things live

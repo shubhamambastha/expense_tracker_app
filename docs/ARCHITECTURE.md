@@ -354,7 +354,7 @@ main.dart
 
 ### New database entity
 1. Add migration in `sql/` (with RLS on `user_id`)
-2. Add routes + a column whitelist entry in `backend/src/app.js`
+2. Add `backend/src/routes/<resource>.js` (routes + column whitelist) and mount it in `backend/src/routes/index.js`
 3. Add model in `lib/models/`
 4. Add methods to `ApiService` (and `GuestStore` for guest mode)
 5. Optionally add a `ChangeNotifier` singleton if the data is user-global and cached
@@ -376,7 +376,7 @@ main.dart
 | Onboarding wizard shows again / never shows | `onboarding_wizard_status.dart`, `user_settings.onboarding_completed_at`, `FeatureFlags.postLoginOnboardingEnabled` |
 | Guest data missing after sign-in | `guest_migration_service.dart`, Settings → Data & Privacy guest-data section |
 | Data not saving | `api_service.dart` (`ApiException` status), backend logs, Supabase RLS policies |
-| Wrong user scope | `auth` middleware in `backend/src/app.js` (`user_id` := token `sub`) and Supabase RLS policies |
+| Wrong user scope | `auth` middleware in `backend/src/middleware/auth.js` (`user_id` := token `sub`) and Supabase RLS policies |
 | Dashboard numbers wrong | `utils/dashboard_aggregations.dart`, `financial_insights.dart` |
 | Analytics charts empty | `utils/analytics_aggregations.dart`, `analytics_content.dart` |
 | Recurring timeline | `utils/upcoming_payments.dart`, `recurring_management.dart` |
