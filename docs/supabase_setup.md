@@ -17,7 +17,7 @@ Add the following secrets in your GitHub repository settings -> Secrets:
 - `AUTH0_DOMAIN` — Auth0 tenant domain (e.g. `dev-abc.us.auth0.com`)
 - `AUTH0_CLIENT_ID` — Native application client ID
 
-The workflow passes these as `--dart-define=KEY=VALUE` to `flutter build`.
+The workflow passes these as `--dart-define=KEY=VALUE` to `flutter build`. A separate `backend` job runs `npm ci && npm test` in `backend/` on Node 22 and needs no secrets (the tests stub Auth0 and Supabase).
 
 ## Database schema
 
@@ -106,5 +106,3 @@ cp config.dev.json.example config.dev.json
 # edit config.dev.json: API_BASE_URL + Auth0 keys (Supabase keys go in backend/.env)
 python3 scripts/define_from_json.py config.dev.json run
 ```
-
-*** End Patch

@@ -88,7 +88,7 @@ Balances and credit metrics are always computed on the fly from transaction hist
 Separate per-user catalogs for expense and income categories; identical rules apply to both (`category_catalog.dart` and `income_category_catalog.dart` are structurally 1:1).
 
 - Default categories are seeded **idempotently** — on sync, only default names missing from the user's catalog (case-insensitive match) are inserted; existing rows are untouched (`api_service.dart::ensureDefaultCategories` / `ensureDefaultIncomeCategories`).
-- Default categories cannot be deleted — enforced both client-side (`CategoryCatalog.deleteCategory` throws) and at the query level (`deleteCategory` filters `is_default = false`).
+- Default categories cannot be deleted — enforced both client-side (`CategoryCatalog.deleteCategory` throws) and by the backend (`DELETE /v1/categories/{expense,income}/:id` filters `is_default = false`, still returning 204).
 - A custom category name must be non-empty and unique case-insensitively within the user's catalog, checked client-side before any network call (`category_catalog.dart::addCategory`).
 - If remote sync fails outright (e.g. first launch offline), the catalog falls back to an **in-memory, unpersisted** set of default categories so pickers never render empty (`category_catalog.dart::_syncForUser` catch path → `_loadLocalDefaults`).
 - Signing out immediately clears the in-memory catalog and reloads local (unsynced) defaults, so a new sign-in never briefly shows the previous user's custom categories (`category_catalog.dart::onSignedOut`).
@@ -159,7 +159,7 @@ Auth0 handles identity; Supabase stores data; every row is scoped by the Auth0 `
 - The backend forwards the same token to Supabase so Postgres RLS enforces the scoping again. RLS is the real enforcement point, since the anon key + an Auth0 token can still reach PostgREST directly ([BACKEND.md](./BACKEND.md)).
 - On sign-in, `AuthGate` triggers `syncForUser()` on every user-scoped singleton (`CategoryCatalog`, `IncomeCategoryCatalog`, `CategoryBudgetService`, `CurrencySettings`, `SettingsPreferences`) so cached state reflects the newly signed-in user.
 - On sign-out, each of those singletons runs `onSignedOut()`, clearing in-memory state (and, for catalogs, reloading local unsynced defaults) so no data from the previous session lingers in memory for a subsequent sign-in.
-- Login callback scheme differs by platform: Android always uses HTTPS app links; iOS/macOS use a custom URL scheme unless `AppConfig.auth0UseHttps` is explicitly set (`auth_service.dart::_useHttpsCallbacks`).
+- Every platform (Android, iOS, macOS) logs in through the custom URL scheme (`AUTH0_CALLBACK_SCHEME`) unless `AppConfig.auth0UseHttps` is explicitly set, which switches to HTTPS callbacks (`auth_service.dart::_useHttpsCallbacks`; see [auth0_setup.md](./auth0_setup.md)).
 - A user cancelling the Auth0 web login is surfaced as a distinct `AuthLoginCancelledException`, not a generic error (`auth_service.dart::login`).
 - Splash bootstrap reserves (but does not yet implement) two future gates: a biometric-unlock step (`SplashBootstrapResult.requiresBiometricUnlock`, currently hardcoded to always return `false`) and an onboarding destination (`SplashDestination.onboarding`, reachable only if a local `onboarding_complete` pref is explicitly set `false`, which nothing in the app currently does) — see [BACKLOG.md](./BACKLOG.md).
 
@@ -169,7 +169,7 @@ Auth0 handles identity; Supabase stores data; every row is scoped by the Auth0 `
 
 Settings → Data → "Export Data".
 
-- Fetches fresh from Supabase (not the in-memory lists the rest of the app uses, which may be stale/paginated) — transactions, accounts (including archived), and category budgets — serializes each to CSV (`utils/data_export.dart`, pure functions, unit tested), writes them to the OS temp directory, and hands all three files to the native share sheet via `share_plus`. Settings/preferences are deliberately excluded — they're app config, not financial data. CSV was chosen over JSON: the target audience is a non-technical user who wants something that opens in Excel/Sheets, not a re-import format (no import feature exists or is planned).
+- Fetches fresh through `ApiService` (not the in-memory lists the rest of the app uses, which may be stale/paginated) — transactions, accounts (including archived), and category budgets — serializes each to CSV (`utils/data_export.dart`, pure functions, unit tested), writes them to the OS temp directory, and hands all three files to the native share sheet via `share_plus`. Settings/preferences are deliberately excluded — they're app config, not financial data. CSV was chosen over JSON: the target audience is a non-technical user who wants something that opens in Excel/Sheets, not a re-import format (no import feature exists or is planned).
 - Account reset/deletion is **not** self-service — see [BACKLOG.md](./BACKLOG.md) for the planned "Reset my account" / "Delete my account" flows, both mail-triggered requests to an admin rather than an automatic client-side wipe.
 
 ---

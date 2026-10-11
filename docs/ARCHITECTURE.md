@@ -119,7 +119,7 @@ lib/
 
 backend/                            # Node REST API (see BACKEND.md)
 sql/                                # Supabase migrations (see DATABASE_SCHEMA.md)
-docs/                               # Auth0 / Supabase setup guides
+docs/                               # Architecture, backend, schema, design & setup docs
 ios/AddExpenseWidget/              # iOS home-screen widget (deep link → add expense)
 ```
 
@@ -380,7 +380,7 @@ main.dart
 | Routing | Adopt `go_router` for deep links and web URL parity |
 | Testing | Mirror `lib/` structure under `test/`; mock `ApiService` |
 | Localization | `flutter gen-l10n` + ARB files |
-| Offline | Local cache layer (Drift/isar) with Supabase sync |
+| Offline | Local cache layer (Drift/isar) synced through the API |
 | Biometrics | Hook planned in `SplashBootstrapResult.requiresBiometricUnlock` |
 | Onboarding | `SplashDestination.onboarding` reserved in bootstrap |
 
@@ -390,6 +390,7 @@ main.dart
 
 - [DESIGN.md](./DESIGN.md) — design tokens, shared UI primitives, motion
 - [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) — Postgres tables, ER diagram, migration order
+- [BACKEND.md](./BACKEND.md) — Node API endpoints, auth flow, run/deploy
 - [auth0_setup.md](./auth0_setup.md) — Auth0 tenant & callback setup
 - [supabase_setup.md](./supabase_setup.md) — Supabase project & RLS
 - [config.dev.json.example](../config.dev.json.example) — local `--dart-define` template

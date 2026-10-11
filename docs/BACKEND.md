@@ -55,7 +55,7 @@ All under `/v1`, all require `Authorization: Bearer <token>`. Bodies are the sam
 | `POST /accounts` · `PATCH /accounts/:id` · `DELETE /accounts/:id` | `insertAccount`, `updateAccount`/`archiveAccount`, `deleteAccount` | |
 | `GET /budgets` · `POST /budgets` · `DELETE /budgets/:id` | `fetchCategoryBudgets`, `upsertCategoryBudget`, `deleteCategoryBudget` | POST upserts on category name |
 | `GET /categories/{expense,income}` | `fetchCategories`, `fetchIncomeCategories` | |
-| `POST /categories/{expense,income}` | `insertCategory`, `ensureDefault…Categories` | object, or array for seeding |
+| `POST /categories/{expense,income}` | `insertCategory`, `insertIncomeCategory`, `ensureDefault…Categories` | object, or array for seeding |
 | `DELETE /categories/{expense,income}/:id` | `deleteCategory`, `deleteIncomeCategory` | seeded defaults are never deleted |
 | `GET /settings` | `fetchUserSettings` (also read for `onboardingCompletedAt`) | row or `null` |
 | `PATCH /settings` | `upsertUserSettings`, `markOnboardingComplete` | upserts only the columns sent |
@@ -65,7 +65,8 @@ All under `/v1`, all require `Authorization: Bearer <token>`. Bodies are the sam
 Errors are JSON `{ "error": "...", "code": "<postgres/PostgREST code>" }`. Status codes:
 
 - **401:** bad, expired or missing token, or Supabase rejecting the forwarded token (`PGRST301`).
-- **404 on PATCH:** the row is missing or belongs to someone else.
+- **404 on PATCH:** the row is missing or belongs to someone else. Any non-numeric `:id` is also a 404.
+- **413:** request body over 1 MB.
 - **Other 4xx:** passed through from PostgREST, e.g. 400 for bad input or constraint errors, 403 for an RLS denial, 409 for unique/FK conflicts.
 - **500:** anything else, including an Auth0 JWKS or Supabase outage.
 
