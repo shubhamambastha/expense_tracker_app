@@ -12,6 +12,7 @@ import '../../models/account.dart';
 import '../../services/auth_service.dart';
 import '../../services/settings_preferences.dart';
 import 'sections/about_page.dart';
+import 'sections/appearance_page.dart';
 import 'sections/data_privacy_page.dart';
 import 'sections/edit_profile_page.dart';
 import 'sections/help_center_page.dart';
@@ -112,12 +113,28 @@ class SettingsPage extends StatelessWidget {
               ],
               const SizedBox(height: AppSpacing.xl),
               SettingsSection(
+                title: 'General',
+                children: [
+                  SettingsTile(
+                    icon: Icons.dark_mode_rounded,
+                    title: 'Appearance',
+                    valueLabel:
+                        SettingsPreferences.instance.themeMode ==
+                            ThemeMode.light
+                        ? 'Light'
+                        : 'Dark',
+                    onTap: () => _open(context, const AppearancePage()),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              SettingsSection(
                 title: 'Money',
                 children: [
                   SettingsTile(
                     icon: Icons.account_balance_wallet_rounded,
                     title: 'Money',
-                    subtitle: 'Currency, appearance, accounts, recurring',
+                    subtitle: 'Currency, accounts, recurring',
                     onTap: () => _open(
                       context,
                       MoneyPage(
