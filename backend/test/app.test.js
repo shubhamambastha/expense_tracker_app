@@ -145,6 +145,10 @@ test('writes force user_id from the token and drop id / unknown columns', async 
   assert.deepEqual(calls[1].body, { is_archived: true });
   assert.equal(calls[1].params.id, 'eq.7');
   assert.equal(calls[1].params.user_id, `eq.${SUB}`);
+
+  const account = await call('POST', '/v1/accounts', { name: 'Cash', type: 'cash', user_id: 'auth0|evil', id: 3, hacked: 1 });
+  assert.equal(account.status, 201);
+  assert.deepEqual(calls[2].body, { name: 'Cash', type: 'cash', user_id: SUB });
 });
 
 test('non-numeric ids 404 without touching the database', async () => {
@@ -152,6 +156,7 @@ test('non-numeric ids 404 without touching the database', async () => {
     const res = await call('PATCH', path, { is_archived: true });
     assert.equal(res.status, 404, path);
   }
+  assert.equal((await call('DELETE', '/v1/categories/income/abc')).status, 404);
   assert.equal(calls.length, 0);
 });
 
