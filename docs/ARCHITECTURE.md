@@ -70,7 +70,7 @@ Compile-time secrets come from `--dart-define` (see `config.dev.json.example` an
 | `SplashBootstrap` | `services/splash_bootstrap.dart` | Offline-first startup: restore session, sync prefs, pick destination |
 | `LoginPage` | `screens/auth/login_page.dart` | Auth0 Universal Login entry + "Continue as guest" |
 | `OnboardingWizardPage` | `screens/onboarding/onboarding_wizard_page.dart` | First-run wizard: name → currency → budget → accounts → income → recurring. Shown once per account (`OnboardingWizardStatus`; `user_settings.onboarding_completed_at` remotely) |
-| `auth` middleware | `backend/src/app.js` | Verifies the JWT and scopes every query to Auth0 `sub` |
+| `auth` middleware | `backend/src/middleware/auth.js` | Verifies the JWT and scopes every query to Auth0 `sub` |
 
 On sign-in, `AuthGate` syncs user-scoped singletons (`CategoryCatalog`, `IncomeCategoryCatalog`, `CategoryBudgetService`, `CurrencySettings`, `SettingsPreferences`). On sign-out, each calls `onSignedOut()` to clear in-memory state.
 

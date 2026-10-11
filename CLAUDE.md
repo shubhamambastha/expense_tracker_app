@@ -56,7 +56,7 @@ There is no named router and no bundled `.env` — secrets are compile-time `--d
 
 - `lib/screens/home/expense_home_page.dart` — the tab shell (Home · Transactions · Analytics · Settings, plus a centre Add button; Budgets is a pushed route, not a tab) and the owner of most in-memory transaction/account state.
 - `lib/services/api_service.dart` — every data read/write for signed-in users (HTTP → `backend/`); guest mode branches to `GuestStore`.
-- `backend/src/app.js` — the whole Node API (Express 5): JWT verification, column whitelists, routes.
+- `backend/src/` — the Node API (Express 5): `middleware/auth.js` (JWT verification), `routes/<resource>.js` (routes + that table's column whitelist), `db.js` (user-scoped query helpers). Layout in [docs/BACKEND.md](./docs/BACKEND.md#code-layout).
 - `lib/services/auth_service.dart` + `components/common/auth_gate.dart` — Auth0/guest session and splash → login → onboarding wizard → app routing.
 - `lib/services/guest_store.dart` + `guest_migration_service.dart` — guest-mode on-device storage and its replay into a real account on first sign-in.
 - `sql/` — dated Supabase migration files (manually applied; see [docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md)).
