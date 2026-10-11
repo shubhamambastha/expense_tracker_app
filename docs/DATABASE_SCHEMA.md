@@ -249,7 +249,7 @@ category_budgets
 └── created_at
 ```
 
-**Unique:** `(user_id, lower(category_name))` · **Dart:** `category_budget.dart` · **SQL:** `20260527_dashboard_data.sql`
+**Unique:** `(user_id, category_name)` (upsert target) and `(user_id, lower(category_name))` · **Dart:** `category_budget.dart` · **SQL:** `20260527_dashboard_data.sql`, `20261011_perf_indexes.sql`
 
 ---
 
@@ -393,6 +393,7 @@ Run in Supabase SQL editor (fresh project → existing project):
 13. 20260528_recurring_close.sql
 14. 20260529_auth0_user_id_text.sql   ← required for Auth0 third-party auth
 15. 20260824_onboarding_completed_at.sql
+16. 20261011_perf_indexes.sql        ← fixes the budgets upsert (42P10)
 ```
 
 On an existing database, apply only the files after the last one you ran.

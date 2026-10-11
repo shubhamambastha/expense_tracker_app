@@ -240,6 +240,16 @@ test('malformed and oversized JSON bodies are rejected with 4xx', async () => {
   assert.equal(calls.length, 0);
 });
 
+test('large list responses are gzipped for clients that ask', async () => {
+  respond = () => Response.json(Array.from({ length: 50 }, (_, id) => ({ id, note: 'x'.repeat(40) })));
+  const res = await realFetch(`${base}/v1/transactions`, {
+    headers: { Authorization: `Bearer ${token}`, 'Accept-Encoding': 'gzip' },
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-encoding'), 'gzip');
+  assert.equal((await res.json()).length, 50);
+});
+
 test('accounts hide archived rows unless includeArchived=true', async () => {
   await call('GET', '/v1/accounts');
   await call('GET', '/v1/accounts?includeArchived=true');
