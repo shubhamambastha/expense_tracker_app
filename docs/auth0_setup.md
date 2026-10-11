@@ -11,14 +11,14 @@ Authentication uses **Auth0 Universal Login**; expense data stays in **Supabase*
 3. **Allowed Callback URLs** and **Allowed Logout URLs** (comma-separated):
 
 ```
-com.shubhamambastha.expensetracker://YOUR_DOMAIN/android/com.example.expense_tracker_app/callback
+com.shubhamambastha.expensetracker://YOUR_DOMAIN/android/com.shubhamambastha.expensetracker/callback
 https://YOUR_DOMAIN/ios/com.shubhamambastha.expensetracker/callback
 com.shubhamambastha.expensetracker://YOUR_DOMAIN/ios/com.shubhamambastha.expensetracker/callback
 https://YOUR_DOMAIN/macos/com.shubhamambastha.expensetracker/callback
 com.shubhamambastha.expensetracker://YOUR_DOMAIN/macos/com.shubhamambastha.expensetracker/callback
 ```
 
-Android uses the **same custom scheme** as iOS/macOS (`AUTH0_CALLBACK_SCHEME`), not `https://` — the `https` scheme only works if you enable [Android App Links](https://auth0.com/docs/get-started/applications/enable-android-app-links-support) (Digital Asset Link verification on the Auth0 tenant domain), which this app doesn't set up. Using `https` without that verification causes a "not found" page after login instead of returning to the app.
+Android uses the **same custom scheme** as iOS/macOS (`AUTH0_CALLBACK_SCHEME`), not `https://`, and its package is `com.shubhamambastha.expensetracker` (renamed from `com.example.expense_tracker_app` on 2026-09-14, so drop the old `…/android/com.example.expense_tracker_app/callback` URL once the new one works) — the `https` scheme only works if you enable [Android App Links](https://auth0.com/docs/get-started/applications/enable-android-app-links-support) (Digital Asset Link verification on the Auth0 tenant domain), which this app doesn't set up. Using `https` without that verification causes a "not found" page after login instead of returning to the app.
 
 Replace `YOUR_DOMAIN` with your tenant host (e.g. `dev-abc123.us.auth0.com`).
 
@@ -51,11 +51,13 @@ cp config.dev.json.example config.dev.json
 python3 scripts/define_from_json.py config.dev.json run
 ```
 
-Optional Android Gradle property (manifest placeholder for Auth0 redirect):
+Android reads `AUTH0_DOMAIN` and `AUTH0_CALLBACK_SCHEME` for its manifest placeholders from a Gradle property or env var (`android/app/build.gradle.kts`). `define_from_json.py` exports every `config.dev.json` key as an env var, so this just works through the script. Building with plain `flutter`/Gradle instead? Set them yourself, otherwise the scheme falls back to `https` and login won't return to the app:
 
 ```properties
-# android/local.properties or ~/.gradle/gradle.properties
+# ~/.gradle/gradle.properties (android/local.properties is NOT read for these;
+# or export them as env vars)
 AUTH0_DOMAIN=dev-abc123.us.auth0.com
+AUTH0_CALLBACK_SCHEME=com.shubhamambastha.expensetracker
 ```
 
 ## 4. iOS / macOS callbacks (default: custom URL scheme)

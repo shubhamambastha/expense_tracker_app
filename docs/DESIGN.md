@@ -1,6 +1,6 @@
 # Design System
 
-Premium dark theme for the Expense Tracker app. Source of truth lives in `lib/config/design_tokens.dart` and is wired into Material 3 via `lib/config/theme.dart`. Always reach for tokens — never hardcode hex values, durations, or radii in widgets.
+Premium iOS-style theme for the Expense Tracker app: Dark (default) and Light, with a user-picked accent. Source of truth lives in `lib/config/design_tokens.dart` and is wired into Material 3 via `lib/config/theme.dart`. Always reach for tokens — never hardcode hex values, durations, or radii in widgets.
 
 ---
 
@@ -20,7 +20,7 @@ lib/
 ├── config/
 │   ├── design_tokens.dart      # AppColors, AppRadii, AppShadows, AppDurations,
 │   │                           # AppCurves, AppSpacing, AppTextStyles
-│   └── theme.dart              # AppTheme.darkTheme — wires tokens into Material 3
+│   └── theme.dart              # AppTheme.darkTheme / lightTheme — wires tokens into Material 3
 ├── utils/
 │   ├── category_style.dart     # kCategoryColors, CategoryIcons, default seeds
 │   └── snackbar_helper.dart    # SnackbarHelper — top-anchored feedback
@@ -38,11 +38,13 @@ lib/
 │   ├── accounts/               # Account cards, swipe tiles, empty states
 │   ├── recurring/              # Subscription/EMI cards, timeline tiles
 │   ├── profile/                # Profile form fields, manage cards
+│   ├── onboarding/             # Wizard steps, OnboardingStepScaffold, progress header
 │   ├── auth/                   # Login form
 │   └── dialogs/                # Sheets and confirmation dialogs
 └── screens/                    # Full pages — compose components, own navigation
     ├── home/expense_home_page.dart   # Tab shell + bottom nav + FAB
     ├── auth/                         # Login, splash
+    ├── onboarding/                   # Post-login onboarding wizard
     ├── transaction/                  # Add/edit transaction
     ├── accounts/                     # Account list & detail
     ├── analytics/                    # Analytics tab
@@ -61,6 +63,8 @@ Token classes are private-constructor (`AppColors._()`) static-only namespaces. 
 | Add (+ FAB) | `screens/transaction/add_transaction_page.dart` | `AmountSection`, `TransactionPrimaryFields`, `TransactionAdvancedSection`, `StickyBottomCTA` |
 | Analytics | `screens/analytics/analytics_page.dart` | `AnalyticsSectionCard`, chart widgets, `TimeRangeSelector` |
 | Settings | `screens/settings/settings_page.dart` | `SettingsSection`, `SettingsTile`, `SettingsSubpageScaffold` |
+| Budgets (pushed) | `_BudgetsPage` in `expense_home_page.dart` → `BudgetsAndSpendingContent` | `SettingsSection`, `BudgetAllocationNote`, budget edit sheet |
+| Onboarding | `screens/onboarding/onboarding_wizard_page.dart` | `OnboardingStepScaffold`, `OnboardingProgressHeader`, `RecurringKindRow` |
 | Accounts | `screens/accounts/` | `BankAccountCard`, `CreditCardCard`, `AccountsEmptyState` |
 | Recurring | `screens/recurring/recurring_payments_page.dart` | `SubscriptionCard`, `EmiCard`, `UpcomingPaymentTile` |
 | Detail sheets | `components/transaction/transaction_detail_sheet.dart` | `DetailSectionCard`, hero amount, action rows |
@@ -69,7 +73,7 @@ Token classes are private-constructor (`AppColors._()`) static-only namespaces. 
 
 ## Color
 
-Colors resolve dynamically off `AppColors.configure(brightness, accent)` (called once per rebuild from `main.dart`) rather than fixed `const` values — the app now supports Light/Dark (`AppearancePage`'s Theme section) and a user-selectable accent (`AppAccent.teal` / `.blue` / `.purple`, Appearance page's Accent Color section). Every `AppColors.xxx` call site is a getter, so it picks up theme changes automatically. Values below are the dark-theme defaults (teal accent); light-theme values are noted where they differ.
+Colors resolve dynamically off `AppColors.configure(brightness, accent)` (called once per rebuild from `main.dart`) rather than fixed `const` values — the app supports Light/Dark and a user-selectable accent (`AppAccent.teal` / `.blue` / `.purple`), both chosen in Settings → Appearance (`screens/settings/sections/appearance_page.dart`). Every `AppColors.xxx` call site is a getter, so it picks up theme changes automatically. Values below are the dark-theme defaults (teal accent); light-theme values are noted where they differ.
 
 ### Tokens
 
@@ -155,7 +159,7 @@ All text styles are exposed from `AppTextStyles`. Use them directly or via `Them
 
 Helper `BorderRadius` constants exist for each (e.g. `AppRadii.cardRadius`). Use these in `BoxDecoration`, `RoundedRectangleBorder`, etc.
 
-For anything that takes a `shape:` (buttons, cards, dialogs, sheets, chips, snackbars, FAB, list tiles, date picker) or a raw `Container` you're converting to `ShapeDecoration`, prefer the continuous-corner variants — `AppRadii.cardBorder`, `AppRadii.buttonBorder`, `AppRadii.inputBorder`, `AppRadii.chipBorder`, `AppRadii.pillBorder` — over `RoundedRectangleBorder`. These use `ContinuousRectangleBorder`, which matches iOS's native superellipse ("squircle") corner curvature instead of a true circular arc; already wired into `AppTheme.darkTheme` for every Material shape. (`InputDecorationTheme`'s `OutlineInputBorder` has no continuous equivalent in Flutter, so text fields keep circular corners.)
+For anything that takes a `shape:` (buttons, cards, dialogs, sheets, chips, snackbars, FAB, list tiles, date picker) or a raw `Container` you're converting to `ShapeDecoration`, prefer the continuous-corner variants — `AppRadii.cardBorder`, `AppRadii.buttonBorder`, `AppRadii.inputBorder`, `AppRadii.chipBorder`, `AppRadii.pillBorder` — over `RoundedRectangleBorder`. These use `ContinuousRectangleBorder`, which matches iOS's native superellipse ("squircle") corner curvature instead of a true circular arc; already wired into `AppTheme` (both themes) for every Material shape. (`InputDecorationTheme`'s `OutlineInputBorder` has no continuous equivalent in Flutter, so text fields keep circular corners.)
 
 > **Don't** hand-roll `BorderRadius.circular(20)` — use `AppRadii.cardRadius` so a future refactor is one-line.
 
@@ -331,12 +335,11 @@ import 'package:expense_tracker_app/components/common/states/states.dart';
 
 ### Buttons
 
-All button themes are pre-wired in `AppTheme.darkTheme`. Use them as-is:
+All button themes are pre-wired in `AppTheme` (both themes). Use them as-is:
 
-- **`FilledButton`** — primary CTA. Background `primary`, foreground deep-teal `#003328`, radius `button`.
+- **`FilledButton`** — primary CTA. Background `primary`, foreground `onPrimary` (white), radius `button`.
 - **`OutlinedButton`** — secondary CTA. `border` outline, `textPrimary` label.
 - **`TextButton`** — tertiary / inline. `primary` label.
-- **`FloatingActionButton`** — gradient teal→cyan, soft primary glow, radius `button`.
 
 Minimum height: 48. Default padding: `22 × 14`.
 
@@ -354,7 +357,7 @@ Minimum height: 48. Default padding: `22 × 14`.
 
 ### Bottom navigation
 
-Implemented inline in `screens/home/expense_home_page.dart` (not `BottomNavigationBar`): rounded (continuous-corner) `card`-radius surface container with icon **+ label** items for the four real destinations — Home · Transactions · Analytics · Settings (`_selectedIndex` 0–3). The centre `_AddExpenseFab` is a separate floating control, not a tab slot: it always opens the add-transaction flow directly and never participates in `_selectedIndex`, so a tab bar item never doubles as an action trigger. It uses a teal→cyan gradient with a soft primary glow and a breathing scale animation.
+Implemented inline in `screens/home/expense_home_page.dart` (not `BottomNavigationBar`): a translucent, blurred (`BackdropFilter`, `surface` @ ~90%) continuous-corner `card`-radius container with icon **+ label** items for the four real destinations — Home · Transactions · Analytics · Settings (`_selectedIndex` 0–3). The centre `_AddExpenseFab` is a separate floating control, not a tab slot: it always opens the add-transaction flow directly and never participates in `_selectedIndex`, so a tab bar item never doubles as an action trigger. It's a 58px circle with a `primary`→`secondary` gradient, a 4px `background`-colored ring, and a soft primary glow, raised above the bar.
 
 Tab content switches via `AnimatedSwitcher` + `AppDurations.page` + `AppCurves.emphasized` in the same file.
 
