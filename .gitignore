@@ -48,3 +48,6 @@ app.*.map.json
 .env
 # Local config files with keys
 config.*.json
+
+# brag
+/brag-output
