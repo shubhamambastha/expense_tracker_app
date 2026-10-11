@@ -665,9 +665,10 @@ class _TransactionsAppBar extends StatelessWidget {
             child: Text('Transactions', style: AppTextStyles.headingMedium),
           ),
           IconButton(
-            tooltip: 'Export',
-            onPressed: () {},
+            tooltip: 'Export (coming soon)',
+            onPressed: null,
             icon: const Icon(Icons.upload_rounded),
+            disabledColor: AppColors.textSecondary.withAlpha(90),
           ),
           IconButton(
             tooltip: 'Calendar',
