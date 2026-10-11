@@ -12,7 +12,6 @@ import '../../../services/category_catalog.dart';
 import '../../../services/currency_settings.dart';
 import '../../../services/income_category_catalog.dart';
 import '../../../services/settings_preferences.dart';
-import 'appearance_page.dart';
 import 'categories_page.dart';
 
 /// Thin hub for everything about your money — currency, appearance,
@@ -66,24 +65,6 @@ class MoneyPage extends StatelessWidget {
                   subtitle: 'Used for analytics & summaries',
                   valueLabel: currency.currencyCode,
                   onTap: () => showCurrencyPickerSheet(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            SettingsSection(
-              title: 'Appearance',
-              children: [
-                SettingsTile(
-                  icon: Icons.dark_mode_rounded,
-                  title: 'Appearance',
-                  valueLabel: prefs.themeMode == ThemeMode.light
-                      ? 'Light'
-                      : 'Dark',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const AppearancePage(),
-                    ),
-                  ),
                 ),
               ],
             ),

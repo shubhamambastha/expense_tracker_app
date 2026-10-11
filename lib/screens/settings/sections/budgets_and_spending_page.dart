@@ -49,6 +49,9 @@ class _BudgetsAndSpendingContentState
           children: [
             SettingsSection(
               title: 'Limits',
+              footnote:
+                  'One ledger, not separate pools: every expense counts '
+                  'toward both its category budget and your monthly limit.',
               children: [
                 SettingsTile(
                   icon: Icons.account_balance_rounded,
@@ -69,6 +72,17 @@ class _BudgetsAndSpendingContentState
                 ),
               ],
             ),
+            if (limit != null && budgets.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              BudgetAllocationNote(
+                limit: limit,
+                allocated: budgets.fold<double>(
+                  0,
+                  (sum, b) => sum + b.monthlyLimit,
+                ),
+                currency: currency,
+              ),
+            ],
             if (budgets.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.lg),
               SettingsSection(

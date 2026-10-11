@@ -154,11 +154,7 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AnalyticsHeader(
-                range: _range,
-                resolvedRange: resolved,
-                onAddTransaction: widget.onAddTransaction,
-              ),
+              AnalyticsHeader(range: _range, resolvedRange: resolved),
               const SizedBox(height: AppSpacing.lg),
               TimeRangeSelector(
                 selected: _range,
@@ -213,11 +209,7 @@ class _AnalyticsContentState extends State<AnalyticsContent> {
 
   List<Widget> _onboarding(ResolvedRange resolved) {
     return [
-      AnalyticsHeader(
-        range: _range,
-        resolvedRange: resolved,
-        onAddTransaction: widget.onAddTransaction,
-      ),
+      AnalyticsHeader(range: _range, resolvedRange: resolved),
       const SizedBox(height: AppSpacing.lg),
       TimeRangeSelector(
         selected: _range,

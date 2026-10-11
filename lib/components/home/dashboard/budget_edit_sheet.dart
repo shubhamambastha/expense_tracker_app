@@ -5,6 +5,7 @@ import '../../../models/category_budget.dart';
 import '../../../services/category_budget_service.dart';
 import '../../../services/category_catalog.dart';
 import '../../../services/currency_settings.dart';
+import '../../../services/settings_preferences.dart';
 import '../../../utils/snackbar_helper.dart';
 import '../../transaction/category_pills_selector.dart';
 
@@ -171,6 +172,11 @@ class _BudgetEditSheetState extends State<_BudgetEditSheet> {
                       hintText: '0',
                     ),
                   ),
+                  _LiveAllocation(
+                    amountController: _amountController,
+                    categoryName: _categoryName,
+                    currency: currency,
+                  ),
                   const SizedBox(height: AppSpacing.lg),
                   Row(
                     children: [
@@ -208,6 +214,126 @@ class _BudgetEditSheetState extends State<_BudgetEditSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Running total of all category budgets — including the amount being typed —
+/// against the overall monthly limit. Hidden when no limit is set.
+class _LiveAllocation extends StatelessWidget {
+  const _LiveAllocation({
+    required this.amountController,
+    required this.categoryName,
+    required this.currency,
+  });
+
+  final TextEditingController amountController;
+  final String? categoryName;
+  final CurrencySettings currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final limit = SettingsPreferences.instance.monthlySpendingLimit;
+    if (limit == null) return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable: amountController,
+      builder: (context, _) {
+        // upsert is keyed by category, so the selected category's existing
+        // budget gets replaced by the typed amount rather than added to it.
+        final others = CategoryBudgetService.instance.budgets
+            .where((b) => b.categoryName != categoryName)
+            .fold<double>(0, (sum, b) => sum + b.monthlyLimit);
+        final typed = double.tryParse(amountController.text.trim()) ?? 0;
+        return Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.md),
+          child: Semantics(
+            liveRegion: true,
+            child: BudgetAllocationNote(
+              limit: limit,
+              allocated: others + typed,
+              currency: currency,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Shows how category budgets add up against the monthly limit, and what
+/// that means when they don't (under- or over-allocated).
+class BudgetAllocationNote extends StatelessWidget {
+  const BudgetAllocationNote({
+    super.key,
+    required this.limit,
+    required this.allocated,
+    required this.currency,
+  });
+
+  final double limit;
+  final double allocated;
+  final CurrencySettings currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final diff = allocated - limit;
+    final balanced = diff.abs() < 0.5;
+    final over = diff > 0;
+    final color = balanced
+        ? AppColors.success
+        : over
+        ? AppColors.warning
+        : AppColors.primary;
+    final icon = balanced
+        ? Icons.check_circle_rounded
+        : over
+        ? Icons.warning_amber_rounded
+        : Icons.info_outline_rounded;
+    final headline = balanced
+        ? 'Fully allocated'
+        : over
+        ? 'Over-allocated by ${currency.format(diff)}'
+        : '${currency.format(-diff)} unallocated';
+    final detail = balanced
+        ? 'Category budgets add up to your ${currency.format(limit)} limit.'
+        : over
+        ? 'Category budgets total ${currency.format(allocated)} against a '
+              '${currency.format(limit)} limit, so you\'ll hit the monthly '
+              'limit before every category cap is used.'
+        : '${currency.format(allocated)} of ${currency.format(limit)} is '
+              'split by category. Spending outside those categories still '
+              'counts toward the monthly limit.';
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color.withAlpha(24),
+        borderRadius: AppRadii.cardRadius,
+        border: Border.all(color: color.withAlpha(90)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  headline,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(detail, style: AppTextStyles.bodySmall),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
