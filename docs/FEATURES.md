@@ -23,7 +23,7 @@ One unified `Transaction` model covers all three kinds, persisted in `public.tra
 - The Type filter (`expense`/`income`/`transfer`/`emi`/`subscription`/`refund`) is a **derived** classification, not a stored column: transfer kind → transfer; income + category containing "refund" → refund; expense + category containing "emi" → emi; expense + category containing "subscription" → subscription; else plain expense/income. The category match is a case-insensitive **substring** check, not an exact enum (`transaction_subtype_helpers.dart::displayTypeForTransaction`, `isEmiCategory`, `isSubscriptionCategory`, `isRefundCategory`).
 - `transfer` only appears as a selectable filter option when `FeatureFlags.transferVisible` is true (`transaction_filters.dart::kTransactionTypeFilterOptions`).
 - Search matches (case-insensitive, substring) merchant name, category, source account name, destination account name, and note simultaneously (`transaction_filter_logic.dart::apply`).
-- Date presets — Today, This Week, This Month, Last Month, Custom. "This Week" always starts **Monday**, independent of the `WeekStartDay` app setting (see [Currency & display settings](#currency--display-settings) — that setting isn't actually consumed here) (`transaction_filter_logic.dart::dateRangeForPreset`).
+- Date presets — Today, This Week, This Month, Last Month, Custom. "This Week" always starts **Monday**; there is no week-start setting (`transaction_filter_logic.dart::dateRangeForPreset`).
 - Amount filter is an inclusive `min ≤ amount ≤ max` range.
 - Sort options: latest first (default), highest amount, lowest amount.
 - Sort/date-preset/category/account filter state persists locally per device and is restored on next visit; **search text and amount range are not persisted** (`transaction_list_preferences.dart`).
@@ -87,6 +87,7 @@ Balances and credit metrics are always computed on the fly from transaction hist
 
 Separate per-user catalogs for expense and income categories; identical rules apply to both (`category_catalog.dart` and `income_category_catalog.dart` are structurally 1:1).
 
+- On Add Transaction → income, the category list shows the 4 most-used income categories plus a "More (N)" row; it stays expanded when the current selection would otherwise be hidden (`transaction_primary_fields.dart`).
 - Default categories are seeded **idempotently** — on sync, only default names missing from the user's catalog (case-insensitive match) are inserted; existing rows are untouched (`api_service.dart::ensureDefaultCategories` / `ensureDefaultIncomeCategories`).
 - Default categories cannot be deleted — enforced both client-side (`CategoryCatalog.deleteCategory` throws) and by the backend (`DELETE /v1/categories/{expense,income}/:id` filters `is_default = false`, still returning 204).
 - A custom category name must be non-empty and unique case-insensitively within the user's catalog, checked client-side before any network call (`category_catalog.dart::addCategory`).
@@ -101,6 +102,8 @@ One optional monthly spending limit per expense category name — no rollover, n
 
 - At most one budget per `(user_id, category_name)`, enforced by a case-insensitive unique index; saving a budget for an already-budgeted category **replaces** it via upsert (`api_service.dart::upsertCategoryBudget`, `sql/20260527_dashboard_data.sql`).
 - A budget requires a selected category and a strictly positive amount, or the save is rejected client-side (`category_budget_service.dart::upsert`).
+- A separate, optional **Monthly Spending Limit** (a global cap, stored in `SettingsPreferences.monthlySpendingLimit`) sits above the category budgets. It's informational only: nothing outside the Budgets screen, budget sheet and onboarding budget step reads it, so it doesn't feed Spending Room or insights.
+- When both a limit and category budgets exist, a live allocation note compares Σ category budgets to the limit: within 0.5 → "Fully allocated", above → "Over-allocated by X" (warning), below → "X unallocated" (spend outside budgeted categories still counts toward the limit). While editing a budget, the note recomputes with the typed amount replacing that category's existing budget, not adding to it (`budget_edit_sheet.dart::BudgetAllocationNote`).
 - No rollover exists: "spent" is recomputed fresh from raw transactions for the target month every time — nothing persists a "remaining balance" across months (`analytics_aggregations.dart::budgetSpend`).
 - The dashboard's budget-proximity insight (below) only ever surfaces the **first** budget it encounters that's near/over limit — not all of them — because the loop returns on first match (`financial_insights.dart::_budgetProximity`).
 
@@ -108,7 +111,7 @@ One optional monthly spending limit per expense category name — no rollover, n
 
 ## Spending Room (home screen "how much can I spend today")
 
-Settings → Budgets & Spending → "Safe Daily Spend" toggle (on by default, `settings_preferences.dart::safeDailySpendEnabled`) gates a card below the home screen's Total Balance hero.
+Budgets screen → Guardrails → "Safe Daily Spend" toggle (on by default, `settings_preferences.dart::safeDailySpendEnabled`) gates a card below the home screen's Total Balance hero.
 
 - Formula: `totalMonthIncome − monthSpend` — this month's income (logged + projected recurring) minus every expense logged this month, recurring or not (`dashboard_aggregations.dart::spendableToday`). A plain running balance, not a daily-accrued allowance: it's the same number all month, moving only when income or spend is logged.
 - **Resets every calendar month — no rollover.** Unspent (or overspent) balance does not carry into the next month (v1 scope decision — rollover was considered and deliberately deferred, see `docs/BACKLOG.md` if revisited).
@@ -147,7 +150,8 @@ A single app-wide default display currency — not per-transaction or per-accoun
 - On first sign-in, if the user has no remote `user_settings` row, one is created server-side using the current local currency as the default rather than left unset (`currency_settings.dart::syncForUser`).
 - Currency is cached under both a per-user SharedPreferences key and a global fallback key, so the last-used currency renders immediately on cold start before remote sync completes (`currency_settings.dart::_prefKeyFor`, `_cacheLocally`).
 - `Transaction.currencyCode` is stored per-row, but the app is single-currency by design — there is no conversion; each transaction simply records whatever currency was active when it was saved.
-- **`WeekStartDay` (Mon/Sun) and `FinancialYear` (Jan–Dec / Apr–Mar) exist as settings but are not consumed anywhere else in the codebase** — verified no reads outside `settings_preferences.dart` and its own settings-page UI. Date-preset filtering (`transaction_filter_logic.dart`) and transaction-list grouping (`transaction_grouping.dart`) both hardcode Monday-start weeks and calendar-year months regardless of what the user picks here.
+- Theme (Light / Dark, default Dark) and accent (Teal / Blue / Purple, default Teal) live in Settings → Appearance. Both are `SettingsPreferences` values, cached locally and synced in `user_settings.preferences`; `main.dart` pushes them into `AppColors.configure` on every rebuild.
+- There are no week-start or financial-year settings. Weeks start Monday and months are calendar months everywhere (`transaction_filter_logic.dart`, `transaction_grouping.dart`, `analytics_aggregations.dart`).
 
 ---
 
@@ -161,16 +165,41 @@ Auth0 handles identity; Supabase stores data; every row is scoped by the Auth0 `
 - On sign-out, each of those singletons runs `onSignedOut()`, clearing in-memory state (and, for catalogs, reloading local unsynced defaults) so no data from the previous session lingers in memory for a subsequent sign-in.
 - Every platform (Android, iOS, macOS) logs in through the custom URL scheme (`AUTH0_CALLBACK_SCHEME`) unless `AppConfig.auth0UseHttps` is explicitly set, which switches to HTTPS callbacks (`auth_service.dart::_useHttpsCallbacks`; see [auth0_setup.md](./auth0_setup.md)).
 - A user cancelling the Auth0 web login is surfaced as a distinct `AuthLoginCancelledException`, not a generic error (`auth_service.dart::login`).
-- Splash bootstrap reserves (but does not yet implement) two future gates: a biometric-unlock step (`SplashBootstrapResult.requiresBiometricUnlock`, currently hardcoded to always return `false`) and an onboarding destination (`SplashDestination.onboarding`, reachable only if a local `onboarding_complete` pref is explicitly set `false`, which nothing in the app currently does) — see [BACKLOG.md](./BACKLOG.md).
+- Splash bootstrap reserves (but does not yet implement) a biometric-unlock step (`SplashBootstrapResult.requiresBiometricUnlock`, hardcoded to `false`). Its `SplashDestination.onboarding` is dead code, unrelated to the post-login wizard below — see [BACKLOG.md](./BACKLOG.md).
+
+---
+
+## Guest mode
+
+"Continue as guest" on the login screen (behind `FeatureFlags.guestModeEnabled`) skips Auth0. Data never leaves the device.
+
+- `AuthService.isGuest` is persisted to SharedPreferences, so a guest stays a guest across restarts. `SplashBootstrap` and `AuthGate` treat it like a live session (`auth_service.dart`, `auth_gate.dart`).
+- Every `ApiService` method checks `_isGuest` first and routes to `GuestStore`. Each table is a JSON list under its own `guest.*` key; ids are negative and come from one local counter (`guest_store.dart`).
+- On the first real sign-in with guest data present, a confirm dialog shows rough counts and offers to bring the data in (`confirm_guest_migration_dialog.dart`). Declined data stays local and can be imported later from Settings → Data & Privacy, which only shows that section to a signed-in user who still has guest data (`SettingsGuestDataSection`).
+- Migration replays accounts → categories → transactions → recurring events → budgets, remapping foreign keys. Accounts and categories matching an existing name are reused, not duplicated. User settings are not replayed. Any failure deletes everything that attempt inserted, in reverse order, and leaves `GuestStore` untouched for a retry (`guest_migration_service.dart`).
+- Guests don't see "Delete my account" (there is no account); "Reset My Account" wipes `GuestStore`.
+
+---
+
+## Post-login onboarding wizard
+
+A 6-step first-run wizard, shown once per account before the dashboard (behind `FeatureFlags.postLoginOnboardingEnabled`). Design: [designs/post-login-onboarding.md](./designs/post-login-onboarding.md).
+
+- Steps: name → currency → monthly budget → accounts → income → recurring. Each can be skipped; an in-UI Back button moves backward, but hardware back is blocked for the whole wizard (`onboarding_wizard_page.dart`).
+- Accounts come before income and recurring so those steps have an account to attach to. Income saves inline with an account picker that defaults to the first account; recurring items open the real `AddTransactionPage` and are listed as "Added" on the step.
+- Income is guarded against a duplicate save if an interrupted run resumes. Recurring is not: adding several items is the intended flow.
+- Completion is local-first: the `financial_profile_onboarding_complete` pref decides; if it was never set (fresh install, second device), the remote `user_settings.onboarding_completed_at` is checked. Rows that predate the feature were backfilled as complete (`onboarding_wizard_status.dart`, `sql/20260824_onboarding_completed_at.sql`). Guests use a flag in `GuestStore`, copied to the server on migration.
+- Default currency is suggested from the device locale (`onboarding_locale_currency.dart`). Local-only counters (started / completed / skipped per step) live in `onboarding_analytics.dart` and are never sent anywhere.
 
 ---
 
 ## Data export
 
-Settings → Data → "Export Data".
+Settings → Data & Privacy → "Export Data".
 
 - Fetches fresh through `ApiService` (not the in-memory lists the rest of the app uses, which may be stale/paginated) — transactions, accounts (including archived), and category budgets — serializes each to CSV (`utils/data_export.dart`, pure functions, unit tested), writes them to the OS temp directory, and hands all three files to the native share sheet via `share_plus`. Settings/preferences are deliberately excluded — they're app config, not financial data. CSV was chosen over JSON: the target audience is a non-technical user who wants something that opens in Excel/Sheets, not a re-import format (no import feature exists or is planned).
-- Account reset/deletion is **not** self-service — see [BACKLOG.md](./BACKLOG.md) for the planned "Reset my account" / "Delete my account" flows, both mail-triggered requests to an admin rather than an automatic client-side wipe.
+- **Reset My Account** (Data & Privacy → Danger Zone) is self-service after a confirmation dialog: `DELETE /v1/data` wipes transactions, accounts, categories, budgets and recurring events but keeps the login and `user_settings`; default categories are re-seeded straight after. It is not atomic (see [BACKLOG.md](./BACKLOG.md)).
+- **Delete my account** is a request, not an action: after a typed confirmation it opens a pre-filled `mailto:` to `AppInfo.supportEmail` and a human does the deletion (`account_deletion_request.dart`). If no mail app is installed, an error snackbar shows the address to email directly.
 
 ---
 
