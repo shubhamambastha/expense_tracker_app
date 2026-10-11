@@ -2,8 +2,9 @@
 class AppConfig {
   AppConfig._();
 
-  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  /// Base URL of the Node API in `backend/`, without a trailing slash
+  /// (e.g. `http://localhost:3000`).
+  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL');
   static const String auth0Domain = String.fromEnvironment('AUTH0_DOMAIN');
   static const String auth0ClientId = String.fromEnvironment('AUTH0_CLIENT_ID');
 
@@ -17,8 +18,7 @@ class AppConfig {
   static const bool auth0UseHttps =
       bool.fromEnvironment('AUTH0_USE_HTTPS', defaultValue: false);
 
-  static bool get hasSupabase =>
-      supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+  static bool get hasApi => apiBaseUrl.isNotEmpty;
 
   static bool get hasAuth0 => auth0Domain.isNotEmpty && auth0ClientId.isNotEmpty;
 }

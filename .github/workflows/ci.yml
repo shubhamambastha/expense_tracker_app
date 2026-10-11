@@ -7,6 +7,21 @@ on:
     branches: [ main ]
 
 jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -25,29 +40,25 @@ jobs:
 
       - name: Build APK (example)
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
           AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
           AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
         run: |
           flutter build apk \
-            --dart-define=SUPABASE_URL=${SUPABASE_URL} \
-            --dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY} \
+            --dart-define=API_BASE_URL=${API_BASE_URL} \
             --dart-define=AUTH0_DOMAIN=${AUTH0_DOMAIN} \
             --dart-define=AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
 
       - name: (Optional) Build iOS
         if: runner.os == 'macOS'
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
           AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
           AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
         run: |
           flutter build ios \
             --no-codesign \
-            --dart-define=SUPABASE_URL=${SUPABASE_URL} \
-            --dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY} \
+            --dart-define=API_BASE_URL=${API_BASE_URL} \
             --dart-define=AUTH0_DOMAIN=${AUTH0_DOMAIN} \
             --dart-define=AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
 

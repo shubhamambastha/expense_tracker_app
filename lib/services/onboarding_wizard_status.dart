@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/feature_flags.dart';
 import 'auth_service.dart';
 import 'guest_store.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 /// Tracks whether the post-login onboarding wizard has been completed or
 /// skipped — distinct from `SplashBootstrap`'s unrelated, dead
@@ -34,7 +34,8 @@ class OnboardingWizardStatus {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool(_kLocalComplete) == true) return true;
 
-    final remote = await SupabaseService.fetchOnboardingCompletedAt();
+    final remote =
+        (await ApiService.fetchUserSettings())?.onboardingCompletedAt;
     if (remote != null) {
       await prefs.setBool(_kLocalComplete, true);
       return true;
@@ -54,7 +55,7 @@ class OnboardingWizardStatus {
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kLocalComplete, true);
-    unawaited(SupabaseService.markOnboardingComplete());
+    unawaited(ApiService.markOnboardingComplete());
   }
 
   static const _kIncomeStepDone = 'onboarding_wizard_income_step_done';

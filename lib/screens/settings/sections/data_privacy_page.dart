@@ -18,7 +18,7 @@ import '../../../models/transaction.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/category_catalog.dart';
 import '../../../services/income_category_catalog.dart';
-import '../../../services/supabase_service.dart';
+import '../../../services/api_service.dart';
 import '../../../utils/account_deletion_request.dart';
 import '../../../utils/data_export.dart';
 import '../../../utils/profile_identity.dart';
@@ -140,11 +140,11 @@ class _DataPrivacyPageState extends State<DataPrivacyPage> {
 
     setState(() => _resetting = true);
     try {
-      // Not requireUserId() — a guest has no Auth0 session, and
-      // resetUserData()/syncForUser() are already guest-branched, so any
-      // non-empty placeholder is fine here (see SupabaseService._isGuest).
+      // A guest has no Auth0 session, and resetUserData()/syncForUser() are
+      // already guest-branched, so any non-empty placeholder is fine here
+      // (see ApiService._isGuest).
       final userId = AuthService.instance.currentSession?.userId ?? 'guest';
-      await SupabaseService.resetUserData();
+      await ApiService.resetUserData();
       await Future.wait([
         CategoryCatalog.instance.syncForUser(userId),
         IncomeCategoryCatalog.instance.syncForUser(userId),
@@ -172,9 +172,9 @@ class _DataPrivacyPageState extends State<DataPrivacyPage> {
 
     try {
       final results = await Future.wait([
-        SupabaseService.fetchTransactions(),
-        SupabaseService.fetchAccounts(includeArchived: true),
-        SupabaseService.fetchCategoryBudgets(),
+        ApiService.fetchTransactions(),
+        ApiService.fetchAccounts(includeArchived: true),
+        ApiService.fetchCategoryBudgets(),
       ]);
       final transactions = results[0] as List<Transaction>;
       final exportAccounts = results[1] as List<Account>;

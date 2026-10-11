@@ -10,14 +10,14 @@ import 'services/category_catalog.dart';
 import 'services/currency_settings.dart';
 import 'services/settings_preferences.dart';
 import 'services/deep_link_service.dart';
-import 'services/supabase_service.dart';
+import 'services/api_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
     await Future.wait([
-      SupabaseService.init(),
+      ApiService.init(),
       CurrencySettings.instance.load(),
       SettingsPreferences.instance.load(),
     ]);

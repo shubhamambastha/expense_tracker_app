@@ -420,4 +420,4 @@ Every visual change should start in `lib/config/design_tokens.dart`. Updating a 
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — app structure, services, navigation
 - [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) — Postgres schema mind map
-- [auth0_setup.md](./auth0_setup.md) · [supabase_setup.md](./supabase_setup.md) — backend setup
+- [BACKEND.md](./BACKEND.md) · [auth0_setup.md](./auth0_setup.md) · [supabase_setup.md](./supabase_setup.md) — backend setup

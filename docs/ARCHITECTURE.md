@@ -2,9 +2,9 @@
 
 ## Overview
 
-Flutter expense tracker with Auth0 login, Supabase persistence, and a component-based UI. The app is organized into thin screens, reusable components, singleton services, and pure utils — no global state-management framework; session-scoped data lives in `ChangeNotifier` / `ValueNotifier` singletons, and tab-level data is owned by `ExpenseHomePage`.
+Flutter expense tracker with Auth0 login, a Node REST API in front of Supabase Postgres ([BACKEND.md](./BACKEND.md)), and a component-based UI. The app is organized into thin screens, reusable components, singleton services, and pure utils — no global state-management framework; session-scoped data lives in `ChangeNotifier` / `ValueNotifier` singletons, and tab-level data is owned by `ExpenseHomePage`.
 
-Visual conventions live in [DESIGN.md](./DESIGN.md). Database schema (mind map): [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md). Backend setup guides: [auth0_setup.md](./auth0_setup.md), [supabase_setup.md](./supabase_setup.md).
+Visual conventions live in [DESIGN.md](./DESIGN.md). Database schema (mind map): [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md). Backend API: [BACKEND.md](./BACKEND.md). Setup guides: [auth0_setup.md](./auth0_setup.md), [supabase_setup.md](./supabase_setup.md).
 
 ---
 
@@ -12,7 +12,7 @@ Visual conventions live in [DESIGN.md](./DESIGN.md). Database schema (mind map):
 
 ```mermaid
 flowchart TD
-  main[main.dart] --> init[Parallel init: Supabase, CurrencySettings, SettingsPreferences]
+  main[main.dart] --> init[Parallel init: ApiService/Auth0, CurrencySettings, SettingsPreferences]
   init --> app[ExpenseTrackerApp]
   app --> gate[AuthGate]
   gate --> splash[SplashScreen + SplashBootstrap]
@@ -20,11 +20,12 @@ flowchart TD
   gate --> home[ExpenseHomePage tab shell]
   home --> tabs[Home · Transactions · Analytics · Settings]
   home --> push[Push routes: add transaction, accounts, recurring, budgets]
-  services[Services layer] --> supa[SupabaseService]
+  services[Services layer] --> api[ApiService]
   services --> auth[AuthService]
-  supa --> db[(Supabase Postgres)]
+  api -->|REST + Bearer ID token| node[backend/ Node API]
+  node --> db[(Supabase Postgres)]
   auth --> auth0[Auth0 Universal Login]
-  auth -->|ID token| supa
+  auth -->|ID token| api
 ```
 
 ---
@@ -33,7 +34,7 @@ flowchart TD
 
 `main.dart` initializes the app in parallel, then mounts `AuthGate`:
 
-1. `SupabaseService.init()` — configures Auth0 token bridge and `Supabase.initialize`
+1. `ApiService.init()` — checks `API_BASE_URL` and initializes `AuthService` (Auth0)
 2. `CurrencySettings.instance.load()` — local currency preference
 3. `SettingsPreferences.instance.load()` — local user settings cache
 4. `DeepLinkService.instance.start()` — widget / app-link intents (non-blocking)
@@ -46,8 +47,7 @@ Compile-time secrets come from `--dart-define` (see `config.dev.json.example` an
 
 | Define | Purpose |
 | --- | --- |
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_ANON_KEY` | Supabase anon key |
+| `API_BASE_URL` | Node API base URL, e.g. `http://localhost:3000` (see [BACKEND.md](./BACKEND.md#run-locally)) |
 | `AUTH0_DOMAIN` | Auth0 tenant domain |
 | `AUTH0_CLIENT_ID` | Auth0 native app client ID |
 | `AUTH0_CALLBACK_SCHEME` | iOS custom-scheme callback (optional) |
@@ -57,7 +57,7 @@ Compile-time secrets come from `--dart-define` (see `config.dev.json.example` an
 
 ## Authentication
 
-**Auth0** handles login; **Supabase** stores data. The two are linked by passing Auth0 ID tokens to Supabase via a custom `accessToken` callback in `SupabaseService.init()`.
+**Auth0** handles login. `ApiService` sends the Auth0 ID token as `Authorization: Bearer …` on every request. The Node API verifies it, derives `user_id` from `sub`, and forwards the same token to Supabase so RLS still applies. See [BACKEND.md](./BACKEND.md).
 
 | Piece | Location | Role |
 | --- | --- | --- |
@@ -65,7 +65,7 @@ Compile-time secrets come from `--dart-define` (see `config.dev.json.example` an
 | `AuthGate` | `components/common/auth_gate.dart` | Routes splash → login → app based on session |
 | `SplashBootstrap` | `services/splash_bootstrap.dart` | Offline-first startup: restore session, sync prefs, pick destination |
 | `LoginPage` | `screens/auth/login_page.dart` | Auth0 Universal Login entry |
-| `SupabaseService.requireUserId()` | `services/supabase_service.dart` | Scopes every query to Auth0 `sub` |
+| `auth` middleware | `backend/src/app.js` | Verifies the JWT and scopes every query to Auth0 `sub` |
 
 On sign-in, `AuthGate` syncs user-scoped singletons (`CategoryCatalog`, `IncomeCategoryCatalog`, `CategoryBudgetService`, `CurrencySettings`, `SettingsPreferences`). On sign-out, each calls `onSignedOut()` to clear in-memory state.
 
@@ -111,14 +111,15 @@ lib/
 │   ├── design_tokens.dart          # Colors, spacing, typography tokens
 │   ├── theme.dart                  # AppTheme.darkTheme (Material 3)
 │   └── feature_flags.dart          # Compile-time UI toggles (see Feature flags)
-├── models/                         # Domain types & Supabase row mappers
+├── models/                         # Domain types & API (snake_case row) mappers
 ├── services/                       # Singletons: auth, sync, preferences
 ├── screens/                        # Full pages & navigation owners
 ├── components/                     # Reusable UI by feature area
 └── utils/                          # Pure helpers, aggregations, validators
 
+backend/                            # Node REST API (see BACKEND.md)
 sql/                                # Supabase migrations (see DATABASE_SCHEMA.md)
-docs/                               # Auth0 / Supabase setup guides
+docs/                               # Architecture, backend, schema, design & setup docs
 ios/AddExpenseWidget/              # iOS home-screen widget (deep link → add expense)
 ```
 
@@ -130,7 +131,7 @@ ios/AddExpenseWidget/              # iOS home-screen widget (deep link → add e
 | `transaction_draft.dart` | Mutable form state for add/edit flows |
 | `transaction_filters.dart` | List filter model |
 | `account.dart` | Bank, credit card, wallet accounts |
-| `expense.dart` | Legacy expense adapter (still used by some helpers) |
+| `expense.dart` | `AccountType` enum + labels (legacy file name; the `Expense` model is gone) |
 | `expense_category.dart` / `income_category.dart` | User category rows |
 | `category_budget.dart` | Per-category monthly budgets |
 | `recurring_event.dart` | Standalone recurring events table |
@@ -141,7 +142,7 @@ ios/AddExpenseWidget/              # iOS home-screen widget (deep link → add e
 
 | Service | Pattern | Purpose |
 | --- | --- | --- |
-| `SupabaseService` | Static methods | All Postgres CRUD |
+| `ApiService` | Static methods | All data CRUD over HTTP to `backend/` (guest → `GuestStore`) |
 | `AuthService` | Singleton + `ValueNotifier` | Auth0 session |
 | `SplashBootstrap` | Singleton | Startup orchestration |
 | `CategoryCatalog` | Singleton + `ChangeNotifier` | Expense categories (local + remote) |
@@ -167,7 +168,7 @@ ios/AddExpenseWidget/              # iOS home-screen widget (deep link → add e
 
 ### `lib/components/`
 
-Feature-grouped reusable widgets. Screens compose these; they do not call Supabase directly (callbacks / data passed from parent).
+Feature-grouped reusable widgets. Screens compose these; they do not call `ApiService` directly (callbacks / data passed from parent).
 
 | Folder | Responsibility |
 | --- | --- |
@@ -228,7 +229,9 @@ Migrations are dated SQL files in `sql/`, applied manually to Supabase. For the 
 
 Legacy `expenses` table SQL remains for reference; the app reads/writes `transactions`.
 
-### `SupabaseService` surface
+### `ApiService` surface
+
+Each method maps to one REST endpoint. The full table is in [BACKEND.md](./BACKEND.md#endpoints).
 
 Grouped responsibilities:
 
@@ -238,9 +241,8 @@ Grouped responsibilities:
 - **Budgets** — fetch, upsert, delete
 - **Recurring events** — fetch, insert, delete
 - **User settings** — fetch, upsert
-- **Legacy** — `fetchExpenses` / `insertExpense` adapters for older call sites
 
-All writes attach `user_id` from `AuthService.instance.currentSession`.
+The app never sends `user_id`. The backend sets it from the verified token.
 
 ---
 
@@ -253,7 +255,7 @@ No Provider / Riverpod / Bloc. Current approach:
 | Auth session | `AuthService.session` | `ValueNotifier<AppSession?>` |
 | Global prefs / catalogs | Service singletons | `ChangeNotifier` + `ListenableBuilder` in `main.dart` |
 | Tab data (transactions, accounts) | `ExpenseHomePage` | `StatefulWidget` + `setState`, refreshed via `_loadTransactions` / `_refreshDashboard` |
-| Feature sub-screens | Individual screens | Local state; mutate via `SupabaseService`, then callback to parent or pop |
+| Feature sub-screens | Individual screens | Local state; mutate via `ApiService`, then callback to parent or pop |
 | Forms | Page state / `TransactionDraft` | Passed into components as immutable snapshots + callbacks |
 
 This keeps dependencies explicit. Trade-off: `ExpenseHomePage` is large and owns most synced list state; extracting a dedicated dashboard controller would be a natural next step.
@@ -270,12 +272,12 @@ This keeps dependencies explicit. Trade-off: `ExpenseHomePage` is large and owns
 
 ### Screens
 - Own navigation and orchestration
-- Fetch/mutate via `SupabaseService` (or delegate to a service singleton)
+- Fetch/mutate via `ApiService` (or delegate to a service singleton)
 - Pass data + callbacks into components
 
 ### Components
 - Single UI concern; stateless when possible
-- No direct Supabase calls — receive `onSave`, `onDelete`, etc.
+- No direct `ApiService` calls — receive `onSave`, `onDelete`, etc.
 - Import design tokens, not hardcoded colors
 
 ### Services
@@ -294,7 +296,7 @@ This keeps dependencies explicit. Trade-off: `ExpenseHomePage` is large and owns
 ```
 main.dart
 ├── config/theme.dart
-├── services/supabase_service.dart → auth_service.dart, models/*
+├── services/api_service.dart → auth_service.dart, models/* → HTTP → backend/
 ├── services/currency_settings.dart
 ├── services/settings_preferences.dart
 ├── services/deep_link_service.dart
@@ -304,7 +306,7 @@ main.dart
     ├── screens/auth/login_page.dart
     │   └── components/auth/login_form.dart
     └── screens/home/expense_home_page.dart
-        ├── services/supabase_service.dart
+        ├── services/api_service.dart
         ├── components/home/home_content.dart
         ├── components/home/transactions_content.dart
         ├── screens/analytics/analytics_page.dart
@@ -326,13 +328,14 @@ main.dart
 1. Create page in `screens/settings/sections/`
 2. Wrap with `SettingsSubpageScaffold`
 3. Compose `SettingsSection` + tile widgets
-4. Persist via `SettingsPreferences`, `CategoryCatalog`, or `SupabaseService` as appropriate
+4. Persist via `SettingsPreferences`, `CategoryCatalog`, or `ApiService` as appropriate
 
-### New Supabase entity
-1. Add migration in `sql/`
-2. Add model in `lib/models/`
-3. Add CRUD methods to `SupabaseService`
-4. Optionally add a `ChangeNotifier` singleton if the data is user-global and cached
+### New database entity
+1. Add migration in `sql/` (with RLS on `user_id`)
+2. Add routes + a column whitelist entry in `backend/src/app.js`
+3. Add model in `lib/models/`
+4. Add methods to `ApiService` (and `GuestStore` for guest mode)
+5. Optionally add a `ChangeNotifier` singleton if the data is user-global and cached
 
 ### New reusable widget
 1. Place in the matching `components/{feature}/` folder
@@ -348,8 +351,8 @@ main.dart
 | App won't start / config error | `main.dart`, `app_config.dart`, `--dart-define` values |
 | Stuck on splash | `splash_bootstrap.dart`, `auth_service.dart` |
 | Login / session issues | `auth_gate.dart`, `auth_service.dart`, Auth0 callback config |
-| Data not saving | `supabase_service.dart`, Supabase RLS policies |
-| Wrong user scope | `requireUserId()` — Auth0 `sub` must match row `user_id` |
+| Data not saving | `api_service.dart` (`ApiException` status), backend logs, Supabase RLS policies |
+| Wrong user scope | `auth` middleware in `backend/src/app.js` (`user_id` := token `sub`) and Supabase RLS policies |
 | Dashboard numbers wrong | `utils/dashboard_aggregations.dart`, `financial_insights.dart` |
 | Analytics charts empty | `utils/analytics_aggregations.dart`, `analytics_content.dart` |
 | Recurring timeline | `utils/upcoming_payments.dart`, `recurring_management.dart` |
@@ -375,9 +378,9 @@ main.dart
 | --- | --- |
 | State management | Extract `ExpenseHomePage` data into a dedicated notifier or lightweight store |
 | Routing | Adopt `go_router` for deep links and web URL parity |
-| Testing | Mirror `lib/` structure under `test/`; mock `SupabaseService` |
+| Testing | Mirror `lib/` structure under `test/`; mock `ApiService` |
 | Localization | `flutter gen-l10n` + ARB files |
-| Offline | Local cache layer (Drift/isar) with Supabase sync |
+| Offline | Local cache layer (Drift/isar) synced through the API |
 | Biometrics | Hook planned in `SplashBootstrapResult.requiresBiometricUnlock` |
 | Onboarding | `SplashDestination.onboarding` reserved in bootstrap |
 
@@ -387,6 +390,7 @@ main.dart
 
 - [DESIGN.md](./DESIGN.md) — design tokens, shared UI primitives, motion
 - [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) — Postgres tables, ER diagram, migration order
+- [BACKEND.md](./BACKEND.md) — Node API endpoints, auth flow, run/deploy
 - [auth0_setup.md](./auth0_setup.md) — Auth0 tenant & callback setup
 - [supabase_setup.md](./supabase_setup.md) — Supabase project & RLS
 - [config.dev.json.example](../config.dev.json.example) — local `--dart-define` template

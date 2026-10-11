@@ -42,8 +42,12 @@ Deploy the action and add it to the Login flow.
 ## 3. Local app config
 
 ```bash
+# Backend: SUPABASE_URL, SUPABASE_ANON_KEY, AUTH0_DOMAIN, AUTH0_CLIENT_ID
+cp backend/.env.example backend/.env
+(cd backend && npm install && npm run dev)
+
+# App: API_BASE_URL, AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CALLBACK_SCHEME
 cp config.dev.json.example config.dev.json
-# Fill SUPABASE_URL, SUPABASE_ANON_KEY, AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CALLBACK_SCHEME
 python3 scripts/define_from_json.py config.dev.json run
 ```
 
@@ -117,13 +121,13 @@ Checklist (all required):
    - `alg`: `RS256` (not `HS256` — unsupported for third-party Auth0)
    - payload includes `"role": "authenticated"`
 
-4. **`config.dev.json`** must use the **same** Supabase project where you enabled Auth0 integration:
+4. **`backend/.env`** must use the **same** Supabase project where you enabled Auth0 integration:
    - `SUPABASE_URL` = `https://<project-ref>.supabase.co`
    - `SUPABASE_ANON_KEY` = that project’s anon / publishable key (Project Settings → API)
 
 5. **Sign out and sign in again** after changing dashboard settings so a fresh ID token is issued.
 
-The Flutter app already sends `credentials.idToken` to Supabase ([Supabase Auth0 guide](https://supabase.com/docs/guides/auth/third-party/auth0)); no extra deploy or app URL is required for local runs.
+The Flutter app sends `credentials.idToken` to the Node API ([BACKEND.md](./BACKEND.md)), which verifies it and forwards it to Supabase ([Supabase Auth0 guide](https://supabase.com/docs/guides/auth/third-party/auth0)). For local runs, start `backend/` and point `API_BASE_URL` at it.
 
 ## References
 

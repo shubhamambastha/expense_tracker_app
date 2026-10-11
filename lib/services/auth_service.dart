@@ -8,7 +8,7 @@ import '../models/app_session.dart';
 import '../utils/app_config.dart';
 import '../utils/auth0_urls.dart';
 
-/// Auth0 Universal Login — session storage and token access for Supabase.
+/// Auth0 Universal Login — session storage and token access for the API.
 class AuthService {
   AuthService._();
 
@@ -22,7 +22,7 @@ class AuthService {
   final ValueNotifier<AppSession?> session = ValueNotifier<AppSession?>(null);
 
   /// True while the user is using the app without an Auth0 session — all
-  /// data access routes to on-device storage instead of Supabase. Persisted
+  /// data access routes to on-device storage instead of the API. Persisted
   /// so it survives a process kill (checked by [SplashBootstrap] at cold
   /// start, same as [session] is restored from Auth0's own credential store).
   final ValueNotifier<bool> isGuest = ValueNotifier<bool>(false);

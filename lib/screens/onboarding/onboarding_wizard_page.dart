@@ -19,7 +19,7 @@ import '../../models/transaction.dart';
 import '../../models/transaction_draft.dart';
 import '../../services/onboarding_analytics.dart';
 import '../../services/onboarding_wizard_status.dart';
-import '../../services/supabase_service.dart';
+import '../../services/api_service.dart';
 import '../../utils/income_flow_helpers.dart';
 import '../../utils/recurring_management.dart' show RecurringKind;
 import '../transaction/add_transaction_page.dart';
@@ -86,7 +86,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
     unawaited(OnboardingAnalytics.recordStarted());
     List<Account> accounts = const [];
     try {
-      accounts = await SupabaseService.fetchAccounts();
+      accounts = await ApiService.fetchAccounts();
     } catch (_) {
       // Best-effort — an empty list still lets AddTransactionPage prompt
       // for an account via onAddAccount when the recurring step needs one
@@ -106,7 +106,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
   }
 
   Future<void> _saveAccount(Account account) async {
-    final saved = await SupabaseService.insertAccount(account);
+    final saved = await ApiService.insertAccount(account);
     if (!mounted) return;
     _accounts.value = [..._accounts.value, saved];
   }
@@ -126,7 +126,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
       orElse: () => accounts.first,
     );
     final tx = draft.toTransaction(account: account);
-    final saved = await SupabaseService.insertTransaction(tx);
+    final saved = await ApiService.insertTransaction(tx);
     if (saved.isRecurring) {
       _recurringItems.value = [..._recurringItems.value, saved];
     }

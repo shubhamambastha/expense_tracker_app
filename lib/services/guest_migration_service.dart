@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'auth_service.dart';
 import 'currency_settings.dart';
 import 'guest_store.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 /// Rough counts shown in the "bring these in?" confirm dialog before
 /// replaying guest data into a real account.
@@ -89,7 +89,7 @@ class GuestMigrationService {
       // since it's a self-reference that may point to an account inserted
       // later in iteration order) ---
       final accountIdMap = <int, int>{};
-      final remoteAccounts = await SupabaseService.fetchAccounts(includeArchived: true);
+      final remoteAccounts = await ApiService.fetchAccounts(includeArchived: true);
       final remoteAccountByName = {
         for (final a in remoteAccounts) a.name.trim().toLowerCase(): a,
       };
@@ -100,7 +100,7 @@ class GuestMigrationService {
           accountIdMap[local.id!] = existing.id!;
           continue;
         }
-        final saved = await SupabaseService.insertAccount(
+        final saved = await ApiService.insertAccount(
           local.copyWith(id: null, clearLinkedAccountId: true),
         );
         accountIdMap[local.id!] = saved.id!;
@@ -112,14 +112,14 @@ class GuestMigrationService {
         final newLinkedId = accountIdMap[local.linkedAccountId!];
         if (newId == null || newLinkedId == null) continue;
         if (!insertedAccountIds.contains(newId)) continue; // reused existing, don't touch it
-        await SupabaseService.updateAccount(
+        await ApiService.updateAccount(
           local.copyWith(id: newId, linkedAccountId: newLinkedId),
         );
       }
 
       // --- Expense categories (name-matched) ---
       final categoryIdMap = <int, int>{};
-      final remoteCategories = await SupabaseService.ensureDefaultCategories();
+      final remoteCategories = await ApiService.ensureDefaultCategories();
       final remoteCategoryByName = {
         for (final c in remoteCategories) c.name.trim().toLowerCase(): c,
       };
@@ -130,7 +130,7 @@ class GuestMigrationService {
           categoryIdMap[local.id!] = existing.id!;
           continue;
         }
-        final saved = await SupabaseService.insertCategory(
+        final saved = await ApiService.insertCategory(
           name: local.name,
           iconKey: local.iconKey,
           sortOrder: local.sortOrder,
@@ -140,7 +140,7 @@ class GuestMigrationService {
       }
 
       // --- Income categories (name-matched, mirrors expense categories) ---
-      final remoteIncomeCategories = await SupabaseService.ensureDefaultIncomeCategories();
+      final remoteIncomeCategories = await ApiService.ensureDefaultIncomeCategories();
       final remoteIncomeCategoryByName = {
         for (final c in remoteIncomeCategories) c.name.trim().toLowerCase(): c,
       };
@@ -148,7 +148,7 @@ class GuestMigrationService {
       for (final local in localIncomeCategories) {
         final existing = remoteIncomeCategoryByName[local.name.trim().toLowerCase()];
         if (existing != null) continue;
-        final saved = await SupabaseService.insertIncomeCategory(
+        final saved = await ApiService.insertIncomeCategory(
           name: local.name,
           iconKey: local.iconKey,
           sortOrder: local.sortOrder,
@@ -167,7 +167,7 @@ class GuestMigrationService {
               ? accountIdMap[local.transferToAccountId]
               : null,
         );
-        final saved = await SupabaseService.insertTransaction(remapped);
+        final saved = await ApiService.insertTransaction(remapped);
         transactionIdMap[local.id!] = saved.id!;
         insertedTransactionIds.add(saved.id!);
       }
@@ -177,7 +177,7 @@ class GuestMigrationService {
       for (final local in localEvents) {
         final newTransactionId = transactionIdMap[local.transactionId];
         if (newTransactionId == null) continue; // orphaned locally; nothing to attach to
-        final saved = await SupabaseService.insertRecurringEvent(
+        final saved = await ApiService.insertRecurringEvent(
           local.copyWith(id: null, transactionId: newTransactionId),
         );
         insertedRecurringEventIds.add(saved.id!);
@@ -189,12 +189,12 @@ class GuestMigrationService {
       // overwritten with the guest's value and not restored on rollback,
       // upgrade path: snapshot prior value if this proves to matter) ---
       final localBudgets = await GuestStore.instance.fetchCategoryBudgets();
-      final existingBudgetNames = (await SupabaseService.fetchCategoryBudgets())
+      final existingBudgetNames = (await ApiService.fetchCategoryBudgets())
           .map((b) => b.categoryName.trim().toLowerCase())
           .toSet();
       for (final local in localBudgets) {
         final isNew = !existingBudgetNames.contains(local.categoryName.trim().toLowerCase());
-        final saved = await SupabaseService.upsertCategoryBudget(
+        final saved = await ApiService.upsertCategoryBudget(
           local.copyWith(id: null),
         );
         if (isNew) insertedBudgetIds.add(saved.id!);
@@ -227,22 +227,22 @@ class GuestMigrationService {
     required List<int> budgetIds,
   }) async {
     for (final id in recurringEventIds) {
-      await _safely(() => SupabaseService.deleteRecurringEvent(id));
+      await _safely(() => ApiService.deleteRecurringEvent(id));
     }
     for (final id in transactionIds) {
-      await _safely(() => SupabaseService.deleteTransaction(id));
+      await _safely(() => ApiService.deleteTransaction(id));
     }
     for (final id in budgetIds) {
-      await _safely(() => SupabaseService.deleteCategoryBudget(id));
+      await _safely(() => ApiService.deleteCategoryBudget(id));
     }
     for (final id in incomeCategoryIds) {
-      await _safely(() => SupabaseService.deleteIncomeCategory(id));
+      await _safely(() => ApiService.deleteIncomeCategory(id));
     }
     for (final id in categoryIds) {
-      await _safely(() => SupabaseService.deleteCategory(id));
+      await _safely(() => ApiService.deleteCategory(id));
     }
     for (final id in accountIds) {
-      await _safely(() => SupabaseService.deleteAccount(id));
+      await _safely(() => ApiService.deleteAccount(id));
     }
   }
 

@@ -14,7 +14,6 @@ import '../../components/transaction/transaction_type_selector.dart';
 import '../../config/design_tokens.dart';
 import '../../config/feature_flags.dart';
 import '../../models/account.dart';
-import '../../models/expense.dart';
 import '../../models/transaction_draft.dart';
 import '../../services/category_catalog.dart';
 import '../../services/currency_settings.dart';

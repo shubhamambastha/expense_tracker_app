@@ -14,7 +14,7 @@ import '../../config/design_tokens.dart';
 import '../../models/account.dart';
 import '../../models/recurring_event.dart';
 import '../../models/transaction.dart';
-import '../../services/supabase_service.dart';
+import '../../services/api_service.dart';
 import '../../utils/recurring_management.dart';
 import '../../utils/snackbar_helper.dart';
 
@@ -28,7 +28,7 @@ import '../../utils/snackbar_helper.dart';
 /// * It owns the per-occurrence `_events` state and re-fetches both the
 ///   transactions and events after every mutation so the timeline stays
 ///   in sync without needing the parent to push updates.
-/// * Quick actions (Mark paid / Skip / Snooze / Pause) call SupabaseService
+/// * Quick actions (Mark paid / Skip / Snooze / Pause) call ApiService
 ///   directly and notify the parent via [onMutation] so its caches refresh
 ///   when the user pops back.
 ///
@@ -86,7 +86,7 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
 
   Future<void> _bootstrap() async {
     try {
-      final events = await SupabaseService.fetchRecurringEvents();
+      final events = await ApiService.fetchRecurringEvents();
       if (!mounted) return;
       setState(() {
         _events = events;
@@ -102,8 +102,8 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
   Future<void> _refreshAll() async {
     try {
       final results = await Future.wait([
-        SupabaseService.fetchTransactions(),
-        SupabaseService.fetchRecurringEvents(),
+        ApiService.fetchTransactions(),
+        ApiService.fetchRecurringEvents(),
       ]);
       if (!mounted) return;
       setState(() {
@@ -178,11 +178,11 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
         recurrenceEndDate: null,
         reminderTiming: null,
       );
-      final insertedTx = await SupabaseService.insertTransaction(clone);
+      final insertedTx = await ApiService.insertTransaction(clone);
 
       // 2. Record the per-occurrence "paid" event so the timeline skips this
       //    date next time it iterates the schedule.
-      final event = await SupabaseService.insertRecurringEvent(
+      final event = await ApiService.insertRecurringEvent(
         RecurringEvent(
           transactionId: transaction.id!,
           occurrenceDate: occurrenceDate,
@@ -202,9 +202,9 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
         undoLabel: 'Undo',
         onUndo: () async {
           try {
-            await SupabaseService.deleteRecurringEvent(event.id!);
+            await ApiService.deleteRecurringEvent(event.id!);
             if (insertedTx.id != null) {
-              await SupabaseService.deleteTransaction(insertedTx.id!);
+              await ApiService.deleteTransaction(insertedTx.id!);
             }
             await _refreshAll();
             unawaitedRefresh();
@@ -234,7 +234,7 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
       return;
     }
     try {
-      final event = await SupabaseService.insertRecurringEvent(
+      final event = await ApiService.insertRecurringEvent(
         RecurringEvent(
           transactionId: transaction.id!,
           occurrenceDate: occurrenceDate,
@@ -250,7 +250,7 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
         undoLabel: 'Undo',
         onUndo: () async {
           try {
-            await SupabaseService.deleteRecurringEvent(event.id!);
+            await ApiService.deleteRecurringEvent(event.id!);
             await _refreshAll();
             unawaitedRefresh();
           } catch (e) {
@@ -268,7 +268,7 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
     if (transaction.id == null) return;
     final paused = !transaction.isPaused;
     try {
-      await SupabaseService.setTransactionPaused(transaction.id!, paused);
+      await ApiService.setTransactionPaused(transaction.id!, paused);
       if (!mounted) return;
       SnackbarHelper.showSuccess(
         context,
@@ -292,7 +292,7 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
   ///    cancellation language; EMIs get "Mark as completed"; everything else
   ///    gets a neutral "Close schedule" copy).
   /// 2. Stamp `transactions.closed_at = now()` via
-  ///    [SupabaseService.setTransactionClosed]. The
+  ///    [ApiService.setTransactionClosed]. The
   ///    [RecurringManagement.build] aggregation drops closed rows entirely,
   ///    so the card and its upcoming entry disappear on the next rebuild.
   /// 3. Offer a 4-second Undo snackbar that clears `closed_at` back to NULL
@@ -328,7 +328,7 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await SupabaseService.setTransactionClosed(
+      await ApiService.setTransactionClosed(
         transaction.id!,
         closed: true,
       );
@@ -341,7 +341,7 @@ class _RecurringPaymentsPageState extends State<RecurringPaymentsPage> {
         undoLabel: 'Undo',
         onUndo: () async {
           try {
-            await SupabaseService.setTransactionClosed(
+            await ApiService.setTransactionClosed(
               transaction.id!,
               closed: false,
             );

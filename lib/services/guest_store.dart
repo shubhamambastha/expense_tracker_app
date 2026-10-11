@@ -11,7 +11,7 @@ import '../models/transaction.dart';
 import '../models/user_settings.dart';
 import '../utils/category_style.dart';
 
-/// On-device mirror of [SupabaseService]'s tables for guest mode. Each
+/// On-device mirror of [ApiService]'s tables for guest mode. Each
 /// collection is a JSON-encoded list under its own SharedPreferences key
 /// (never one shared blob, so a single write doesn't rewrite everything).
 /// IDs are negative and assigned from one shared local counter — unique
@@ -461,7 +461,7 @@ class GuestStore {
 
   // --- Whole-store operations ---
 
-  /// Mirrors `SupabaseService.resetUserData()` — wipes everything except
+  /// Mirrors `ApiService.resetUserData()` — wipes everything except
   /// `user_settings`. Used by guest "Reset My Account".
   Future<void> resetUserData() async {
     final prefs = await SharedPreferences.getInstance();

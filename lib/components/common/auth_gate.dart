@@ -18,7 +18,7 @@ import '../../services/deep_link_service.dart';
 import '../../services/guest_migration_service.dart';
 import '../../services/guest_store.dart';
 import '../../services/splash_bootstrap.dart';
-import '../../services/supabase_service.dart';
+import '../../services/api_service.dart';
 import '../dialogs/confirm_guest_migration_dialog.dart';
 import '../../utils/snackbar_helper.dart';
 
@@ -191,7 +191,7 @@ class _AuthGateState extends State<AuthGate> {
       // single scoped column write, not a change to GuestMigrationService's
       // broader "exclude preferences" policy (see Open Question #2).
       if (await GuestStore.instance.isOnboardingComplete()) {
-        unawaited(SupabaseService.markOnboardingComplete());
+        unawaited(ApiService.markOnboardingComplete());
       }
       if (!mounted) return;
       SnackbarHelper.showSuccess(
@@ -214,7 +214,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   /// Warms the same category/budget singletons a real sign-in warms —
-  /// their remote calls are already guest-branched inside [SupabaseService],
+  /// their remote calls are already guest-branched inside [ApiService],
   /// so this reloads them from [GuestStore] instead of Supabase.
   Future<void> _handleGuestEntry() async {
     if (_handlingAuthTransition) return;
