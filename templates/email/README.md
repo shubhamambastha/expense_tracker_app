@@ -1,33 +1,34 @@
 # Auth0 email templates
 
-HTML templates for Auth0's transactional emails, styled to match the app's design system (`lib/config/design_tokens.dart`, see [docs/DESIGN.md](../../docs/DESIGN.md)). Auth0 renders them with Liquid ([supported Liquid syntax](https://auth0.com/docs/customize/email/email-templates/supported-liquid-syntax)).
+HTML templates for Auth0's transactional emails, styled to match the app's design system (`lib/config/design_tokens.dart`, see [docs/DESIGN.md](../../docs/DESIGN.md)). Auth0 renders them with LiquidJS. Before editing, read [AUTH0_LIQUID_REFERENCE.md](./AUTH0_LIQUID_REFERENCE.md), a copy of [Auth0's supported Liquid syntax](https://auth0.com/docs/customize/email/email-templates/supported-liquid-syntax). Only use the tags, filters and variables it lists for that template type.
 
 | File | Auth0 template | Suggested subject |
 | --- | --- | --- |
-| [`auth0_verification_email.html`](./auth0_verification_email.html) | **Verification Email (using Link)** | `Confirm your email for {{ friendly_name }}` |
+| [`auth0_verification_email.html`](./auth0_verification_email.html) | **Verification Email (using Link)** | `Confirm your email for {{ friendly_name \| default: "Expense Tracker" }}` |
 
 ## Installing
 
 1. Auth0 Dashboard → **Branding** → **Email Templates** → pick the template from the table.
 2. Turn on **Status**, set **From** (sending needs a custom email provider; see Branding → Email Provider), and paste the subject.
 3. Paste the full HTML file into **Message**, then **Try** to send a test, and **Save**.
-4. Optional: set **Redirect To** so people land back on a page after they verify. Without it, Auth0 shows its own success page.
+4. Optional: set **Redirect To** so people land back on a page after they verify. Without it, Auth0 shows its own success page. That field only accepts `application.name`, `application.clientID` and `application.callback_domain`, and custom Redirect To values aren't available on non-enterprise tenants created on or after May 5, 2026.
 
-`friendly_name`, `support_email`, `support_url`, `home_url` and `logo_url` come from **Settings** → **General** (tenant) and **Branding** → **Universal Login** (logo). Fill them in. Otherwise the template uses its fallbacks: the brand name defaults to "Expense Tracker", and the logo, support line and links are left out.
+`friendly_name`, `support_email` and `support_url` come from **Settings** → **General** (tenant). Fill them in. Otherwise the template uses its fallbacks: the brand name defaults to "Expense Tracker" and the support line is left out.
 
 ## Liquid variables used
 
-| Variable | Used for |
-| --- | --- |
-| `url` | Verification link (button and plain-text fallback) |
-| `user.email` | "Signing up as" chip |
-| `user.given_name` | Greeting ("Hi Jane,"). Falls back to a plain welcome; database sign-ups usually don't have it |
-| `friendly_name` | Brand name (`default: "Expense Tracker"`) |
-| `logo_url` | Optional logo above the brand name |
-| `home_url` | Brand link target |
-| `support_url`, `support_email` | Optional "Need help?" footer line |
+| Variable | Documented by Auth0 | Used for |
+| --- | --- | --- |
+| `url` | Yes (verification link template only) | Verification link (button and plain-text fallback) |
+| `user.email` | Yes | "Signing up as" chip |
+| `user.given_name` | Yes (untrusted) | Greeting ("Hi Jane,"). Falls back to a plain welcome; database sign-ups usually don't have it |
+| `friendly_name` | Yes (tenant) | Brand name (`default: "Expense Tracker"`) |
+| `support_url`, `support_email` | Yes (tenant) | Optional "Need help?" footer line |
+| `logo_url`, `home_url` | **No.** Auth0's default template uses them, but the syntax doc doesn't list them | Optional logo and brand link, each rendered only when non-blank |
 
-Every output goes through `| escape`.
+Every output goes through `| escape`. Every optional value is wrapped in `{% if … != blank %}` or `default`, so a missing value removes that element and never leaves an empty link.
+
+The template uses only these Liquid features: `assign`, `if` / `else` (with `or` and `!= blank`), `comment`, and the `escape` and `default` filters.
 
 ## Design token mapping
 

@@ -69,12 +69,13 @@
           <!-- Brand row -->
           <tr>
             <td align="center" style="padding:0 0 24px;">
-              <a href="{{ home_url | escape }}" target="_blank" style="text-decoration:none;">
+              {% comment %}home_url / logo_url aren't on Auth0's documented variable list (its default template uses them), so both stay optional.{% endcomment %}
+              {% if home_url != blank %}<a href="{{ home_url | escape }}" target="_blank" style="text-decoration:none;">{% endif %}
                 {% if logo_url != blank %}
                 <img src="{{ logo_url | escape }}" alt="{{ app_name | escape }}" height="40" style="display:block;height:40px;width:auto;margin:0 auto 12px;border:0;" />
                 {% endif %}
                 <span class="text-primary" style="display:block;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:17px;line-height:22px;font-weight:700;color:#000000;">{{ app_name | escape }}</span>
-              </a>
+              {% if home_url != blank %}</a>{% endif %}
             </td>
           </tr>
 
