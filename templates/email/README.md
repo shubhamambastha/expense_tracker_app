@@ -9,6 +9,7 @@ HTML templates for Auth0's transactional emails, styled to match the app's desig
 | [`auth0_welcome_email.html`](./auth0_welcome_email.html) | **Welcome Email** | `Welcome to {{ friendly_name \| default: "Expense Tracker" }}` |
 | [`auth0_mfa_enrollment_email.html`](./auth0_mfa_enrollment_email.html) | **Enroll in MFA** | `Secure your {{ friendly_name \| default: "Expense Tracker" }} account with MFA` |
 | [`auth0_change_password_email.html`](./auth0_change_password_email.html) | **Change Password (Link)** | `Reset your {{ friendly_name \| default: "Expense Tracker" }} password` |
+| [`auth0_change_password_code_email.html`](./auth0_change_password_code_email.html) | **Change Password (Code)** | `{{ code }} is your {{ friendly_name \| default: "Expense Tracker" }} password reset code` |
 
 Auth0 sends only one of the two verification emails, depending on the tenant's verification setting (link or code). Both share the same layout. The code version replaces the button and benefits list with a large code box and a "keep this code to yourself" warning, and puts the code in the inbox preview text.
 
@@ -16,7 +17,7 @@ Auth0 sends the welcome email after someone verifies their email address (or on 
 
 The MFA enrollment email goes out when an admin sends an enrollment ticket (Dashboard → User → Send enrollment invitation, or the Management API). It explains in plain words what MFA changes, shows the account email, links to `link`, and lists three steps without naming factors, since which methods are offered depends on the tenant's MFA settings. It says "don't use the link" for unexpected invites. `connection.name` isn't available in this template, and the template doesn't use it.
 
-The change-password email covers both "forgot password" and admin-triggered resets. The button ("Reset password") opens Auth0's page for choosing a new password. Its warning-tinted note says that ignoring the email leaves the password unchanged. It doesn't state password rules, because those depend on the connection's password policy.
+The change-password email covers both "forgot password" and admin-triggered resets. The button ("Reset password") opens Auth0's page for choosing a new password. Its warning-tinted note says that ignoring the email leaves the password unchanged. It doesn't state password rules, because those depend on the connection's password policy. The code version (sent when the tenant uses codes instead of links) reuses the verification code layout: the same code box, the code in the inbox preview, and the "keep this code to yourself" note, with password-reset wording.
 
 ## Installing
 
@@ -32,9 +33,9 @@ The change-password email covers both "forgot password" and admin-triggered rese
 | Variable | Documented by Auth0 | Used for |
 | --- | --- | --- |
 | `url` | Yes (verification link and change password link templates) | Verification link / password reset link (button and plain-text fallback) |
-| `code` | Yes (verification code template only) | Code template: code box, inbox preview text, suggested subject |
+| `code` | Yes (verification code and change password code templates) | Code templates: code box, inbox preview text, suggested subject |
 | `link` | Yes (MFA enrollment template only) | MFA template: enrollment link (button and plain-text fallback) |
-| `user.email` | Yes | Link template: "Signing up as" chip. Code template: intro sentence. MFA and change-password templates: "Account" chip |
+| `user.email` | Yes | Link template: "Signing up as" chip. Code templates: intro sentence. MFA and change-password templates: "Account" chip |
 | `user.given_name` | Yes (untrusted) | Greeting ("Hi Jane," / "Welcome, Jane!"). Falls back to a plain welcome; database sign-ups usually don't have it |
 | `user.picture` | Yes (untrusted) | Welcome template: avatar. Falls back to the 👋 tile when blank |
 | `friendly_name` | Yes (tenant) | Brand name (`default: "Expense Tracker"`) |
