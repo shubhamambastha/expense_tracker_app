@@ -33,8 +33,8 @@ for k, v in data.items():
 flutter_cmd = ["flutter", sys.argv[2]] + sys.argv[3:] + defines
 print('Running:', ' '.join(flutter_cmd))
 
-# Also export as env vars so android/app/build.gradle.kts (e.g. AUTH0_DOMAIN's
-# manifestPlaceholders lookup) can see them — Gradle isn't reachable via --dart-define.
+# Also export as env vars so Gradle/Xcode build scripts can read them if ever
+# needed — they aren't reachable via --dart-define.
 env = {**os.environ, **{k: str(v) for k, v in data.items()}}
 
 # Execute the flutter command

@@ -5,20 +5,28 @@ class AppConfig {
   /// Base URL of the Node API in `backend/`, without a trailing slash
   /// (e.g. `http://localhost:3000`).
   static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL');
-  static const String auth0Domain = String.fromEnvironment('AUTH0_DOMAIN');
-  static const String auth0ClientId = String.fromEnvironment('AUTH0_CLIENT_ID');
 
-  /// Custom URL scheme for iOS/macOS Auth0 callbacks (must match Info.plist + Auth0 URLs).
-  static const String auth0CallbackScheme = String.fromEnvironment(
-    'AUTH0_CALLBACK_SCHEME',
-    defaultValue: 'com.shubhamambastha.expensetracker',
+  /// Supabase project used for sign-in only. All data still goes through
+  /// the API; the publishable key is safe to ship because RLS guards the rows.
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const String supabasePublishableKey = String.fromEnvironment(
+    'SUPABASE_PUBLISHABLE_KEY',
   );
 
-  /// Set true only after configuring Associated Domains (webcredentials) in Xcode.
-  static const bool auth0UseHttps =
-      bool.fromEnvironment('AUTH0_USE_HTTPS', defaultValue: false);
+  /// Google Cloud OAuth clients. The Web client is what Supabase verifies the
+  /// ID token against; the iOS client is what the native sheet signs in with.
+  static const String googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+  );
+  static const String googleIosClientId = String.fromEnvironment(
+    'GOOGLE_IOS_CLIENT_ID',
+  );
 
   static bool get hasApi => apiBaseUrl.isNotEmpty;
 
-  static bool get hasAuth0 => auth0Domain.isNotEmpty && auth0ClientId.isNotEmpty;
+  /// Without the Web client the Google sheet can't produce an ID token.
+  static bool get hasGoogle => googleWebClientId.isNotEmpty;
+
+  static bool get hasSupabase =>
+      supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty;
 }

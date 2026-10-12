@@ -29,12 +29,19 @@ class ApiException implements Exception {
 }
 
 /// All persistence for signed-in users goes through the Node API in
-/// `backend/` (see docs/BACKEND.md), which scopes every row to the Auth0
-/// `sub` in the bearer token. Guest sessions stay on-device in [GuestStore].
+/// `backend/` (see docs/BACKEND.md), which scopes every row to the Supabase
+/// user id (`sub`) in the bearer token. Guest sessions stay on-device in [GuestStore].
 class ApiService {
   ApiService._();
 
-  static final _client = http.Client();
+  /// Swappable in tests (`package:http/testing.dart`'s `MockClient`).
+  @visibleForTesting
+  static http.Client client = http.Client();
+
+  /// Where the bearer token comes from; swappable in tests.
+  @visibleForTesting
+  static Future<String> Function({bool forceRefresh}) tokenSource =
+      AuthService.instance.accessToken;
 
   /// Tolerates a trailing slash in `API_BASE_URL` (otherwise `//v1/...` 404s).
   static final _baseUrl = AppConfig.apiBaseUrl.replaceFirst(RegExp(r'/+$'), '');
@@ -65,40 +72,14 @@ class ApiService {
     if (AuthService.instance.currentSession == null) {
       throw Exception(AppConstants.errorNotSignedIn);
     }
-    var response = await _sendWith(await _idToken(), method, path, body);
+    var response = await _sendWith(await tokenSource(), method, path, body);
     if (response.statusCode == 401) {
       // Rejected before any write happened (expired, clock skew, rotated
-      // key), so one retry with a freshly renewed token is safe.
-      final renewed = await _idToken(forceRenew: true);
+      // key), so one retry with a freshly refreshed token is safe.
+      final renewed = await tokenSource(forceRefresh: true);
       response = await _sendWith(renewed, method, path, body);
     }
     return decode(response);
-  }
-
-  /// Auth0's `credentials()` only renews when the *access* token expires,
-  /// but the API verifies the shorter-lived ID token, so renew when that
-  /// one is about to lapse.
-  static Future<String> _idToken({bool forceRenew = false}) async {
-    var creds = await AuthService.instance.credentials();
-    if (forceRenew || _expiresSoon(creds.idToken)) {
-      creds = await AuthService.instance.auth0.credentialsManager
-          .renewCredentials();
-    }
-    return creds.idToken;
-  }
-
-  static bool _expiresSoon(String jwt) {
-    try {
-      final payload = jsonDecode(
-        utf8.decode(base64Url.decode(base64Url.normalize(jwt.split('.')[1]))),
-      );
-      final exp = DateTime.fromMillisecondsSinceEpoch(
-        (payload['exp'] as int) * 1000,
-      );
-      return exp.isBefore(DateTime.now().add(const Duration(minutes: 1)));
-    } catch (_) {
-      return false; // Unreadable token: let the server decide.
-    }
   }
 
   static Future<http.Response> _sendWith(
@@ -115,7 +96,7 @@ class ApiService {
         ..body = jsonEncode(body);
     }
     try {
-      return await _client
+      return await client
           .send(request)
           .then(http.Response.fromStream)
           .timeout(_timeout);
@@ -470,10 +451,14 @@ class ApiService {
   }
 
   /// Wipes every user-owned row *except* `user_settings` (preferences +
-  /// currency) and the Auth0 session itself — used by "Reset My Account" in
+  /// currency) and the login itself — used by "Reset My Account" in
   /// Help Center.
   static Future<void> resetUserData() async {
     if (_isGuest) return GuestStore.instance.resetUserData();
     await _send('DELETE', '/data');
   }
+
+  /// Deletes every row *and* the login itself. Signed-in users only (the
+  /// settings tile is hidden for guests). Callers sign out afterwards.
+  static Future<void> deleteUserAccount() => _send('DELETE', '/account');
 }

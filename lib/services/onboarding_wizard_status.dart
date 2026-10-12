@@ -60,6 +60,15 @@ class OnboardingWizardStatus {
 
   static const _kIncomeStepDone = 'onboarding_wizard_income_step_done';
 
+  /// The local flags aren't keyed by user, so a different account (or a new
+  /// one after Delete Account) on this device would skip the wizard. A
+  /// returning user re-reads `onboarding_completed_at` once instead.
+  Future<void> onSignedOut() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kLocalComplete);
+    await prefs.remove(_kIncomeStepDone);
+  }
+
   /// Idempotent-resume guard (Open Design Question D2): if the app is
   /// killed after the income step already created a real transaction but
   /// before the wizard's overall completion flag is set, a naive

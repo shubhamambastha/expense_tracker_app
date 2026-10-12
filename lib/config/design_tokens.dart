@@ -183,6 +183,9 @@ class AppDurations {
   static const Duration page = Duration(milliseconds: 280);
   static const Duration pageLong = Duration(milliseconds: 350);
 
+  /// Gap between items of a staggered entrance (multiply per item).
+  static const Duration stagger = Duration(milliseconds: 40);
+
   /// Decorative reveal animations (charts, lists).
   static const Duration reveal = Duration(milliseconds: 600);
 }

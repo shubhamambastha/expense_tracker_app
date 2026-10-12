@@ -1,4 +1,4 @@
-# auth0_flutter requires iOS 14.0+
+# iOS 14.0+ (google_sign_in, sign_in_with_apple, flutter_secure_storage)
 platform :ios, '14.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.

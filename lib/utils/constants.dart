@@ -20,7 +20,7 @@ class AppConstants {
   static const String validationEmailRequired = 'Enter your email';
   static const String validationEmailInvalid = 'Enter a valid email';
   static const String validationPasswordRequired = 'Enter your password';
-  static const String validationPasswordTooShort = 'Password must be at least 6 characters';
+  static const String validationCodeInvalid = 'Enter the code from the email';
   static const String validationNameRequired = 'Enter a name';
   static const String validationAmountRequired = 'Enter an amount';
   static const String validationAmountInvalid = 'Enter a valid number';

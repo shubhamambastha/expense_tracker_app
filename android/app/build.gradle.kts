@@ -28,20 +28,6 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-
-        // Auth0 Flutter SDK — domain/scheme from dart-define at build time.
-        // Custom scheme (not "https") so Android doesn't need App Links/Digital Asset
-        // Link verification on the Auth0 tenant domain — see docs/auth0_setup.md.
-        val auth0Domain =
-            project.findProperty("AUTH0_DOMAIN") as String?
-                ?: System.getenv("AUTH0_DOMAIN")
-                ?: "YOUR_AUTH0_DOMAIN"
-        val auth0Scheme =
-            project.findProperty("AUTH0_CALLBACK_SCHEME") as String?
-                ?: System.getenv("AUTH0_CALLBACK_SCHEME")
-                ?: "https"
-        manifestPlaceholders["auth0Domain"] = auth0Domain
-        manifestPlaceholders["auth0Scheme"] = auth0Scheme
     }
 
     buildTypes {

@@ -9,20 +9,24 @@ class SettingsDeleteAccountTile extends StatelessWidget {
   const SettingsDeleteAccountTile({
     super.key,
     required this.onDeleteConfirmed,
+    this.isDeleting = false,
   });
 
-  /// Async so the caller can await a real action (e.g. launching a mailto:
-  /// request) and show its own error state — mounted-guarded by the caller.
+  /// Async so the caller can await the deletion and show its own error
+  /// state — mounted-guarded by the caller.
   final Future<void> Function() onDeleteConfirmed;
+  final bool isDeleting;
 
   @override
   Widget build(BuildContext context) {
     return SettingsTile(
       icon: Icons.delete_forever_rounded,
       title: 'Delete Account',
-      subtitle: 'Permanently remove your account and data',
+      subtitle: isDeleting
+          ? 'Deleting…'
+          : 'Permanently remove your account and data',
       destructive: true,
-      onTap: () => _confirmDelete(context),
+      onTap: isDeleting ? null : () => _confirmDelete(context),
     );
   }
 
@@ -39,9 +43,11 @@ class SettingsDeleteAccountSection extends StatelessWidget {
   const SettingsDeleteAccountSection({
     super.key,
     required this.onDeleteConfirmed,
+    this.isDeleting = false,
   });
 
   final Future<void> Function() onDeleteConfirmed;
+  final bool isDeleting;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +78,7 @@ class SettingsDeleteAccountSection extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: SettingsDeleteAccountTile(
             onDeleteConfirmed: onDeleteConfirmed,
+            isDeleting: isDeleting,
           ),
         ),
       ],

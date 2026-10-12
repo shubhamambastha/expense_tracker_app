@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:auth0_flutter/auth0_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import '../config/design_tokens.dart';
 import '../services/auth_service.dart';
@@ -35,7 +35,7 @@ class SnackbarHelper {
   static void showError(BuildContext context, Object error) {
     final message = switch (error) {
       AuthLoginCancelledException() => 'Login was cancelled',
-      WebAuthenticationException(:final message) => message,
+      AuthException(:final message) => message,
       _ => error.toString(),
     };
     _showTopSnackBar(context, message, style: _errorStyle);

@@ -44,7 +44,7 @@ class _AuthGateState extends State<AuthGate> {
   /// Guards `_handleSignedIn`/`_handleGuestEntry` against re-entrant calls.
   /// Both were fast enough that this never mattered before the onboarding
   /// wizard existed; a wizard can run for minutes, so a second session-change
-  /// notification mid-wizard (e.g. an Auth0 silent token refresh) must not
+  /// notification mid-wizard (e.g. signing out and back in as another user) must not
   /// re-run migration-offer/sync concurrently with the wizard in flight.
   bool _handlingAuthTransition = false;
 
@@ -114,6 +114,17 @@ class _AuthGateState extends State<AuthGate> {
     }
     if (!mounted) return;
 
+    // Supabase refreshes the restored session in the background; a revoked
+    // refresh token signs out while we were still on splash, when
+    // _onSessionChange ignores events. Don't enter the app without a session.
+    final auth = AuthService.instance;
+    if (nextPhase != _AuthPhase.login &&
+        auth.currentSession == null &&
+        !auth.isGuest.value) {
+      _clearUserScopedState();
+      nextPhase = _AuthPhase.login;
+    }
+
     setState(() => _phase = nextPhase);
 
     // A guest cold start also reaches `dashboard` but carries no userId
@@ -137,6 +148,9 @@ class _AuthGateState extends State<AuthGate> {
     if (session != null) {
       unawaited(_handleSignedIn(session.userId));
     } else {
+      // Supabase can sign out on its own (revoked or expired refresh token),
+      // so drop any pushed route that would otherwise sit above the login screen.
+      Navigator.of(context).popUntil((r) => r.isFirst);
       _clearUserScopedState();
       setState(() => _phase = _AuthPhase.login);
     }
@@ -149,7 +163,11 @@ class _AuthGateState extends State<AuthGate> {
       await _maybeOfferGuestMigration(userId);
       await _syncUserPreferences(userId);
       if (!mounted || _phase == _AuthPhase.splash) return;
-      final complete = await OnboardingWizardStatus.instance.isComplete();
+      // A network error here must not leave LoginPage spinning with a live
+      // session; the wizard is best-effort, so fall through to the app.
+      final complete = await OnboardingWizardStatus.instance
+          .isComplete()
+          .catchError((Object _) => true);
       if (!mounted || _phase == _AuthPhase.splash) return;
       if (!complete) {
         setState(() => _phase = _AuthPhase.onboarding);
@@ -170,7 +188,7 @@ class _AuthGateState extends State<AuthGate> {
     unawaited(DeepLinkService.instance.captureLinks());
   }
 
-  /// Offers to import leftover local guest data the moment a real Auth0
+  /// Offers to import leftover local guest data the moment a real
   /// session lands — runs before [_syncUserPreferences] so the account's
   /// categories exist for name-matching during replay. A decline leaves
   /// [GuestStore] untouched; the same import can be re-run later from
@@ -243,6 +261,7 @@ class _AuthGateState extends State<AuthGate> {
     CategoryCatalog.instance.onSignedOut();
     IncomeCategoryCatalog.instance.onSignedOut();
     CategoryBudgetService.instance.onSignedOut();
+    unawaited(OnboardingWizardStatus.instance.onSignedOut());
   }
 
   @override
@@ -263,7 +282,7 @@ class _AuthGateState extends State<AuthGate> {
 
   Future<void> _signOut() async {
     if (AuthService.instance.isGuest.value) {
-      // No Auth0 session to close. GuestStore data is intentionally left
+      // No session to close. GuestStore data is intentionally left
       // untouched — re-entering guest mode later resumes where they left
       // off, same as declining the migration offer does.
       await AuthService.instance.exitGuestMode();

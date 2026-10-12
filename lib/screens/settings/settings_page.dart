@@ -160,6 +160,7 @@ class SettingsPage extends StatelessWidget {
                       DataPrivacyPage(
                         onAccountReset: onAccountReset,
                         onGuestDataChanged: onGuestDataChanged,
+                        onAccountDeleted: onSignOut,
                       ),
                     ),
                   ),
