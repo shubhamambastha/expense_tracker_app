@@ -11,6 +11,7 @@ HTML templates for Auth0's transactional emails, styled to match the app's desig
 | [`auth0_change_password_email.html`](./auth0_change_password_email.html) | **Change Password (Link)** | `Reset your {{ friendly_name \| default: "Expense Tracker" }} password` |
 | [`auth0_change_password_code_email.html`](./auth0_change_password_code_email.html) | **Change Password (Code)** | `{{ code }} is your {{ friendly_name \| default: "Expense Tracker" }} password reset code` |
 | [`auth0_blocked_account_email.html`](./auth0_blocked_account_email.html) | **Blocked Account Email** | `We blocked some sign-in attempts on your {{ friendly_name \| default: "Expense Tracker" }} account` |
+| [`auth0_password_breach_alert_email.html`](./auth0_password_breach_alert_email.html) | **Password Breach Alert** | `Action needed: change your {{ friendly_name \| default: "Expense Tracker" }} password` |
 
 Auth0 sends only one of the two verification emails, depending on the tenant's verification setting (link or code). Both share the same layout. The code version replaces the button and benefits list with a large code box and a "keep this code to yourself" warning, and puts the code in the inbox preview text.
 
@@ -21,6 +22,8 @@ The MFA enrollment email goes out when an admin sends an enrollment ticket (Dash
 The change-password email covers both "forgot password" and admin-triggered resets. The button ("Reset password") opens Auth0's page for choosing a new password. Its warning-tinted note says that ignoring the email leaves the password unchanged. It doesn't state password rules, because those depend on the connection's password policy. The code version (sent when the tenant uses codes instead of links) reuses the verification code layout: the same code box, the code in the inbox preview, and the "keep this code to yourself" note, with password-reset wording.
 
 The blocked account email goes out when brute-force protection blocks an IP address after repeated failed sign-ins. It uses the warning tint for its icon tile and shows a details box (account, IP address, and location when Auth0 has a city or country; on phones each label stacks above its value). Then it gives two clearly separate paths: "Was this you?" with the **Unblock sign-ins** button on `url`, and a warning-tinted "Not you? Don't use the button" note that points to "Forgot password?".
+
+The password breach alert goes out when Breached Password Detection finds the user's password in a third-party leak. It says the breach happened elsewhere, not in the app, and gives three "what to do" steps. Auth0's syntax doc lists no template-specific variables for this email, so its `url` (from Auth0's default template) is treated as optional. When `url` is set, the email shows a **Change password** button and a plain-link fallback; otherwise it tells the user to use "Forgot password?" in the app. It says sign-in "may be" blocked until the password changes, because blocking depends on the tenant's Breached Password Detection settings.
 
 ## Installing
 
@@ -44,6 +47,7 @@ The blocked account email goes out when brute-force protection blocks an IP addr
 | `user.picture` | Yes (untrusted) | Welcome template: avatar. Falls back to the 👋 tile when blank |
 | `friendly_name` | Yes (tenant) | Brand name (`default: "Expense Tracker"`) |
 | `support_url`, `support_email` | Yes (tenant) | Optional "Need help?" footer line |
+| `url` in the breach alert | **No.** The syntax doc lists no variables for this template; Auth0's default breach template uses `url` | Change-password button and plain link, rendered only when non-blank |
 | `logo_url`, `home_url` | **No.** Auth0's default template uses them, but the syntax doc doesn't list them | Optional logo, brand link and the welcome email's "Open" button, each rendered only when non-blank |
 
 Every output goes through `| escape`. Every optional value is wrapped in `{% if … != blank %}` or `default`, so a missing value removes that element and never leaves an empty link.
@@ -61,7 +65,7 @@ Email clients can't read our Dart tokens, so the template hardcodes their values
 | `surfaceSecondary` (chip) | `#F2F2F7` | `#2C2C2E` |
 | `primary` (teal, CTA fill, checkmarks) | `#00C896` | `#00C896` |
 | `warning` (share / "not you" warnings) | `#FF9500` | `#FF9500` |
-| `warningSoft` (blocked account icon tile) | `#FFECD1` | `#453219` |
+| `warningSoft` (blocked account / breach alert icon tile) | `#FFECD1` | `#453219` |
 | `onAccent` (CTA label) | `#003328` | `#003328` |
 | `primarySoft` (icon tile) | `#D1F5EC` | `#173B34` |
 | `secondary` (links) | `#0A84FF` | `#0A84FF` |
