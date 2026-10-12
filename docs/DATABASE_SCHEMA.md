@@ -2,7 +2,7 @@
 
 Mind-map view of the Supabase Postgres schema for the Expense Tracker app. The app reaches it only through the Node API ([BACKEND.md](./BACKEND.md)); RLS remains the enforcement point. Source SQL lives in [`sql/`](../sql/). App models in [`lib/models/`](../lib/models/).
 
-> **Auth note:** After `20260529_auth0_user_id_text.sql`, every `user_id` column is **`text`** (Auth0 JWT `sub`), not `uuid`. RLS uses `public.requesting_user_id()` → `auth.jwt() ->> 'sub'`.
+> **Auth note:** After `20260529_auth0_user_id_text.sql`, every `user_id` column is **`text`** holding the Supabase Auth user id (JWT `sub`, a UUID as text). No FK to `auth.users`, so `DELETE /v1/account` deletes rows before the user. RLS uses `public.requesting_user_id()` → `auth.jwt() ->> 'sub'`.
 
 ---
 
@@ -10,7 +10,7 @@ Mind-map view of the Supabase Postgres schema for the Expense Tracker app. The a
 
 ```
                               ┌─────────────────────────┐
-                              │   Auth0 JWT `sub`       │
+                              │   Supabase JWT `sub`    │
                               │   user_id (text)        │
                               │   RLS on every table    │
                               └───────────┬─────────────┘
@@ -32,7 +32,7 @@ mindmap
   root((public schema))
     Identity
       user_id text
-      Auth0 sub via JWT
+      Supabase Auth sub via JWT
       requesting_user_id
       RLS per table
     Money hub
@@ -97,7 +97,7 @@ erDiagram
     expense_categories ||..o{ category_budgets : "category_name match"
 
     USER {
-        text sub "Auth0 — not a local table row"
+        text sub "Supabase auth.users id, no FK"
     }
 
     transactions {
@@ -141,7 +141,7 @@ Solid FK lines = enforced in Postgres. Dotted lines = logical match on `category
 ```
 transactions
 ├── 🔑 id                    bigint identity PK
-├── 👤 user_id               text NOT NULL          → Auth0 sub
+├── 👤 user_id               text NOT NULL          → Supabase user id (sub)
 │
 ├── 💰 Core
 │   ├── kind                 expense | income | transfer
@@ -360,7 +360,7 @@ Account `type` values are enforced in Dart (`AccountType`: `bank`, `creditCard`,
 ```
 Every app table
 ├── ENABLE ROW LEVEL SECURITY
-├── user_id = requesting_user_id()     ← Auth0 JWT sub
+├── user_id = requesting_user_id()     ← Supabase JWT sub
 └── Policies: INSERT own … / Manage own … (ALL or split SELECT/UPDATE)
 
 Helper function
@@ -391,9 +391,11 @@ Run in Supabase SQL editor (fresh project → existing project):
 11. 20260528_accounts_management.sql
 12. 20260528_recurring_events.sql
 13. 20260528_recurring_close.sql
-14. 20260529_auth0_user_id_text.sql   ← required for Auth0 third-party auth
+14. 20260529_auth0_user_id_text.sql   ← text user_id + requesting_user_id() RLS (still used by Supabase Auth)
 15. 20260824_onboarding_completed_at.sql
 16. 20261011_perf_indexes.sql        ← fixes the budgets upsert (42P10)
+17. 20261012_user_settings_delete_policy.sql ← lets a user delete their own settings row; required by DELETE /v1/account
+18. 20261012_drop_auth0_rows.sql     ← one-off: deletes rows left by Auth0 users after the switch
 ```
 
 On an existing database, apply only the files after the last one you ran.
@@ -421,5 +423,4 @@ On an existing database, apply only the files after the last one you ran.
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — services layer, auth flow, state
 - [DESIGN.md](./DESIGN.md) — design tokens and shared UI primitives
-- [supabase_setup.md](./supabase_setup.md) — project & RLS setup
-- [auth0_setup.md](./auth0_setup.md) — Auth0 + Supabase integration
+- [supabase_setup.md](./supabase_setup.md) — project, auth providers & RLS setup

@@ -12,8 +12,7 @@ Before planning, implementing, or refactoring anything in this repo, read the re
 | Any structural or feature change | `docs/ARCHITECTURE.md` |
 | UI, styling, widgets, tokens | `docs/DESIGN.md` |
 | Database, SQL, models, Supabase | `docs/DATABASE_SCHEMA.md` |
-| Auth0 login / callbacks | `docs/auth0_setup.md` |
-| Supabase setup, RLS, migrations | `docs/supabase_setup.md` |
+| Login (Supabase Auth), Supabase setup, RLS, migrations | `docs/supabase_setup.md` |
 
 ## Workflow
 

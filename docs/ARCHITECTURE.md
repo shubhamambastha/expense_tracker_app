@@ -2,9 +2,9 @@
 
 ## Overview
 
-Flutter expense tracker with Auth0 login, a Node REST API in front of Supabase Postgres ([BACKEND.md](./BACKEND.md)), and a component-based UI. The app is organized into thin screens, reusable components, singleton services, and pure utils — no global state-management framework; session-scoped data lives in `ChangeNotifier` / `ValueNotifier` singletons, and tab-level data is owned by `ExpenseHomePage`.
+Flutter expense tracker with Supabase Auth login, a Node REST API in front of Supabase Postgres ([BACKEND.md](./BACKEND.md)), and a component-based UI. The app is organized into thin screens, reusable components, singleton services, and pure utils — no global state-management framework; session-scoped data lives in `ChangeNotifier` / `ValueNotifier` singletons, and tab-level data is owned by `ExpenseHomePage`.
 
-Visual conventions live in [DESIGN.md](./DESIGN.md). Database schema (mind map): [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md). Backend API: [BACKEND.md](./BACKEND.md). Setup guides: [auth0_setup.md](./auth0_setup.md), [supabase_setup.md](./supabase_setup.md).
+Visual conventions live in [DESIGN.md](./DESIGN.md). Database schema (mind map): [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md). Backend API: [BACKEND.md](./BACKEND.md). Setup guide (Supabase, auth providers, CI): [supabase_setup.md](./supabase_setup.md).
 
 ---
 
@@ -12,22 +12,22 @@ Visual conventions live in [DESIGN.md](./DESIGN.md). Database schema (mind map):
 
 ```mermaid
 flowchart TD
-  main[main.dart] --> init[Parallel init: ApiService/Auth0, CurrencySettings, SettingsPreferences]
+  main[main.dart] --> init[Parallel init: ApiService/Supabase Auth, CurrencySettings, SettingsPreferences]
   init --> app[ExpenseTrackerApp]
   app --> gate[AuthGate]
   gate --> splash[SplashScreen + SplashBootstrap]
-  gate --> login[LoginPage: Auth0 or Continue as guest]
+  gate --> login[LoginPage: email, Google, Apple or guest]
   gate --> wizard[OnboardingWizardPage, first run only]
   gate --> home[ExpenseHomePage tab shell]
   home --> tabs[Home · Transactions · Analytics · Settings]
   home --> push[Push routes: add transaction, accounts, recurring, budgets]
   services[Services layer] --> api[ApiService]
   services --> auth[AuthService]
-  api -->|REST + Bearer ID token| node[backend/ Node API]
+  api -->|REST + Bearer access token| node[backend/ Node API]
   api -->|guest mode| guest[(GuestStore, on-device)]
   node --> db[(Supabase Postgres)]
-  auth --> auth0[Auth0 Universal Login]
-  auth -->|ID token| api
+  auth --> sbauth[Supabase Auth + native Google/Apple]
+  auth -->|access token| api
 ```
 
 ---
@@ -36,7 +36,7 @@ flowchart TD
 
 `main.dart` initializes the app in parallel, then mounts `AuthGate`:
 
-1. `ApiService.init()` — checks `API_BASE_URL` and initializes `AuthService` (Auth0)
+1. `ApiService.init()` — checks `API_BASE_URL` and initializes `AuthService` (Supabase Auth)
 2. `CurrencySettings.instance.load()` — local currency preference
 3. `SettingsPreferences.instance.load()` — local user settings cache
 4. `DeepLinkService.instance.start()` — widget / app-link intents (non-blocking)
@@ -50,27 +50,27 @@ Compile-time secrets come from `--dart-define` (see `config.dev.json.example` an
 | Define | Purpose |
 | --- | --- |
 | `API_BASE_URL` | Node API base URL, e.g. `http://localhost:3000` (see [BACKEND.md](./BACKEND.md#run-locally)) |
-| `AUTH0_DOMAIN` | Auth0 tenant domain |
-| `AUTH0_CLIENT_ID` | Auth0 native app client ID |
-| `AUTH0_CALLBACK_SCHEME` | iOS custom-scheme callback (optional) |
-| `AUTH0_USE_HTTPS` | Use HTTPS app links on iOS (optional) |
+| `SUPABASE_URL` | Supabase project URL (auth only; data goes through the API) |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key |
+| `GOOGLE_WEB_CLIENT_ID` | Google OAuth Web client (the audience Supabase verifies) |
+| `GOOGLE_IOS_CLIENT_ID` | Google OAuth iOS client (native sheet on iOS) |
 
 ---
 
 ## Authentication
 
-**Auth0** handles login. `ApiService` sends the Auth0 ID token as `Authorization: Bearer …` on every request. The Node API verifies it, derives `user_id` from `sub`, and forwards the same token to Supabase so RLS still applies. See [BACKEND.md](./BACKEND.md).
+**Supabase Auth** handles login: email + password (confirmed with an emailed 6-digit code), native Google sign-in, and Sign in with Apple on iOS. Screens are our own (`LoginPage`, `VerifyEmailPage`, `ResetPasswordPage`); there are no auth deep links. The session lives in the Keychain/Keystore (`flutter_secure_storage`). `ApiService` sends the Supabase access token as `Authorization: Bearer …` on every request and retries once with a refreshed token on a 401. The Node API verifies it, derives `user_id` from `sub`, and forwards the same token to Supabase so RLS still applies. See [BACKEND.md](./BACKEND.md).
 
-**Guest mode** ("Continue as guest", behind `FeatureFlags.guestModeEnabled`) skips Auth0. `AuthService.isGuest` is persisted, and every `ApiService` method branches to `GuestStore` (SharedPreferences, no network) when it's true. On the first real sign-in with guest data present, `GuestMigrationService` offers to replay it into the account (all-or-nothing, rolls back on failure); declined data stays local and can be imported later from Settings → Data & Privacy. Design: [designs/guest-mode.md](./designs/guest-mode.md).
+**Guest mode** ("Continue as guest", behind `FeatureFlags.guestModeEnabled`) skips sign-in. `AuthService.isGuest` is persisted, and every `ApiService` method branches to `GuestStore` (SharedPreferences, no network) when it's true. On the first real sign-in with guest data present, `GuestMigrationService` offers to replay it into the account (all-or-nothing, rolls back on failure); declined data stays local and can be imported later from Settings → Data & Privacy. Design: [designs/guest-mode.md](./designs/guest-mode.md).
 
 | Piece | Location | Role |
 | --- | --- | --- |
-| `AuthService` | `services/auth_service.dart` | Auth0 SDK, credential storage, `AppSession` notifier |
+| `AuthService` | `services/auth_service.dart` | Supabase Auth + Google/Apple sign-in, secure session storage, `AppSession` notifier (fires only when the user changes) |
 | `AuthGate` | `components/common/auth_gate.dart` | Routes splash → login → onboarding wizard → app based on session / guest flag |
 | `SplashBootstrap` | `services/splash_bootstrap.dart` | Offline-first startup: restore session, sync prefs, pick destination |
-| `LoginPage` | `screens/auth/login_page.dart` | Auth0 Universal Login entry + "Continue as guest" |
+| `LoginPage` | `screens/auth/login_page.dart` | Email/password sign-in and sign-up, Google, Apple (iOS), "Continue as guest"; pushes `VerifyEmailPage` / `ResetPasswordPage` |
 | `OnboardingWizardPage` | `screens/onboarding/onboarding_wizard_page.dart` | First-run wizard: name → currency → budget → accounts → income → recurring. Shown once per account (`OnboardingWizardStatus`; `user_settings.onboarding_completed_at` remotely) |
-| `auth` middleware | `backend/src/middleware/auth.js` | Verifies the JWT and scopes every query to Auth0 `sub` |
+| `auth` middleware | `backend/src/middleware/auth.js` | Verifies the Supabase JWT and scopes every query to its `sub` |
 
 On sign-in, `AuthGate` syncs user-scoped singletons (`CategoryCatalog`, `IncomeCategoryCatalog`, `CategoryBudgetService`, `CurrencySettings`, `SettingsPreferences`). On sign-out, each calls `onSignedOut()` to clear in-memory state.
 
@@ -146,14 +146,14 @@ ios/AddExpenseWidget/               # iOS home-screen widget (deep link → add 
 | `category_budget.dart` | Per-category monthly budgets |
 | `recurring_event.dart` | Standalone recurring events table |
 | `user_settings.dart` | Remote user preferences row |
-| `app_session.dart` | Auth0 session snapshot |
+| `app_session.dart` | Signed-in user snapshot |
 
 ### `lib/services/`
 
 | Service | Pattern | Purpose |
 | --- | --- | --- |
 | `ApiService` | Static methods | All data CRUD over HTTP to `backend/` (guest → `GuestStore`) |
-| `AuthService` | Singleton + `ValueNotifier` | Auth0 session + persisted `isGuest` flag |
+| `AuthService` | Singleton + `ValueNotifier` | Supabase session + persisted `isGuest` flag |
 | `GuestStore` | Singleton | Guest-mode mirror of every table in SharedPreferences (negative local ids) |
 | `GuestMigrationService` | Singleton | Replays guest data into a real account, with rollback |
 | `SplashBootstrap` | Singleton | Startup orchestration |
@@ -208,12 +208,12 @@ Pure functions and small helpers — no Flutter widget trees except where UI-adj
 
 | Area | Files |
 | --- | --- |
-| Config | `app_config.dart`, `constants.dart`, `auth0_urls.dart` |
+| Config | `app_config.dart`, `constants.dart` |
 | Validation | `validators.dart` |
 | UX | `snackbar_helper.dart`, `category_style.dart` |
 | Aggregations | `dashboard_aggregations.dart`, `analytics_aggregations.dart`, `financial_insights.dart` |
 | Domain | `recurring_management.dart`, `upcoming_payments.dart`, `account_management.dart`, `transaction_filter_logic.dart`, `transaction_grouping.dart`, `transaction_subtype_helpers.dart`, `income_flow_helpers.dart`, `recurrence_normalization.dart`, `emi_schedule_helpers.dart`, `subscription_catalog.dart` |
-| Settings & data | `data_export.dart` (CSV), `account_deletion_request.dart` (mailto), `onboarding_locale_currency.dart` |
+| Settings & data | `data_export.dart` (CSV), `onboarding_locale_currency.dart` |
 | Formatting | `transaction_date_format.dart`, `profile_identity.dart` |
 
 ---
@@ -372,7 +372,7 @@ main.dart
 | --- | --- |
 | App won't start / config error | `main.dart`, `app_config.dart`, `--dart-define` values |
 | Stuck on splash | `splash_bootstrap.dart`, `auth_service.dart` |
-| Login / session issues | `auth_gate.dart`, `auth_service.dart`, Auth0 callback config |
+| Login / session issues | `auth_gate.dart`, `auth_service.dart`, Supabase Auth providers ([supabase_setup.md](./supabase_setup.md#authentication-supabase-auth)) |
 | Onboarding wizard shows again / never shows | `onboarding_wizard_status.dart`, `user_settings.onboarding_completed_at`, `FeatureFlags.postLoginOnboardingEnabled` |
 | Guest data missing after sign-in | `guest_migration_service.dart`, Settings → Data & Privacy guest-data section |
 | Data not saving | `api_service.dart` (`ApiException` status), backend logs, Supabase RLS policies |
@@ -414,6 +414,5 @@ main.dart
 - [DESIGN.md](./DESIGN.md) — design tokens, shared UI primitives, motion
 - [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) — Postgres tables, ER diagram, migration order
 - [BACKEND.md](./BACKEND.md) — Node API endpoints, auth flow, run/deploy
-- [auth0_setup.md](./auth0_setup.md) — Auth0 tenant & callback setup
 - [supabase_setup.md](./supabase_setup.md) — Supabase project & RLS
 - [config.dev.json.example](../config.dev.json.example) — local `--dart-define` template

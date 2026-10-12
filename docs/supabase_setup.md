@@ -2,11 +2,49 @@
 
 See also: [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) (mind-map schema reference), [ARCHITECTURE.md](./ARCHITECTURE.md) (app structure).
 
-## Authentication (Auth0)
+## Authentication (Supabase Auth)
 
-Login is handled by **Auth0**, not Supabase Auth. See [auth0_setup.md](auth0_setup.md) for dashboard steps.
+Login uses **Supabase Auth**: email + password (confirmed with an emailed 6-digit code), native Google sign-in, and Sign in with Apple on iOS. The Flutter app talks to Supabase **only for auth** (`AuthService`, with the publishable key). Every data read and write still goes through the Node API ([BACKEND.md](./BACKEND.md)), which verifies the Supabase access token and forwards it so RLS applies. `user_id` columns are **text** holding the user's UUID (the JWT `sub`).
 
-The Flutter app sends Auth0 **ID tokens** to the Node API ([BACKEND.md](./BACKEND.md)). The API verifies them and forwards them to Supabase, which validates them again via the third-party Auth0 integration. Database `user_id` columns are **text** values matching the JWT `sub` claim (e.g. `auth0|…`).
+### 1. JWT signing keys
+
+Settings → **JWT Keys** → move the project to **asymmetric signing keys** (ES256). The API verifies tokens against `https://<project>.supabase.co/auth/v1/.well-known/jwks.json`; legacy HS256 tokens won't verify.
+
+### 2. Email + password
+
+Authentication → **Providers → Email**:
+- Enable **Email**, **Confirm email** on, minimum password length **8** (matches `LoginForm.minPasswordLength`).
+- Authentication → **Email Templates**: in **Confirm signup** and **Reset password**, show the code instead of a link, e.g. `<p>Your code: <strong>{{ .Token }}</strong></p>`. The app has no auth deep links, so a link-only template leaves users stuck.
+- Authentication → **SMTP Settings**: set up a real sender (Resend, SES, Postmark) **before launch**. The built-in sender is heavily rate-limited and meant for testing.
+- Harden the codes, since the publishable key ships in the app and anyone can call `/auth/v1/signup`, `/recover` and `/verify` directly: **Email OTP expiration ~600 s** (default 3600), consider **OTP length 8** (`validateCode` accepts 6–10), tight **email rate limits** (Authentication → Rate Limits), and **CAPTCHA** (hCaptcha/Turnstile) before a public launch.
+- Leave **Anonymous sign-ins off**. The API rejects anonymous tokens anyway.
+
+### 3. Google
+
+1. Google Cloud → APIs & Services → Credentials → create three OAuth clients:
+   - **Web application**: its client ID is `GOOGLE_WEB_CLIENT_ID`, and its client ID + secret go into Supabase.
+   - **iOS** (bundle id `com.shubhamambastha.expensetracker`): its client ID is `GOOGLE_IOS_CLIENT_ID`. Put its *reversed* ID (`com.googleusercontent.apps.<id>`) in `ios/Runner/Info.plist` in place of `REPLACE_WITH_IOS_CLIENT_ID`.
+   - **Android** (package `com.shubhamambastha.expensetracker` + the SHA-1 of every signing key: `cd android && ./gradlew signingReport`). No value goes in the app; Google matches it by package + SHA-1.
+2. Supabase → Providers → **Google**: enable, paste the Web client ID + secret, add the iOS client ID under **Authorized Client IDs** (comma-separated after the web one), and turn on **Skip nonce check** (the iOS SDK adds a nonce the app can't see).
+
+### 4. Apple (iOS only)
+
+1. Apple Developer → Identifiers → the app's App ID → enable **Sign in with Apple**. (`ios/Runner/Runner.entitlements` already declares it.)
+2. Supabase → Providers → **Apple**: enable and add `com.shubhamambastha.expensetracker` under **Client IDs**. No secret key is needed for the native flow.
+
+Apple shares the user's name only on the first authorization; `AuthService.signInWithApple` saves it to `user_metadata.full_name` right away.
+
+### 5. Account deletion
+
+`DELETE /v1/account` removes the user's rows (as the user, through RLS) and then the auth user, using the **service role** key (`SUPABASE_SERVICE_ROLE_KEY` on the backend host only). Apply `sql/20261012_user_settings_delete_policy.sql` first: without a DELETE policy the settings row can't be removed, and the route refuses to delete the login.
+
+### Cutover order
+
+See **B4** in [DEPLOY_CHECKLIST.md](./DEPLOY_CHECKLIST.md): set up the dashboard, apply the policy migration and set `SUPABASE_SERVICE_ROLE_KEY` on Railway **before** merging, because Railway auto-deploys `main`.
+
+### Not set up yet
+
+Phone OTP: add later through Providers → Phone with a **Send SMS Hook** (any SMS/WhatsApp provider), plus CAPTCHA and SMS rate limits against SMS-pumping fraud.
 
 ## GitHub Actions
 
@@ -14,10 +52,11 @@ The workflow at `.github/workflows/ci.yml` uses repository Secrets to inject key
 
 Add the following secrets in your GitHub repository settings -> Secrets:
 - `API_BASE_URL` — deployed HTTPS URL of the Node API (Supabase keys live only in the backend host's env, see [BACKEND.md](./BACKEND.md#deploy))
-- `AUTH0_DOMAIN` — Auth0 tenant domain (e.g. `dev-abc.us.auth0.com`)
-- `AUTH0_CLIENT_ID` — Native application client ID
+- `SUPABASE_URL` — `https://<project>.supabase.co`
+- `SUPABASE_PUBLISHABLE_KEY` — Settings → API Keys → publishable key (safe in the app; RLS guards the rows)
+- `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_IOS_CLIENT_ID` — see Google above
 
-The workflow passes these as `--dart-define=KEY=VALUE` to `flutter build`. A separate `backend` job runs `npm ci && npm test` in `backend/` on Node 22 and needs no secrets (the tests stub Auth0 and Supabase).
+The workflow passes these as `--dart-define=KEY=VALUE` to `flutter build`. A separate `backend` job runs `npm ci && npm test` in `backend/` on Node 22 and needs no secrets (the tests stub Supabase).
 
 ## Database schema
 
@@ -25,7 +64,7 @@ The workflow passes these as `--dart-define=KEY=VALUE` to `flutter build`. A sep
 
 Run the files in `sql/` in the order listed in [DATABASE_SCHEMA.md → Migration apply order](./DATABASE_SCHEMA.md#migration-apply-order), in the Supabase SQL editor. On an existing database, apply only the files after the last one you ran.
 
-`20260529_auth0_user_id_text.sql` is required before the Auth0-enabled app works against an older database: it converts `user_id` to text, drops the `auth.users` FKs, and switches RLS to `requesting_user_id()`. Dev-only, so there's no migration of existing Supabase Auth UUID users.
+`20260529_auth0_user_id_text.sql` converted `user_id` to text, dropped the `auth.users` FKs, and switched RLS to `requesting_user_id()` (for the former Auth0 login). It still applies: Supabase Auth's `sub` is the UUID as text, so the same policies work unchanged. `20261012_drop_auth0_rows.sql` is the one-off cleanup of rows left by Auth0 users after the switch.
 
 ### Table overview
 
@@ -71,16 +110,15 @@ Do **not** drop it before the app is reading from `transactions`.
 The app stores amounts as numbers; `user_settings.default_currency_code` controls display and input formatting per account. `user_settings.preferences` stores the same keys as local `SettingsPreferences` (theme, accent, monthly spending limit, budget and notification toggles, etc.) for cross-device sync when signed in.
 
 ### Notes
-- App tables use `user_id text NOT NULL` (Auth0 `sub`). There is no FK to `auth.users` when using third-party Auth0.
-- RLS policies use `user_id = (SELECT public.requesting_user_id())` where `requesting_user_id()` reads `auth.jwt() ->> 'sub'`.
-- Do **not** use `auth.uid()` with Auth0 JWTs — `sub` is not a UUID ([Supabase third-party Auth0](https://supabase.com/docs/guides/auth/third-party/auth0)).
+- App tables use `user_id text NOT NULL` (the Supabase user's UUID as text). There is no FK to `auth.users`, so deleting a user doesn't cascade: `DELETE /v1/account` deletes the rows first.
+- RLS policies use `user_id = (SELECT public.requesting_user_id())` where `requesting_user_id()` reads `auth.jwt() ->> 'sub'`. Don't switch them to `auth.uid()` (uuid) without also converting the columns back to uuid.
 - For single-user or early prototyping you can omit RLS, but always enable it in production.
 
 ## RLS guidance
 
 - Use anon key only for client operations you intend to allow.
 - Never put `service_role` key in the client or in public repos.
-- The app only reaches Supabase through the Node API ([BACKEND.md](./BACKEND.md)), which uses the anon key + the user's forwarded token. Supabase still accepts Auth0 tokens directly, though, so RLS remains the real enforcement point. Keep it on and correct. Use the `service_role` key only for privileged server-side jobs, never in the app.
+- The app reaches Supabase directly only for auth; data goes through the Node API ([BACKEND.md](./BACKEND.md)), which uses the anon key + the user's forwarded token. The publishable key ships in the app, so a signed-in user can still call PostgREST directly, and RLS remains the real enforcement point. Keep it on and correct. The `service_role` key lives only on the backend host (account deletion), never in the app.
 
 ## Local development
 
@@ -88,6 +126,6 @@ You can use `scripts/define_from_json.py` to run flutter with `--dart-define` va
 
 ```bash
 cp config.dev.json.example config.dev.json
-# edit config.dev.json: API_BASE_URL + Auth0 keys (Supabase keys go in backend/.env)
+# edit config.dev.json: API_BASE_URL, SUPABASE_URL + publishable key, Google client IDs
 python3 scripts/define_from_json.py config.dev.json run
 ```
