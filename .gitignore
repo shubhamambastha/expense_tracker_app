@@ -51,3 +51,6 @@ config.*.json
 
 # brag
 /brag-output
+
+# logo
+/design-exports
