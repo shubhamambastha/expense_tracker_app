@@ -13,9 +13,10 @@ Full docs live in `docs/` — read them before making non-trivial changes:
 | [docs/FEATURES.md](./docs/FEATURES.md) | Business/validation rules per feature, cited to the code |
 | [docs/BACKLOG.md](./docs/BACKLOG.md) | Known gaps, half-finished features, structural debt |
 | [docs/RUNBOOK.md](./docs/RUNBOOK.md) | Incidents: where the logs are, symptom → cause → fix, rollback |
+| [docs/DEPLOY_CHECKLIST.md](./docs/DEPLOY_CHECKLIST.md) | Production-readiness checklist, incl. the Supabase Auth cutover order (B4) |
 | [TODOS.md](./TODOS.md) | Review follow-ups with priority/effort |
 | [docs/designs/](./docs/designs/) | Point-in-time design docs (guest mode, onboarding, insight digest) |
-| [docs/supabase_setup.md](./docs/supabase_setup.md) | Supabase project, auth providers (email codes, Google, Apple), RLS, CI secrets |
+| [docs/supabase_setup.md](./docs/supabase_setup.md) | Supabase project, auth providers (email + password, Google, Apple), RLS, CI secrets |
 
 ## Commands
 

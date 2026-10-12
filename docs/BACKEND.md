@@ -24,7 +24,7 @@ See also: [ARCHITECTURE.md](./ARCHITECTURE.md) (app side), [DATABASE_SCHEMA.md](
 
 Two layers scope every row to the signed-in user:
 
-1. **API**: verifies the token against Supabase Auth's JWKS (issuer `<SUPABASE_URL>/auth/v1`, audience `authenticated`, ES256), then forces `user_id = sub` on every insert and adds `.eq('user_id', sub)` to every read, update and delete. Clients can't set `id` or `user_id`, and any column not on the per-table whitelist is dropped.
+1. **API**: verifies the token against Supabase Auth's JWKS (issuer `<SUPABASE_URL>/auth/v1`, audience `authenticated`, ES256 or RS256; anonymous-user tokens are rejected), then forces `user_id = sub` on every insert and adds `.eq('user_id', sub)` to every read, update and delete. Clients can't set `id` or `user_id`, and any column not on the per-table whitelist is dropped.
 2. **Postgres RLS**: the API forwards the caller's own token to Supabase, so the existing `user_id = requesting_user_id()` policies still apply. A bug in the API can't read another user's rows.
 
 ## Why REST, not GraphQL

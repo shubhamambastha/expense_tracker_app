@@ -13,7 +13,7 @@ Settings → **JWT Keys** → move the project to **asymmetric signing keys** (E
 ### 2. Email + password
 
 Authentication → **Providers → Email**:
-- Enable **Email**, **Confirm email** on, minimum password length **8** (matches `LoginForm.minPasswordLength`).
+- Enable **Email**, **Confirm email** on, minimum password length **8** (matches `minPasswordLength` in `lib/utils/validators.dart`).
 - Authentication → **Email Templates**: in **Confirm signup** and **Reset password**, show the code instead of a link, e.g. `<p>Your code: <strong>{{ .Token }}</strong></p>`. The app has no auth deep links, so a link-only template leaves users stuck.
 - Authentication → **SMTP Settings**: set up a real sender (Resend, SES, Postmark) **before launch**. The built-in sender is heavily rate-limited and meant for testing.
 - Harden the codes, since the publishable key ships in the app and anyone can call `/auth/v1/signup`, `/recover` and `/verify` directly: **Email OTP expiration ~600 s** (default 3600), consider **OTP length 8** (`validateCode` accepts 6–10), tight **email rate limits** (Authentication → Rate Limits), and **CAPTCHA** (hCaptcha/Turnstile) before a public launch.
@@ -23,7 +23,7 @@ Authentication → **Providers → Email**:
 
 1. Google Cloud → APIs & Services → Credentials → create three OAuth clients:
    - **Web application**: its client ID is `GOOGLE_WEB_CLIENT_ID`, and its client ID + secret go into Supabase.
-   - **iOS** (bundle id `com.shubhamambastha.expensetracker`): its client ID is `GOOGLE_IOS_CLIENT_ID`. Put its *reversed* ID (`com.googleusercontent.apps.<id>`) in `ios/Runner/Info.plist` in place of `REPLACE_WITH_IOS_CLIENT_ID`.
+   - **iOS** (bundle id `com.shubhamambastha.expensetracker`): its client ID is `GOOGLE_IOS_CLIENT_ID`. In `ios/Runner/Info.plist`, replace `REPLACE_WITH_IOS_CLIENT_ID` so the URL scheme becomes the *reversed* client ID (`com.googleusercontent.apps.<id>`).
    - **Android** (package `com.shubhamambastha.expensetracker` + the SHA-1 of every signing key: `cd android && ./gradlew signingReport`). No value goes in the app; Google matches it by package + SHA-1.
 2. Supabase → Providers → **Google**: enable, paste the Web client ID + secret, add the iOS client ID under **Authorized Client IDs** (comma-separated after the web one), and turn on **Skip nonce check** (the iOS SDK adds a nonce the app can't see).
 

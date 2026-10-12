@@ -174,7 +174,7 @@ ios/AddExpenseWidget/               # iOS home-screen widget (deep link → add 
 
 | Folder | Screens |
 | --- | --- |
-| `auth/` | `login_page.dart`, `splash_screen.dart` |
+| `auth/` | `login_page.dart`, `verify_email_page.dart`, `reset_password_page.dart`, `splash_screen.dart` |
 | `onboarding/` | `onboarding_wizard_page.dart` — 6-step first-run wizard |
 | `home/` | `expense_home_page.dart` — main tab shell & data owner |
 | `transaction/` | `add_transaction_page.dart` |
@@ -199,7 +199,7 @@ Feature-grouped reusable widgets. Screens compose these; they do not call `ApiSe
 | `settings/` | Settings rows, sections, subpage scaffold |
 | `profile/` | Profile edit widgets |
 | `onboarding/` | Wizard step widgets + shared step scaffold / progress header |
-| `auth/` | Login form |
+| `auth/` | Login form, Google/Apple buttons, shared auth page scaffold |
 | `dialogs/` | Shared modals and confirmation sheets |
 
 ### `lib/utils/`
