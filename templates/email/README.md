@@ -10,6 +10,7 @@ HTML templates for Auth0's transactional emails, styled to match the app's desig
 | [`auth0_mfa_enrollment_email.html`](./auth0_mfa_enrollment_email.html) | **Enroll in MFA** | `Secure your {{ friendly_name \| default: "Expense Tracker" }} account with MFA` |
 | [`auth0_change_password_email.html`](./auth0_change_password_email.html) | **Change Password (Link)** | `Reset your {{ friendly_name \| default: "Expense Tracker" }} password` |
 | [`auth0_change_password_code_email.html`](./auth0_change_password_code_email.html) | **Change Password (Code)** | `{{ code }} is your {{ friendly_name \| default: "Expense Tracker" }} password reset code` |
+| [`auth0_blocked_account_email.html`](./auth0_blocked_account_email.html) | **Blocked Account Email** | `We blocked some sign-in attempts on your {{ friendly_name \| default: "Expense Tracker" }} account` |
 
 Auth0 sends only one of the two verification emails, depending on the tenant's verification setting (link or code). Both share the same layout. The code version replaces the button and benefits list with a large code box and a "keep this code to yourself" warning, and puts the code in the inbox preview text.
 
@@ -18,6 +19,8 @@ Auth0 sends the welcome email after someone verifies their email address (or on 
 The MFA enrollment email goes out when an admin sends an enrollment ticket (Dashboard → User → Send enrollment invitation, or the Management API). It explains in plain words what MFA changes, shows the account email, links to `link`, and lists three steps without naming factors, since which methods are offered depends on the tenant's MFA settings. It says "don't use the link" for unexpected invites. `connection.name` isn't available in this template, and the template doesn't use it.
 
 The change-password email covers both "forgot password" and admin-triggered resets. The button ("Reset password") opens Auth0's page for choosing a new password. Its warning-tinted note says that ignoring the email leaves the password unchanged. It doesn't state password rules, because those depend on the connection's password policy. The code version (sent when the tenant uses codes instead of links) reuses the verification code layout: the same code box, the code in the inbox preview, and the "keep this code to yourself" note, with password-reset wording.
+
+The blocked account email goes out when brute-force protection blocks an IP address after repeated failed sign-ins. It uses the warning tint for its icon tile and shows a details box (account, IP address, and location when Auth0 has a city or country; on phones each label stacks above its value). Then it gives two clearly separate paths: "Was this you?" with the **Unblock sign-ins** button on `url`, and a warning-tinted "Not you? Don't use the button" note that points to "Forgot password?".
 
 ## Installing
 
@@ -32,11 +35,12 @@ The change-password email covers both "forgot password" and admin-triggered rese
 
 | Variable | Documented by Auth0 | Used for |
 | --- | --- | --- |
-| `url` | Yes (verification link and change password link templates) | Verification link / password reset link (button and plain-text fallback) |
+| `url` | Yes (verification link, change password link and blocked account templates) | Verification / password reset / unblock link (button and plain-text fallback) |
 | `code` | Yes (verification code and change password code templates) | Code templates: code box, inbox preview text, suggested subject |
 | `link` | Yes (MFA enrollment template only) | MFA template: enrollment link (button and plain-text fallback) |
 | `user.email` | Yes | Link template: "Signing up as" chip. Code templates: intro sentence. MFA and change-password templates: "Account" chip |
 | `user.given_name` | Yes (untrusted) | Greeting ("Hi Jane," / "Welcome, Jane!"). Falls back to a plain welcome; database sign-ups usually don't have it |
+| `user.source_ip`, `user.city`, `user.country` | Yes (blocked account template only) | Blocked account template: details box and inbox preview. The Location row and its "estimated" note only appear when city or country is set |
 | `user.picture` | Yes (untrusted) | Welcome template: avatar. Falls back to the 👋 tile when blank |
 | `friendly_name` | Yes (tenant) | Brand name (`default: "Expense Tracker"`) |
 | `support_url`, `support_email` | Yes (tenant) | Optional "Need help?" footer line |
@@ -56,7 +60,8 @@ Email clients can't read our Dart tokens, so the template hardcodes their values
 | `surface` (card) | `#FFFFFF` | `#1C1C1E` |
 | `surfaceSecondary` (chip) | `#F2F2F7` | `#2C2C2E` |
 | `primary` (teal, CTA fill, checkmarks) | `#00C896` | `#00C896` |
-| `warning` (code template's share warning) | `#FF9500` | `#FF9500` |
+| `warning` (share / "not you" warnings) | `#FF9500` | `#FF9500` |
+| `warningSoft` (blocked account icon tile) | `#FFECD1` | `#453219` |
 | `onAccent` (CTA label) | `#003328` | `#003328` |
 | `primarySoft` (icon tile) | `#D1F5EC` | `#173B34` |
 | `secondary` (links) | `#0A84FF` | `#0A84FF` |
