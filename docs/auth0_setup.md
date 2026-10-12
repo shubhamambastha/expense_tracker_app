@@ -34,7 +34,7 @@ Deploy the action and add it to the Login flow.
 
 5. Enable **Username-Password-Authentication** (and social providers if desired) for this application.
 
-6. **Branding** → **Email Templates**: paste the branded templates from [`templates/email/`](../templates/email/README.md) (e.g. **Verification Email (using Link)**).
+6. **Branding** → **Email Templates**: paste the branded templates from [`templates/email/`](../templates/email/README.md) (**Verification Email** using Link or using Code, whichever your tenant sends).
 
 ## 2. Supabase Dashboard
 

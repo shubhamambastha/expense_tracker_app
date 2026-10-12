@@ -5,13 +5,16 @@ HTML templates for Auth0's transactional emails, styled to match the app's desig
 | File | Auth0 template | Suggested subject |
 | --- | --- | --- |
 | [`auth0_verification_email.html`](./auth0_verification_email.html) | **Verification Email (using Link)** | `Confirm your email for {{ friendly_name \| default: "Expense Tracker" }}` |
+| [`auth0_verification_code_email.html`](./auth0_verification_code_email.html) | **Verification Email (using Code)** | `{{ code }} is your {{ friendly_name \| default: "Expense Tracker" }} verification code` |
+
+Auth0 sends only one of the two verification emails, depending on the tenant's verification setting (link or code). Both share the same layout. The code version replaces the button and benefits list with a large code box and a "keep this code to yourself" warning, and puts the code in the inbox preview text.
 
 ## Installing
 
 1. Auth0 Dashboard → **Branding** → **Email Templates** → pick the template from the table.
 2. Turn on **Status**, set **From** (sending needs a custom email provider; see Branding → Email Provider), and paste the subject.
 3. Paste the full HTML file into **Message**, then **Try** to send a test, and **Save**.
-4. Optional: set **Redirect To** so people land back on a page after they verify. Without it, Auth0 shows its own success page. That field only accepts `application.name`, `application.clientID` and `application.callback_domain`, and custom Redirect To values aren't available on non-enterprise tenants created on or after May 5, 2026.
+4. Link template only, optional: set **Redirect To** so people land back on a page after they verify. Without it, Auth0 shows its own success page. That field only accepts `application.name`, `application.clientID` and `application.callback_domain`, and custom Redirect To values aren't available on non-enterprise tenants created on or after May 5, 2026.
 
 `friendly_name`, `support_email` and `support_url` come from **Settings** → **General** (tenant). Fill them in. Otherwise the template uses its fallbacks: the brand name defaults to "Expense Tracker" and the support line is left out.
 
@@ -19,8 +22,9 @@ HTML templates for Auth0's transactional emails, styled to match the app's desig
 
 | Variable | Documented by Auth0 | Used for |
 | --- | --- | --- |
-| `url` | Yes (verification link template only) | Verification link (button and plain-text fallback) |
-| `user.email` | Yes | "Signing up as" chip |
+| `url` | Yes (verification link template only) | Link template: verification link (button and plain-text fallback) |
+| `code` | Yes (verification code template only) | Code template: code box, inbox preview text, suggested subject |
+| `user.email` | Yes | Link template: "Signing up as" chip. Code template: intro sentence |
 | `user.given_name` | Yes (untrusted) | Greeting ("Hi Jane,"). Falls back to a plain welcome; database sign-ups usually don't have it |
 | `friendly_name` | Yes (tenant) | Brand name (`default: "Expense Tracker"`) |
 | `support_url`, `support_email` | Yes (tenant) | Optional "Need help?" footer line |
@@ -28,7 +32,7 @@ HTML templates for Auth0's transactional emails, styled to match the app's desig
 
 Every output goes through `| escape`. Every optional value is wrapped in `{% if … != blank %}` or `default`, so a missing value removes that element and never leaves an empty link.
 
-The template uses only these Liquid features: `assign`, `if` / `else` (with `or` and `!= blank`), `comment`, and the `escape` and `default` filters.
+The templates use only these Liquid features: `assign`, `if` / `else` (with `or` and `!= blank`), `comment`, and the `escape` and `default` filters.
 
 ## Design token mapping
 
@@ -39,7 +43,8 @@ Email clients can't read our Dart tokens, so the template hardcodes their values
 | `background` | `#F2F2F7` | `#000000` |
 | `surface` (card) | `#FFFFFF` | `#1C1C1E` |
 | `surfaceSecondary` (chip) | `#F2F2F7` | `#2C2C2E` |
-| `primary` (teal, CTA fill) | `#00C896` | `#00C896` |
+| `primary` (teal, CTA fill, checkmarks) | `#00C896` | `#00C896` |
+| `warning` (code template's share warning) | `#FF9500` | `#FF9500` |
 | `onAccent` (CTA label) | `#003328` | `#003328` |
 | `primarySoft` (icon tile) | `#D1F5EC` | `#173B34` |
 | `secondary` (links) | `#0A84FF` | `#0A84FF` |
@@ -47,9 +52,10 @@ Email clients can't read our Dart tokens, so the template hardcodes their values
 | `textSecondary` | `#3C3C43` body / `#8A8A8E` small | `#98989E` |
 | `textTertiary` (footer) | `#AEAEB2` | `#636366` |
 | `border` / `divider` | `#E8E8E8` | `#3B3B3D` |
-| `AppRadii.card` / `button` / `chip` | 20 / 16 / 12 px | same |
+| `AppRadii.card` / `button` / `input` / `chip` | 20 / 16 / 18 (code box) / 12 px | same |
 | `AppSpacing` | 4 / 8 / 12 / 16 / 20 / 24 / 32 px | same |
 | Font | `-apple-system, 'SF Pro Text', 'Helvetica Neue', …` | same |
+| Code font (code template) | `ui-monospace, 'SF Mono', Menlo, Consolas, …` (the app has no mono token; numerals need fixed width) | same |
 
 The CTA uses `onAccent` (dark text on teal), as the app's sticky save button does. White text on `#00C896` fails contrast at email body sizes.
 
