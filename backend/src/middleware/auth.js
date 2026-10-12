@@ -1,10 +1,11 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { AUTH0_DOMAIN, AUTH0_CLIENT_ID } from '../config.js';
+import { SUPABASE_URL } from '../config.js';
 import { clientFor } from '../db.js';
 
-const issuer = `https://${AUTH0_DOMAIN}/`;
+const issuer = `${SUPABASE_URL}/auth/v1`;
+// Needs the project on asymmetric JWT signing keys (Supabase → Settings → JWT Keys); legacy HS256 tokens won't verify.
 // Long cache so a JWKS blip at a cache boundary can't 401 everyone; an unknown kid still forces a refetch.
-const jwks = createRemoteJWKSet(new URL(`${issuer}.well-known/jwks.json`), { cacheMaxAge: 12 * 60 * 60 * 1000 });
+const jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`), { cacheMaxAge: 12 * 60 * 60 * 1000 });
 
 // jose errors that mean "the caller's token is bad". Anything else (JWKS timeout/fetch failure) is our outage.
 const TOKEN_ERRORS = new Set([
@@ -13,17 +14,19 @@ const TOKEN_ERRORS = new Set([
   'ERR_JOSE_ALG_NOT_ALLOWED', 'ERR_JOSE_NOT_SUPPORTED',
 ]);
 
-// Sets req.userId (the Auth0 sub) and req.db (a Supabase client acting as the caller).
+// Sets req.userId (the Supabase user id, `sub`) and req.db (a Supabase client acting as the caller).
 export async function auth(req, res, next) {
   const token = req.get('authorization')?.match(/^Bearer (.+)$/)?.[1];
   if (!token) return res.status(401).json({ error: 'Missing bearer token' });
   try {
     const { payload } = await jwtVerify(token, jwks, {
       issuer,
-      audience: AUTH0_CLIENT_ID, // the app sends ID tokens
-      algorithms: ['RS256'],
-      requiredClaims: ['sub'],
+      audience: 'authenticated', // signed-in users' access tokens; anon keys carry no such aud
+      algorithms: ['ES256', 'RS256'],
+      requiredClaims: ['sub', 'exp'],
     });
+    // Anonymous Supabase users also carry aud 'authenticated'; the API is for real accounts only.
+    if (payload.is_anonymous) return res.status(401).json({ error: 'Invalid or expired token' });
     req.userId = payload.sub;
   } catch (err) {
     if (!TOKEN_ERRORS.has(err.code)) throw err;

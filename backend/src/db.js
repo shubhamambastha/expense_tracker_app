@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY } from './config.js';
 
 // Bound every Supabase call so a stalled upstream can't pin requests for minutes.
 const fetchWithTimeout = (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(10_000) });
@@ -12,6 +12,12 @@ export const clientFor = (token) => createClient(SUPABASE_URL, SUPABASE_ANON_KEY
 
 // No user token, so RLS hides every row: all the deep health check needs is an answer.
 export const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: fetchWithTimeout } });
+
+// Service role: bypasses RLS. Only DELETE /v1/account may use it, to remove the caller's auth user.
+export const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+  global: { fetch: fetchWithTimeout },
+});
 
 export async function must(query) {
   const { data, error, status } = await query;

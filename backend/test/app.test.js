@@ -6,25 +6,24 @@ import { generateKeyPair, exportJWK, SignJWT } from 'jose';
 Object.assign(process.env, {
   SUPABASE_URL: 'http://supabase.test',
   SUPABASE_ANON_KEY: 'anon',
-  AUTH0_DOMAIN: 'tenant.test',
-  AUTH0_CLIENT_ID: 'client',
+  SUPABASE_SERVICE_ROLE_KEY: 'service',
 });
 
-// Fake Auth0 JWKS + PostgREST by intercepting the global fetch that jose and
+// Fake Supabase (JWKS, PostgREST, auth admin) by intercepting the global fetch that jose and
 // supabase-js both call. Requests to the API under test pass through.
-const key = await generateKeyPair('RS256');
-const jwk = { ...(await exportJWK(key.publicKey)), kid: 'k1', alg: 'RS256' };
+const key = await generateKeyPair('ES256');
+const jwk = { ...(await exportJWK(key.publicKey)), kid: 'k1', alg: 'ES256' };
 let calls = [];
 let respond = null; // (call) => Response | undefined, per test
 let jwksDown = false;
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (input, init = {}) => {
   const url = new URL(typeof input === 'string' ? input : input.url);
-  if (url.host === 'tenant.test') {
+  if (url.host !== 'supabase.test') return realFetch(input, init);
+  if (url.pathname === '/auth/v1/.well-known/jwks.json') {
     if (jwksDown) throw new TypeError('fetch failed');
     return Response.json({ keys: [jwk] });
   }
-  if (url.host !== 'supabase.test') return realFetch(input, init);
   const headers = new Headers(init.headers);
   const call = {
     method: init.method ?? 'GET',
@@ -45,9 +44,9 @@ const pgError = (status, code, message = `pg ${code}`) => Response.json({ code, 
 const { app } = await import('../src/app.js');
 mock.method(console, 'info', () => {}); // request log lines; asserted on below
 
-const SUB = 'auth0|me';
-const sign = ({ privateKey = key.privateKey, iss = 'https://tenant.test/', aud = 'client', exp = '5m' } = {}) =>
-  new SignJWT({}).setProtectedHeader({ alg: 'RS256', kid: 'k1' })
+const SUB = '5f0c6a8e-1b2d-4c3e-9f40-a1b2c3d4e5f6';
+const sign = ({ privateKey = key.privateKey, iss = 'http://supabase.test/auth/v1', aud = 'authenticated', exp = '5m' } = {}) =>
+  new SignJWT({ role: 'authenticated' }).setProtectedHeader({ alg: 'ES256', kid: 'k1' })
     .setIssuer(iss).setAudience(aud).setSubject(SUB).setExpirationTime(exp).sign(privateKey);
 
 let server, base, token;
@@ -99,6 +98,7 @@ test('every data route rejects requests without a valid token', async () => {
     ['POST', '/v1/accounts'],
     ['PATCH', '/v1/settings'],
     ['DELETE', '/v1/data'],
+    ['DELETE', '/v1/account'],
   ]) {
     const missing = await fetch(base + path, { method });
     assert.equal(missing.status, 401, `${method} ${path} without token`);
@@ -114,7 +114,7 @@ test('unknown routes return JSON 404', async () => {
 });
 
 // Must run before any token is verified: jose caches the JWKS once fetched.
-test('an Auth0 JWKS outage is a logged 500, not a 401 blaming the caller', async (t) => {
+test('a Supabase JWKS outage is a logged 500, not a 401 blaming the caller', async (t) => {
   t.mock.method(console, 'error', () => {});
   jwksDown = true;
   try {
@@ -128,11 +128,11 @@ test('an Auth0 JWKS outage is a logged 500, not a 401 blaming the caller', async
 });
 
 test('well-formed JWTs failing verification are 401 and never reach the database', async () => {
-  const other = await generateKeyPair('RS256');
+  const other = await generateKeyPair('ES256');
   const cases = {
     'signed by an unknown key': await sign({ privateKey: other.privateKey }),
-    'wrong issuer': await sign({ iss: 'https://evil.test/' }),
-    'wrong audience': await sign({ aud: 'someone-else' }),
+    'wrong issuer': await sign({ iss: 'https://evil.test/auth/v1' }),
+    'wrong audience': await sign({ aud: 'anon' }),
     expired: await sign({ exp: Math.floor(Date.now() / 1000) - 60 }),
   };
   for (const [name, bad] of Object.entries(cases)) {
@@ -155,18 +155,18 @@ test('list routes scope to the token sub and forward the caller token for RLS', 
 });
 
 test('writes force user_id from the token and drop id / unknown columns', async () => {
-  const evil = { id: 99, user_id: 'auth0|evil', amount: 5, kind: 'expense', hacked: true };
+  const evil = { id: 99, user_id: 'someone-else', amount: 5, kind: 'expense', hacked: true };
   const created = await call('POST', '/v1/transactions', evil);
   assert.equal(created.status, 201);
   assert.deepEqual(calls[0].body, { amount: 5, kind: 'expense', user_id: SUB });
 
-  const patched = await call('PATCH', '/v1/accounts/7', { is_archived: true, user_id: 'auth0|evil', id: 8 });
+  const patched = await call('PATCH', '/v1/accounts/7', { is_archived: true, user_id: 'someone-else', id: 8 });
   assert.equal(patched.status, 200);
   assert.deepEqual(calls[1].body, { is_archived: true });
   assert.equal(calls[1].params.id, 'eq.7');
   assert.equal(calls[1].params.user_id, `eq.${SUB}`);
 
-  const account = await call('POST', '/v1/accounts', { name: 'Cash', type: 'cash', user_id: 'auth0|evil', id: 3, hacked: 1 });
+  const account = await call('POST', '/v1/accounts', { name: 'Cash', type: 'cash', user_id: 'someone-else', id: 3, hacked: 1 });
   assert.equal(account.status, 201);
   assert.deepEqual(calls[2].body, { name: 'Cash', type: 'cash', user_id: SUB });
 });
@@ -347,10 +347,97 @@ test('DELETE /data wipes every user table in FK order and stops on the first fai
   assert.deepEqual(calls.map((c) => c.table), ['recurring_events', 'transactions']);
 });
 
+const noSettingsLeft = (c) => (c.method === 'GET' ? Response.json([]) : undefined);
+const isAdmin = (c) => c.table.startsWith('/auth/');
+
+test('DELETE /account checks the service key, wipes every user table, then deletes the auth user', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  respond = noSettingsLeft;
+  const res = await call('DELETE', '/v1/account');
+  assert.equal(res.status, 204);
+  const [preflight, ...rest] = calls;
+  const [check, user] = rest.slice(-2);
+  const rows = rest.slice(0, -2);
+  assert.deepEqual([preflight.method, preflight.table, preflight.auth], ['GET', `/auth/v1/admin/users/${SUB}`, 'Bearer service']);
+  assert.deepEqual(rows.map((c) => c.table), [
+    'recurring_events', 'transactions', 'accounts', 'category_budgets',
+    'expense_categories', 'income_categories', 'counterparties', 'user_settings',
+  ]);
+  assert.ok(rows.every((c) => c.method === 'DELETE' && c.params.user_id === `eq.${SUB}` && c.auth === `Bearer ${token}`));
+  assert.deepEqual([check.method, check.table, check.params.user_id, check.auth], ['GET', 'user_settings', `eq.${SUB}`, `Bearer ${token}`]);
+  assert.deepEqual([user.method, user.table, user.auth], ['DELETE', `/auth/v1/admin/users/${SUB}`, 'Bearer service']);
+
+  // A failed wipe never deletes the login, so the user can retry.
+  calls = [];
+  respond = (c) => (c.table === 'accounts' ? pgError(500, 'XX000') : noSettingsLeft(c));
+  const failed = await call('DELETE', '/v1/account');
+  assert.equal(failed.status, 500);
+  assert.ok(!calls.some((c) => isAdmin(c) && c.method === 'DELETE'));
+});
+
+test('DELETE /account touches no data when the service key does not work', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  respond = (c) => (isAdmin(c) ? Response.json({ code: 'not_admin', msg: 'User not allowed' }, { status: 403 }) : noSettingsLeft(c));
+  const res = await call('DELETE', '/v1/account');
+  assert.equal(res.status, 500);
+  assert.deepEqual(await res.json(), { error: 'Internal server error' });
+  assert.deepEqual(calls.map((c) => c.method), ['GET']); // only the preflight
+});
+
+test('DELETE /account keeps the login when RLS silently left user_settings behind', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  respond = (c) => (c.method === 'GET' && !isAdmin(c) ? Response.json([{ user_id: SUB }]) : undefined);
+  const res = await call('DELETE', '/v1/account');
+  assert.equal(res.status, 500);
+  assert.ok(!calls.some((c) => isAdmin(c) && c.method === 'DELETE'));
+});
+
+test('DELETE /account: a refused auth delete is an opaque 500; an already-deleted user is a 204 (retry)', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  respond = (c) => (isAdmin(c) && c.method === 'DELETE'
+    ? Response.json({ code: 'unexpected_failure', msg: 'boom' }, { status: 500 })
+    : noSettingsLeft(c));
+  const refused = await call('DELETE', '/v1/account');
+  assert.equal(refused.status, 500);
+  assert.deepEqual(await refused.json(), { error: 'Internal server error' });
+  assert.equal(calls.length, 11); // preflight, 8 deletes, the leftover check, then the auth user
+
+  calls = [];
+  respond = (c) => (isAdmin(c)
+    ? Response.json({ code: 'user_not_found', msg: 'User not found' }, { status: 404 })
+    : noSettingsLeft(c));
+  assert.equal((await call('DELETE', '/v1/account')).status, 204);
+});
+
+test('anonymous Supabase users are rejected', async () => {
+  const anonUser = await new SignJWT({ role: 'authenticated', is_anonymous: true }).setProtectedHeader({ alg: 'ES256', kid: 'k1' })
+    .setIssuer('http://supabase.test/auth/v1').setAudience('authenticated').setSubject(SUB).setExpirationTime('5m').sign(key.privateKey);
+  assert.equal((await call('GET', '/v1/transactions', undefined, anonUser)).status, 401);
+  assert.equal(calls.length, 0);
+});
+
 test('the server refuses to boot without required env', () => {
-  const { status, stderr } = spawnSync(process.execPath, [
-    '--input-type=module', '-e', `await import(${JSON.stringify(new URL('../src/app.js', import.meta.url).href)})`,
-  ], { env: { PATH: process.env.PATH }, encoding: 'utf8' });
-  assert.notEqual(status, 0);
-  assert.match(stderr, /Missing env SUPABASE_URL/);
+  for (const [env, missing] of [
+    [{}, 'SUPABASE_URL'],
+    [{ SUPABASE_URL: 'http://x', SUPABASE_ANON_KEY: 'a' }, 'SUPABASE_SERVICE_ROLE_KEY'],
+  ]) {
+    const { status, stderr } = spawnSync(process.execPath, [
+      '--input-type=module', '-e', `await import(${JSON.stringify(new URL('../src/app.js', import.meta.url).href)})`,
+    ], { env: { PATH: process.env.PATH, ...env }, encoding: 'utf8' });
+    assert.notEqual(status, 0);
+    assert.match(stderr, new RegExp(`Missing env ${missing}`));
+  }
+});
+
+test('HS256 tokens (no matching key in the JWKS) and tokens without a sub are 401 and never reach the database', async () => {
+  const hs256 = await new SignJWT({ role: 'authenticated' }).setProtectedHeader({ alg: 'HS256' })
+    .setIssuer('http://supabase.test/auth/v1').setAudience('authenticated').setSubject(SUB).setExpirationTime('5m')
+    .sign(new TextEncoder().encode('legacy-jwt-secret-at-least-32-bytes!'));
+  const noSub = await new SignJWT({ role: 'authenticated' }).setProtectedHeader({ alg: 'ES256', kid: 'k1' })
+    .setIssuer('http://supabase.test/auth/v1').setAudience('authenticated').setExpirationTime('5m').sign(key.privateKey);
+  for (const [name, bad] of Object.entries({ hs256, noSub })) {
+    const res = await call('DELETE', '/v1/account', undefined, bad);
+    assert.equal(res.status, 401, name);
+  }
+  assert.equal(calls.length, 0);
 });
