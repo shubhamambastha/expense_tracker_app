@@ -23,14 +23,14 @@ Authentication → **Providers → Email**:
 
 1. Google Cloud → APIs & Services → Credentials → create three OAuth clients:
    - **Web application**: its client ID is `GOOGLE_WEB_CLIENT_ID`, and its client ID + secret go into Supabase.
-   - **iOS** (bundle id `com.shubhamambastha.expensetracker`): its client ID is `GOOGLE_IOS_CLIENT_ID`. In `ios/Runner/Info.plist`, replace `REPLACE_WITH_IOS_CLIENT_ID` so the URL scheme becomes the *reversed* client ID (`com.googleusercontent.apps.<id>`).
-   - **Android** (package `com.shubhamambastha.expensetracker` + the SHA-1 of every signing key: `cd android && ./gradlew signingReport`). No value goes in the app; Google matches it by package + SHA-1.
+   - **iOS** (bundle id `com.cremarsservices.jebbo`): its client ID is `GOOGLE_IOS_CLIENT_ID`. In `ios/Runner/Info.plist`, replace `REPLACE_WITH_IOS_CLIENT_ID` so the URL scheme becomes the *reversed* client ID (`com.googleusercontent.apps.<id>`).
+   - **Android** (package `com.cremarsservices.jebbo` + the SHA-1 of every signing key: `cd android && ./gradlew signingReport`). No value goes in the app; Google matches it by package + SHA-1.
 2. Supabase → Providers → **Google**: enable, paste the Web client ID + secret, add the iOS client ID under **Authorized Client IDs** (comma-separated after the web one), and turn on **Skip nonce check** (the iOS SDK adds a nonce the app can't see).
 
 ### 4. Apple (iOS only)
 
 1. Apple Developer → Identifiers → the app's App ID → enable **Sign in with Apple**. (`ios/Runner/Runner.entitlements` already declares it.)
-2. Supabase → Providers → **Apple**: enable and add `com.shubhamambastha.expensetracker` under **Client IDs**. No secret key is needed for the native flow.
+2. Supabase → Providers → **Apple**: enable and add `com.cremarsservices.jebbo` under **Client IDs**. No secret key is needed for the native flow.
 
 Apple shares the user's name only on the first authorization; `AuthService.signInWithApple` saves it to `user_metadata.full_name` right away.
 

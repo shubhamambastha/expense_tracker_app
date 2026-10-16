@@ -108,7 +108,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Insert own recurring events" ON public.recurring_events
       FOR INSERT
-      WITH CHECK (auth.uid() IS NOT NULL AND user_id = auth.uid());
+      WITH CHECK (auth.uid() IS NOT NULL AND user_id::text = auth.uid()::text);
   END IF;
 END $$;
 
@@ -122,7 +122,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Manage own recurring events" ON public.recurring_events
       FOR ALL
-      USING (auth.uid() IS NOT NULL AND user_id = auth.uid());
+      USING (auth.uid() IS NOT NULL AND user_id::text = auth.uid()::text);
   END IF;
 END $$;
 
