@@ -1,17 +1,17 @@
 # Backend API
 
-Node service in [`backend/`](../backend/) that the Flutter app uses for all data access. The app no longer talks to Supabase. It calls this REST API with its Auth0 token, and the API reads and writes Supabase Postgres on the user's behalf.
+Node service in [`backend/`](../backend/) that the Flutter app uses for all data access. The app no longer talks to Supabase. It signs in with Supabase Auth, calls this REST API with the Supabase access token, and the API reads and writes Supabase Postgres on the user's behalf.
 
-> **Security boundary:** Postgres RLS is still the real enforcement point. Supabase keeps accepting Auth0 ID tokens directly, and the anon key shipped in older app builds, so anyone with a valid login could still call PostgREST without going through this API. Treat the API's whitelists and checks as advisory until direct table access is revoked. See the trade-offs below.
+> **Security boundary:** Postgres RLS is still the real enforcement point. The app ships the publishable key (it needs it for Supabase Auth), so anyone with a valid login can still call PostgREST without going through this API. Treat the API's whitelists and checks as advisory until direct table access is revoked. See the trade-offs below.
 
-See also: [ARCHITECTURE.md](./ARCHITECTURE.md) (app side), [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) (tables), [auth0_setup.md](./auth0_setup.md).
+See also: [ARCHITECTURE.md](./ARCHITECTURE.md) (app side), [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) (tables), [supabase_setup.md](./supabase_setup.md) (auth providers).
 
 ---
 
 ## Shape
 
 ```
-┌──────────────┐  Bearer <Auth0 ID token>  ┌────────────────────────┐  same token   ┌───────────────────┐
+┌──────────────┐  Bearer <access token>    ┌────────────────────────┐  same token   ┌───────────────────┐
 │ Flutter app  │ ────────────────────────▶ │ backend/ (Express 5)   │ ────────────▶ │ Supabase Postgres │
 │ ApiService   │ ◀──────── JSON ───────── │ 1. verify JWT (JWKS)   │ ◀──────────── │ RLS: user_id =    │
 └──────┬───────┘                           │ 2. user_id := sub      │   PostgREST   │   jwt.sub         │
@@ -19,12 +19,12 @@ See also: [ARCHITECTURE.md](./ARCHITECTURE.md) (app side), [DATABASE_SCHEMA.md](
        ▼                                   └────────────────────────┘
   GuestStore (on-device, no network)               ▲ JWKS
                                                    │
-                                          Auth0 /.well-known/jwks.json
+                                   Supabase /auth/v1/.well-known/jwks.json
 ```
 
 Two layers scope every row to the signed-in user:
 
-1. **API**: verifies the token against Auth0's JWKS, then forces `user_id = sub` on every insert and adds `.eq('user_id', sub)` to every read, update and delete. Clients can't set `id` or `user_id`, and any column not on the per-table whitelist is dropped.
+1. **API**: verifies the token against Supabase Auth's JWKS (issuer `<SUPABASE_URL>/auth/v1`, audience `authenticated`, ES256 or RS256; anonymous-user tokens are rejected), then forces `user_id = sub` on every insert and adds `.eq('user_id', sub)` to every read, update and delete. Clients can't set `id` or `user_id`, and any column not on the per-table whitelist is dropped.
 2. **Postgres RLS**: the API forwards the caller's own token to Supabase, so the existing `user_id = requesting_user_id()` policies still apply. A bug in the API can't read another user's rows.
 
 ## Why REST, not GraphQL
@@ -60,6 +60,7 @@ All under `/v1`, all require `Authorization: Bearer <token>`. Bodies are the sam
 | `GET /settings` | `fetchUserSettings` (also read for `onboardingCompletedAt`) | row or `null` |
 | `PATCH /settings` | `upsertUserSettings`, `markOnboardingComplete` | upserts only the columns sent |
 | `DELETE /data` | `resetUserData` | "Reset My Account", keeps settings |
+| `DELETE /account` | `deleteUserAccount` | "Delete Account": every row incl. settings, then the Supabase auth user (service-role key). The user goes last, so a failure part-way can be retried |
 | `GET /health` | — | unauthenticated liveness check for the host (Node is up) |
 | `GET /health/db` | — | unauthenticated, for an external uptime monitor: 200 only if Supabase answers too (anonymous query, RLS returns no rows, no retries) |
 
@@ -69,7 +70,7 @@ Errors are JSON `{ "error": "...", "code": "<postgres/PostgREST code>" }`. Statu
 - **404 on PATCH:** the row is missing or belongs to someone else. Any non-numeric `:id` is also a 404.
 - **413:** request body over 1 MB.
 - **Other 4xx:** passed through from PostgREST, e.g. 400 for bad input or constraint errors, 403 for an RLS denial, 409 for unique/FK conflicts.
-- **500:** anything else, including an Auth0 JWKS or Supabase outage.
+- **500:** anything else, including a Supabase JWKS or Supabase outage, or the auth user failing to delete.
 
 `error` is a fixed, user-safe message per status (e.g. 409 → "That already exists or is still in use."). Raw Postgres messages name constraints and indexes, so they only go to the server log.
 
@@ -84,14 +85,14 @@ backend/src/
 ├── config.js            # required env, checked at import (missing → crash on boot)
 ├── db.js                # per-request Supabase client + helpers: must/send/sendAll, pick, list/updateOwn/deleteOwn/row
 ├── middleware/
-│   ├── auth.js          # Auth0 JWT → req.userId, req.db
+│   ├── auth.js          # Supabase access token → req.userId, req.db
 │   └── errors.js        # JSON 404 + error handler (fixed user-safe messages)
 └── routes/
     ├── index.js         # /v1 router: auth, then mounts each resource
     ├── resource-router.js  # Router whose :id must be a bigint
     ├── transactions.js · recurring-events.js · accounts.js · budgets.js
     ├── categories.js    # one factory, mounted for expense_ and income_categories
-    └── settings.js · data.js
+    └── settings.js · data.js · account.js
 ```
 
 Each route file owns its table's column whitelist. To add an entity: write `routes/<resource>.js` with `resourceRouter()` and the `db.js` helpers (they scope every query to `req.userId`), then mount it in `routes/index.js`.
@@ -102,7 +103,7 @@ There is no controller/service layer. Every handler is one scoped query, so a se
 
 ```bash
 cd backend
-cp .env.example .env   # SUPABASE_URL / SUPABASE_ANON_KEY / AUTH0_DOMAIN / AUTH0_CLIENT_ID
+cp .env.example .env   # SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY
 npm install
 npm run dev            # http://localhost:3000, restarts on change
 npm test
@@ -120,18 +121,17 @@ Then set `API_BASE_URL` in `config.dev.json` to match where the app runs:
 
 Any Node 22+ host (Render, Railway, Fly.io, a VM): `npm ci && npm start`, set the four env vars from `.env.example` (`PORT` is usually injected by the host), and point the host's health check at `/health`. Point an external uptime monitor at `/health/db` instead, so it also catches a Supabase outage. Release builds need an **HTTPS** `API_BASE_URL` set as the `API_BASE_URL` GitHub secret for CI.
 
-The backend uses the Supabase **anon** key plus the user's token, never the service-role key, so a leaked backend env can't bypass RLS.
+Data routes use the Supabase **anon** key plus the user's token, so RLS applies. The **service-role** key is used only by `DELETE /v1/account` to remove the auth user, but a leaked backend env *can* bypass RLS, so treat it as a top-tier secret.
 
 ## Logs
 
-Each request writes one JSON line to stdout: `level`, `message`, `method`, `path` (numeric ids collapsed to `:id`), `status`, `ms`, `user` (Auth0 `sub`, absent on 401). `/health*` is skipped. Errors add a second line with `message`, `code`, `status`, plus `stack` on 5xx. Headers, bodies, and PostgREST's `details`/`hint` are never logged: those carry the bearer token or echo a whole row of someone's finances. On Railway, filter with `@level:error`, `@status:500`, `@path:/v1/budgets`, `@user:"auth0|…"`. Incident steps are in [RUNBOOK.md](./RUNBOOK.md).
+Each request writes one JSON line to stdout: `level`, `message`, `method`, `path` (numeric ids collapsed to `:id`), `status`, `ms`, `user` (Supabase user id, absent on 401). `/health*` is skipped. Errors add a second line with `message`, `code`, `status`, plus `stack` on 5xx. Headers, bodies, and PostgREST's `details`/`hint` are never logged: those carry the bearer token or echo a whole row of someone's finances. On Railway, filter with `@level:error`, `@status:500`, `@path:/v1/budgets`, `@user:"<uuid>"`. Incident steps are in [RUNBOOK.md](./RUNBOOK.md).
 
 ## Trade-offs & what to revisit
 
 | Decision | Why now | Revisit when |
 | --- | --- | --- |
-| Verifies the Auth0 **ID token** (audience = client ID); the app renews it itself when it's near expiry, because `credentials()` only tracks the access token | Zero Auth0 or app login changes. The same token Supabase already accepts | Register an Auth0 API, request its `audience` at login, send the access token, and verify against that audience instead of the client ID |
-| Forward user token to Supabase (RLS stays on) | Defense in depth, no service-role secret | You drop Supabase's third-party Auth0 integration. Before switching `createClient` to the service-role key, revoke direct table access for `anon`/`authenticated` and move integrity rules (e.g. FK ownership) into Postgres. Until then RLS is the only enforced guard |
+| Forward user token to Supabase (RLS stays on) | Defense in depth; the service-role key is confined to account deletion | Before switching `createClient` to the service-role key, revoke direct table access for `anon`/`authenticated` and move integrity rules (e.g. FK ownership) into Postgres. Until then RLS is the only enforced guard |
 | `supabase-js` as the DB client | Near line-for-line port of the old Dart queries | You leave Supabase. Swap to `pg`/`postgres.js` + `DATABASE_URL` |
 | `DELETE /data` deletes table by table | Same behavior as before | Partial wipes become a real problem. Move to a single Postgres function (one transaction) |
 | Category default seeds stay in Dart | Guest mode needs the same seed list on-device | Seeding moves fully server-side (e.g. on first `GET /settings`) |

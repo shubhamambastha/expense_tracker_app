@@ -9,7 +9,7 @@ void main() {
       'never defaults to "complete" implicitly',
       () {
         final settings = UserSettings.fromMap({
-          'user_id': 'auth0|abc',
+          'user_id': '5f0c6a8e-1b2d-4c3e-9f40-a1b2c3d4e5f6',
           'default_currency_code': 'USD',
           'preferences': {},
           'updated_at': '2027-01-01T00:00:00.000Z',
@@ -21,7 +21,7 @@ void main() {
 
     test('a set timestamp round-trips correctly', () {
       final settings = UserSettings.fromMap({
-        'user_id': 'auth0|abc',
+        'user_id': '5f0c6a8e-1b2d-4c3e-9f40-a1b2c3d4e5f6',
         'default_currency_code': 'USD',
         'preferences': {},
         'updated_at': '2027-01-01T00:00:00.000Z',
@@ -35,7 +35,7 @@ void main() {
 
     test('key entirely absent from the map (legacy row) reads as null', () {
       final settings = UserSettings.fromMap({
-        'user_id': 'auth0|abc',
+        'user_id': '5f0c6a8e-1b2d-4c3e-9f40-a1b2c3d4e5f6',
         'default_currency_code': 'USD',
         'preferences': {},
         'updated_at': '2027-01-01T00:00:00.000Z',

@@ -6,7 +6,7 @@ import '../../services/settings_preferences.dart';
 import '../../utils/profile_identity.dart';
 import 'onboarding_step_scaffold.dart';
 
-/// Step 1/5 — name, pre-filled from the Auth0 session (or the email
+/// Step 1/5 — name, pre-filled from the signed-in session (or the email
 /// local-part as a fallback), editable, saved to [SettingsPreferences].
 class OnboardingNameStep extends StatefulWidget {
   const OnboardingNameStep({super.key, required this.onSkip, required this.onNext});

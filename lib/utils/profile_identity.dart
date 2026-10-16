@@ -1,7 +1,7 @@
 import '../models/app_session.dart';
 import '../services/auth_service.dart';
 
-/// Helpers for deriving profile identity from Auth0 session + local prefs.
+/// Helpers for deriving profile identity from the signed-in session + local prefs.
 class ProfileIdentity {
   ProfileIdentity._();
 
@@ -41,8 +41,6 @@ class ProfileIdentity {
     if (s == null) return null;
     final name = s.name?.trim();
     if (name != null && name.isNotEmpty) return name;
-    final nick = s.nickname?.trim();
-    if (nick != null && nick.isNotEmpty) return nick;
     return null;
   }
 }

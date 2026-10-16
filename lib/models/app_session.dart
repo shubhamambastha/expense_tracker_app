@@ -1,30 +1,25 @@
-/// Signed-in user session from Auth0 (identity only; data lives in Supabase).
+/// Signed-in user session from Supabase Auth (identity only; data goes through the API).
 class AppSession {
   const AppSession({
     required this.userId,
     this.email,
     this.name,
-    this.nickname,
     this.pictureUrl,
   });
 
-  /// Auth0 subject (`sub` claim) — used as `user_id` in Supabase tables.
+  /// Supabase user id (the token's `sub` claim) — the `user_id` on every row.
   final String userId;
   final String? email;
   final String? name;
-  final String? nickname;
   final String? pictureUrl;
 
   String get displayName {
     if (name != null && name!.trim().isNotEmpty) return name!.trim();
-    if (nickname != null && nickname!.trim().isNotEmpty) {
-      return nickname!.trim();
-    }
     return ProfileFallback.displayNameFromEmail(email ?? '');
   }
 }
 
-/// Display helpers without depending on Auth0 SDK types in models.
+/// Display helpers without depending on auth SDK types in models.
 class ProfileFallback {
   ProfileFallback._();
 

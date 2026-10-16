@@ -157,21 +157,26 @@ A single app-wide default display currency — not per-transaction or per-accoun
 
 ## Auth & user scoping
 
-Auth0 handles identity; Supabase stores data; every row is scoped by the Auth0 `sub` claim as `user_id`.
+Supabase Auth handles identity; every row is scoped by the user's id (the access token's `sub` claim) as `user_id`.
 
-- The app never sends `user_id`. Every request carries the Auth0 ID token, and the backend verifies it and forces `user_id` = token `sub` on every query. Signed-out calls fail in `api_service.dart::_send` before any network request (`backend/src/middleware/auth.js`).
-- The backend forwards the same token to Supabase so Postgres RLS enforces the scoping again. RLS is the real enforcement point, since the anon key + an Auth0 token can still reach PostgREST directly ([BACKEND.md](./BACKEND.md)).
+- The app never sends `user_id`. Every request carries the Supabase access token, and the backend verifies it and forces `user_id` = token `sub` on every query. Signed-out calls fail in `api_service.dart::_send` before any network request (`backend/src/middleware/auth.js`).
+- The backend forwards the same token to Supabase so Postgres RLS enforces the scoping again. RLS is the real enforcement point, since the publishable key (in the app) + a user's token can still reach PostgREST directly ([BACKEND.md](./BACKEND.md)).
 - On sign-in, `AuthGate` triggers `syncForUser()` on every user-scoped singleton (`CategoryCatalog`, `IncomeCategoryCatalog`, `CategoryBudgetService`, `CurrencySettings`, `SettingsPreferences`) so cached state reflects the newly signed-in user.
 - On sign-out, each of those singletons runs `onSignedOut()`, clearing in-memory state (and, for catalogs, reloading local unsynced defaults) so no data from the previous session lingers in memory for a subsequent sign-in.
-- Every platform (Android, iOS, macOS) logs in through the custom URL scheme (`AUTH0_CALLBACK_SCHEME`) unless `AppConfig.auth0UseHttps` is explicitly set, which switches to HTTPS callbacks (`auth_service.dart::_useHttpsCallbacks`; see [auth0_setup.md](./auth0_setup.md)).
-- A user cancelling the Auth0 web login is surfaced as a distinct `AuthLoginCancelledException`, not a generic error (`auth_service.dart::login`).
+- Sign-in options: email + password, Google (native sheet, iOS and Android), Sign in with Apple (iOS only, required there by App Store guideline 4.8). Phone OTP is not offered yet (`login_page.dart`).
+- Sign-up requires confirming the email with a 6–10 digit code (`validators.dart::validateCode`); signing in to an unconfirmed account resends the code and opens that screen. "Resend code" has a 60 s cooldown (`verify_email_page.dart`).
+- Passwords need at least 8 characters, matching the Supabase setting (`validators.dart::minPasswordLength`). Forgot password = emailed code + new password; the code signs the user in (`AuthService.resetPassword`).
+- A user cancelling the Google or Apple sheet is surfaced as a distinct `AuthLoginCancelledException` and doesn't show an error (`login_page.dart::_run`).
+- Apple sends the user's name only on the first authorization; it's saved to `user_metadata.full_name` immediately so onboarding can pre-fill it (`AuthService.signInWithApple`).
+- The session (with the refresh token) is stored in the Keychain/Keystore, not SharedPreferences (`_SecureSessionStorage`). Token refreshes don't re-trigger `AuthGate`'s sign-in handling; only a change of user does (`AuthService.setUser`).
+- "Delete Account" (signed-in users only, typed `DELETE` confirmation) deletes every row and then the login itself via `DELETE /v1/account`, then signs out (`data_privacy_page.dart::_deleteAccount`).
 - Splash bootstrap reserves (but does not yet implement) a biometric-unlock step (`SplashBootstrapResult.requiresBiometricUnlock`, hardcoded to `false`). Its `SplashDestination.onboarding` is dead code, unrelated to the post-login wizard below — see [BACKLOG.md](./BACKLOG.md).
 
 ---
 
 ## Guest mode
 
-"Continue as guest" on the login screen (behind `FeatureFlags.guestModeEnabled`) skips Auth0. Data never leaves the device.
+"Continue as guest" on the login screen (behind `FeatureFlags.guestModeEnabled`) skips sign-in. Data never leaves the device.
 
 - `AuthService.isGuest` is persisted to SharedPreferences, so a guest stays a guest across restarts. `SplashBootstrap` and `AuthGate` treat it like a live session (`auth_service.dart`, `auth_gate.dart`).
 - Every `ApiService` method checks `_isGuest` first and routes to `GuestStore`. Each table is a JSON list under its own `guest.*` key; ids are negative and come from one local counter (`guest_store.dart`).
@@ -199,7 +204,7 @@ Settings → Data & Privacy → "Export Data".
 
 - Fetches fresh through `ApiService` (not the in-memory lists the rest of the app uses, which may be stale/paginated) — transactions, accounts (including archived), and category budgets — serializes each to CSV (`utils/data_export.dart`, pure functions, unit tested), writes them to the OS temp directory, and hands all three files to the native share sheet via `share_plus`. Settings/preferences are deliberately excluded — they're app config, not financial data. CSV was chosen over JSON: the target audience is a non-technical user who wants something that opens in Excel/Sheets, not a re-import format (no import feature exists or is planned).
 - **Reset My Account** (Data & Privacy → Danger Zone) is self-service after a confirmation dialog: `DELETE /v1/data` wipes transactions, accounts, categories, budgets and recurring events but keeps the login and `user_settings`; default categories are re-seeded straight after. It is not atomic (see [BACKLOG.md](./BACKLOG.md)).
-- **Delete my account** is a request, not an action: after a typed confirmation it opens a pre-filled `mailto:` to `AppInfo.supportEmail` and a human does the deletion (`account_deletion_request.dart`). If no mail app is installed, an error snackbar shows the address to email directly.
+- **Delete my account** is self-service (signed-in users only): after typing `DELETE`, `DELETE /v1/account` wipes every row (including `user_settings`) and then the Supabase auth user, and the app signs out. If a `user_settings` row survives the wipe (missing DELETE policy), the server keeps the login and returns 500 so nothing is half-deleted silently (`backend/src/routes/account.js`). A failure shows an error and leaves the user signed in to retry.
 
 ---
 

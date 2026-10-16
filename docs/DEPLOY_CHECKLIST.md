@@ -4,6 +4,8 @@ Pre-release gate for the app + `backend/` API (Railway) + Supabase. One section 
 
 Legend: `[x]` pass · `[ ]` open · `n/a` doesn't apply to this stack
 
+> **2026-10-12:** login moved from Auth0 to Supabase Auth. Auth items below are updated for that; Auth0 mentions elsewhere describe the stack as audited on 2026-10-11. Re-run this checklist before release.
+
 ---
 
 ## 1. Security
@@ -14,9 +16,10 @@ Legend: `[x]` pass · `[ ]` open · `n/a` doesn't apply to this stack
 
 | # | Item | Action (owner: you, dashboard work) |
 | --- | --- | --- |
-| B1 | **The Supabase publishable key is in public git history and still live.** Commits `2ed6530`…`aa935f7` hardcoded the project URL and key. A probe on 2026-10-11 got HTTP 200 from PostgREST with it. RLS still isolates users (anon gets `[]`), but anyone who signs up through Auth0 can skip the API and its column whitelists. | Supabase → Settings → API Keys: create a new publishable key, set it as `SUPABASE_ANON_KEY` on Railway, redeploy, then **delete** the old `sb_publishable_M1CW…` key. The new key lives only on Railway, which closes most of the "direct PostgREST" item in [TODOS.md](../TODOS.md). |
+| B1 | **The Supabase publishable key is in public git history and still live.** Commits `2ed6530`…`aa935f7` hardcoded the project URL and key. A probe on 2026-10-11 got HTTP 200 from PostgREST with it. RLS still isolates users (anon gets `[]`), and since the Supabase Auth switch the app ships the publishable key anyway, so any signed-in user can reach PostgREST directly (RLS is the boundary). | Supabase → Settings → API Keys: create a new publishable key, set it as `SUPABASE_ANON_KEY` on Railway **and** as the app's `SUPABASE_PUBLISHABLE_KEY` (config + CI secret), ship that build, and only then **delete** the old `sb_publishable_M1CW…` key (deleting it first breaks login in every build that carries it). |
 | B2 | **The Android release build is signed with the debug keystore** ([build.gradle.kts:48](../android/app/build.gradle.kts)). Play rejects it, and the debug key isn't secret. | Create an upload keystore, load it from a gitignored `key.properties`, enable Play App Signing. |
-| B3 | **Privacy Policy is a stub** ([about_page.dart:37](../lib/screens/settings/sections/about_page.dart)) and **the Delete Account mailto still goes to `support@REPLACE-ME.com`** ([app_info.dart:14](../lib/config/app_info.dart)). Both stores require a privacy policy for apps that collect financial data. | Publish a policy and link it. Swap the email (already P1 in TODOS). Re-check Apple 5.1.1(v): a mailto deletion is a risk, not a guaranteed pass ([BACKLOG.md](./BACKLOG.md)). |
+| B3 | **Privacy Policy is a stub** ([about_page.dart:37](../lib/screens/settings/sections/about_page.dart)). Both stores require a privacy policy for apps that collect financial data. Delete Account is self-service since 2026-10-12 (`DELETE /v1/account`), but Apple 5.1.1(v) also requires revoking Sign in with Apple tokens on deletion, which isn't done yet (P1 in TODOS). | Publish a policy and link it. Implement the Apple token revoke before App Store submission. |
+| B4 | **Supabase Auth cutover order (2026-10-12).** Railway auto-deploys `main`, and the new backend refuses to boot without `SUPABASE_SERVICE_ROLE_KEY`, then rejects every Auth0 token. | **Before merging:** apply `sql/20261012_user_settings_delete_policy.sql`; move the project to asymmetric JWT keys and check `<SUPABASE_URL>/auth/v1/.well-known/jwks.json` lists ES256/RS256 keys; set `SUPABASE_SERVICE_ROLE_KEY` on Railway. **Merge**, confirm `/health` and `/health/db`. **Then:** ship the new app build and tell testers to update (old builds get 401s), turn off the Third-Party Auth0 integration, remove `AUTH0_*` from Railway, take a backup and run `sql/20261012_drop_auth0_rows.sql`. |
 
 ### Environment & secrets
 
@@ -24,14 +27,14 @@ Legend: `[x]` pass · `[ ]` open · `n/a` doesn't apply to this stack
 - [x] **Environment variables documented.** [`backend/.env.example`](../backend/.env.example), [`config.dev.json.example`](../config.dev.json.example), [BACKEND.md#deploy](./BACKEND.md#deploy), CI secrets in [supabase_setup.md](./supabase_setup.md). [`config.js`](../backend/src/config.js) crashes on boot if any are missing (tested).
 - [x] **Secrets manager configured.** Railway env vars hold the backend secrets, GitHub Actions secrets hold CI's. `.env` and `config.*.json` are gitignored. GitHub secret scanning and push protection are **on**. A dedicated vault isn't warranted at this size.
 - [ ] **API keys rotated.** See **B1**.
-- [x] **Database credentials secured.** The backend never holds the Postgres password or the service-role key. It uses the publishable key plus the caller's own token ([db.js](../backend/src/db.js)), so a leaked backend env can't bypass RLS.
+- [ ] **Database credentials secured.** The backend never holds the Postgres password. Since 2026-10-12 it does hold the **service-role key**, used only by `DELETE /v1/account` to remove the auth user; every data query still uses the publishable key plus the caller's own token ([db.js](../backend/src/db.js)). A leaked backend env *can* now bypass RLS. → Keep Railway membership to you, MFA on, and rotate the key if the env ever leaks.
 
 ### Authentication & authorization
 
-- n/a **Password hashing.** No passwords are stored by us; Auth0 owns credentials. → Turn on **Breached Password Detection** and **Brute-force Protection** in Auth0 (Supabase's leaked-password advisor fires too, but Supabase Auth isn't used).
-- [x] **Session management.** The Auth0 CredentialsManager keeps tokens in the Keychain on iOS and Keystore-encrypted storage on Android. The ID token is renewed 1 min before expiry, a 401 gets one retry, and logout clears the stored credentials ([api_service.dart](../lib/services/api_service.dart), [auth_service.dart](../lib/services/auth_service.dart)). Optional: cut the Auth0 ID-token lifetime from the 10 h default to 1 h. Refresh tokens already handle renewal.
-- [ ] **MFA available for admins.** The app has no admin role. The real admins are the Auth0, Supabase, Railway and GitHub accounts. → Confirm MFA is on for all four (I can't check this from here).
-- [x] **Authorization checks in place.** Every `/v1` route runs `auth` ([routes/index.js](../backend/src/routes/index.js)). `jwtVerify` pins RS256, issuer, audience and `sub`. `user_id` always comes from the token, and `id`/`user_id` are never on a whitelist. **Live DB:** RLS is on for all 8 public tables and every policy requires `requesting_user_id() IS NOT NULL`. There are no SECURITY DEFINER functions and no legacy `expenses` table. **Live API:** missing, garbage and `alg=none` tokens all get 401. Known low gap: cross-user FK references (TODOS P2).
+- [ ] **Password hashing.** Supabase Auth stores the hashes (bcrypt); we never see passwords. → Turn on **Leaked password protection** (Pro plan) and keep the 8-character minimum in Authentication → Providers → Email. Set up custom SMTP so confirmation and reset codes actually arrive.
+- [x] **Session management.** The Supabase session (incl. refresh token) is stored in the Keychain on iOS and Keystore-backed storage on Android (`flutter_secure_storage`). The SDK refreshes the 1 h access token ahead of expiry, a 401 gets one retry with a forced refresh, and logout removes the stored session ([api_service.dart](../lib/services/api_service.dart), [auth_service.dart](../lib/services/auth_service.dart)).
+- [ ] **MFA available for admins.** The app has no admin role. The real admins are the Supabase, Railway, GitHub and Google Cloud / Apple Developer accounts. → Confirm MFA is on for all of them (I can't check this from here).
+- [x] **Authorization checks in place.** Every `/v1` route runs `auth` ([routes/index.js](../backend/src/routes/index.js)). `jwtVerify` pins ES256/RS256, the Supabase issuer, audience `authenticated` and `sub`. `user_id` always comes from the token, and `id`/`user_id` are never on a whitelist. **Live DB:** RLS is on for all 8 public tables and every policy requires `requesting_user_id() IS NOT NULL`. There are no SECURITY DEFINER functions and no legacy `expenses` table. **Live API:** missing, garbage and `alg=none` tokens all get 401. Known low gap: cross-user FK references (TODOS P2).
 - n/a **RBAC.** Single-role app; isolation is per user.
 
 ### Data protection
@@ -40,7 +43,7 @@ Legend: `[x]` pass · `[ ]` open · `n/a` doesn't apply to this stack
 - [x] **Sensitive data encrypted.** Supabase data is encrypted at rest and tokens sit in the OS keystores. Guest-mode data is plain SharedPreferences/UserDefaults, protected only by the OS sandbox and device encryption. That's accepted, since it never leaves the device.
 - [ ] **Backups encrypted.** Supabase manages the backups and encrypts them at rest. → Check your plan's backup retention / PITR in the dashboard.
 - [x] **Data transmission encrypted.** App→API, API→Supabase and API→Auth0 JWKS all use HTTPS.
-- [ ] **PII handling compliant.** Export (CSV) and Reset work self-service. Delete is a manual mailto. See **B3**.
+- [ ] **PII handling compliant.** Export (CSV), Reset and Delete Account are all self-service. The privacy policy is still a stub, see **B3**.
 
 ### API security
 

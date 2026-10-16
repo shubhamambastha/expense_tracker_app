@@ -1,72 +1,122 @@
 import 'package:flutter/material.dart';
 
 import '../../config/design_tokens.dart';
-import '../../config/feature_flags.dart';
+import '../../utils/validators.dart';
+import 'auth_page_scaffold.dart';
 
-typedef SubmitCallback = Future<void> Function();
-
-/// Auth0 Universal Login entry point, with an optional guest path.
-class LoginForm extends StatelessWidget {
+/// Email + password form for both signing in and creating an account.
+/// UI-only: the page decides what [onSubmit] does.
+class LoginForm extends StatefulWidget {
   const LoginForm({
     super.key,
+    required this.isSignUp,
     required this.isLoading,
-    required this.onSignIn,
-    this.onContinueAsGuest,
+    required this.onSubmit,
+    required this.onToggleMode,
+    required this.onForgotPassword,
   });
 
+  final bool isSignUp;
   final bool isLoading;
-  final SubmitCallback onSignIn;
+  final void Function(String email, String password) onSubmit;
+  final VoidCallback onToggleMode;
+  final void Function(String email) onForgotPassword;
 
-  /// Null hides the guest entry point entirely (also gated on
-  /// [FeatureFlags.guestModeEnabled] by the caller).
-  final SubmitCallback? onContinueAsGuest;
+  @override
+  State<LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends State<LoginForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _obscure = true;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    widget.onSubmit(_email.text.trim(), _password.text);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Sign in or create an account securely with Auth0.',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: isLoading ? null : onSignIn,
-            child: isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFF003328),
-                    ),
-                  )
-                : const Text('Continue with Auth0'),
-          ),
-        ),
-        if (FeatureFlags.guestModeEnabled && onContinueAsGuest != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: isLoading ? null : onContinueAsGuest,
-              child: const Text('Continue as guest'),
+    return Form(
+      key: _formKey,
+      child: AutofillGroup(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              autocorrect: false,
+              autofillHints: const [AutofillHints.email],
+              decoration: const InputDecoration(hintText: 'Email'),
+              validator: validateEmail,
             ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Your data stays on this device until you sign in.',
-            style: AppTextStyles.caption,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ],
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _password,
+              obscureText: _obscure,
+              textInputAction: TextInputAction.done,
+              autofillHints: [
+                widget.isSignUp
+                    ? AutofillHints.newPassword
+                    : AutofillHints.password,
+              ],
+              onFieldSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                hintText: 'Password',
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscure
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                  ),
+                  tooltip: _obscure ? 'Show password' : 'Hide password',
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+              ),
+              validator: widget.isSignUp
+                  ? validateNewPassword
+                  : validatePassword,
+            ),
+            if (!widget.isSignUp)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: widget.isLoading
+                      ? null
+                      : () => widget.onForgotPassword(_email.text.trim()),
+                  child: const Text('Forgot password?'),
+                ),
+              )
+            else
+              const SizedBox(height: AppSpacing.lg),
+            AuthSubmitButton(
+              label: widget.isSignUp ? 'Create account' : 'Sign in',
+              isLoading: widget.isLoading,
+              onPressed: _submit,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(
+              onPressed: widget.isLoading ? null : widget.onToggleMode,
+              child: Text(
+                widget.isSignUp
+                    ? 'Already have an account? Sign in'
+                    : 'New here? Create an account',
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

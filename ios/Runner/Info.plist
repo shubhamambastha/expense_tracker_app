@@ -30,12 +30,14 @@
 				<string>expensetracker</string>
 			</array>
 		</dict>
+		<!-- Google Sign-In: the *reversed* iOS OAuth client ID from Google Cloud
+		     (com.googleusercontent.apps.<id>). Must match GOOGLE_IOS_CLIENT_ID. -->
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>auth0</string>
+			<string>google</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.shubhamambastha.expensetracker</string>
+				<string>com.googleusercontent.apps.REPLACE_WITH_IOS_CLIENT_ID</string>
 			</array>
 		</dict>
 	</array>

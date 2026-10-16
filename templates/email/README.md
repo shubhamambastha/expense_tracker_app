@@ -1,5 +1,7 @@
 # Auth0 email templates
 
+> **Obsolete since 2026-10-12:** login moved from Auth0 to Supabase Auth, so Auth0 no longer sends these. The layouts are kept to port into Supabase → Authentication → Email Templates (Go templates: `{{ .Token }}`, `{{ .Email }}`, `{{ .SiteURL }}`). See "Port the branded email templates to Supabase" in [TODOS.md](../../TODOS.md).
+
 HTML templates for Auth0's transactional emails, styled to match the app's design system (`lib/config/design_tokens.dart`, see [docs/DESIGN.md](../../docs/DESIGN.md)). Auth0 renders them with LiquidJS. Before editing, read [AUTH0_LIQUID_REFERENCE.md](./AUTH0_LIQUID_REFERENCE.md), a copy of [Auth0's supported Liquid syntax](https://auth0.com/docs/customize/email/email-templates/supported-liquid-syntax). Only use the tags, filters and variables it lists for that template type.
 
 | File | Auth0 template | Suggested subject |

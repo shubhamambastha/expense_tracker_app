@@ -20,7 +20,7 @@
 
 **What:** `account_id`, `transfer_to_account_id`, `linked_account_id` and `recurring_events.transaction_id` can point at another user's row. FK checks bypass RLS, and sequential ids make 409-vs-201 an existence oracle. Add `UNIQUE (id, user_id)` on `accounts`/`transactions` and switch to composite FKs `(account_id, user_id) → accounts(id, user_id)`. Watch `ON DELETE SET NULL`: use `SET NULL (account_id)` (PG15+) so it doesn't null `user_id`.
 
-**Why:** No victim data is readable, since RLS hides the referenced rows. But one user can attach rows to another user's ids. This belongs in the DB (not the API), because PostgREST is still reachable directly with an Auth0 token.
+**Why:** No victim data is readable, since RLS hides the referenced rows. But one user can attach rows to another user's ids. This belongs in the DB (not the API), because PostgREST is still reachable directly with a user's token and the publishable key the app ships.
 
 **Context:** Security specialist + red team during `/ship` of the Node backend (2026-10-11). Existed before the backend.
 
@@ -32,7 +32,7 @@
 
 ### Decide whether to close direct PostgREST access
 
-**What:** Supabase still accepts Auth0 ID tokens directly, and the anon key shipped in earlier builds, so the API's whitelists are advisory. Either revoke table privileges from `anon`/`authenticated` (the API then needs its own DB role or the service-role key), or keep RLS + DB constraints as the enforcement point (the current documented stance in `docs/BACKEND.md`).
+**What:** The app ships the Supabase publishable key (needed for Supabase Auth), so any signed-in user can call PostgREST directly and the API's whitelists are advisory. Either revoke table privileges from `anon`/`authenticated` (the API then needs its own DB role or the service-role key), or keep RLS + DB constraints as the enforcement point (the current documented stance in `docs/BACKEND.md`).
 
 **Why:** Switching the backend to the service-role key without first revoking direct access would remove the only enforced guard.
 
@@ -54,11 +54,35 @@
 
 ---
 
+### Revoke Sign in with Apple tokens on account deletion
+
+**What:** `DELETE /v1/account` deletes the Supabase user but never calls Apple's `https://appleid.apple.com/auth/revoke`. Capture the Apple `authorizationCode` at sign-in (or ask for a fresh one in the delete flow), exchange it server-side for a refresh token using the client-secret JWT (Team ID + Key ID + .p8), and revoke it before `admin.auth.admin.deleteUser`. Also call `GoogleSignIn.instance.disconnect()` on deletion.
+
+**Why:** App Store guideline 5.1.1(v) requires apps offering Sign in with Apple to revoke its tokens when an account is deleted; App Review rejects without it.
+
+**Effort:** M
+**Priority:** P1 (blocks App Store submission, not this PR)
+**Depends on:** An Apple Sign in with Apple key (.p8) stored as a backend secret.
+
+---
+
+### Port the branded email templates to Supabase
+
+**What:** Login moved from Auth0 to Supabase Auth (2026-10-12), so the 9 Auth0 templates in `templates/email/` are dead. Port the two Supabase actually sends to its Go-template syntax: `auth0_verification_code_email.html` → **Confirm signup** and `auth0_change_password_code_email.html` → **Reset password** (swap `{{ code }}` for `{{ .Token }}`, `{{ user.email }}` for `{{ .Email }}`, drop Liquid `default:` filters). Then delete the Auth0-only ones (MFA, breach alert, blocked account, welcome, link versions) and `AUTH0_LIQUID_REFERENCE.md`.
+
+**Why:** Until then, sign-up and reset codes go out in Supabase's plain default email, and the repo carries templates nothing uses.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** Nothing; templates work with the built-in sender too, but custom SMTP is needed before launch anyway.
+
+---
+
 ### Real-device QA of the API migration
 
-**What:** Manually walk the flows that the automated suite marks as uncovered: login → home loads every resource over real HTTP; an ID token expiring (renew + one retry on 401); guest → sign-in migration and its rollback; what the app shows when the API is down or slow (20s timeout).
+**What:** Manually walk the flows that the automated suite marks as uncovered: sign-up with the emailed code, password sign-in, forgot password, Google (iOS + Android) and Apple (iOS); login → home loads every resource over real HTTP; an access token expiring (refresh + one retry on 401); Delete Account removing the auth user; guest → sign-in migration and its rollback; what the app shows when the API is down or slow (20s timeout).
 
-**Why:** These need a real device, a real Auth0 login and a running backend, so the coverage gate on the backend PR marked them intentionally uncovered (2026-10-11).
+**Why:** These need a real device, a real Supabase Auth login (Google/Apple need real OAuth clients) and a running backend, so the coverage gate on the backend PR marked them intentionally uncovered (2026-10-11).
 
 **Effort:** S
 **Priority:** P2
@@ -86,23 +110,23 @@
 
 ## Review
 
-### Swap the Delete Account placeholder support email before release
+### Swap the placeholder support email before a contact flow ships
 
-**What:** `AppInfo.supportEmail` (`lib/config/app_info.dart`) is still the obviously-fake placeholder `support@REPLACE-ME.com` — swap it for the real founder support address before any release build. The Delete Account `mailto:` and its no-mail-app error message both use it.
+**What:** `AppInfo.supportEmail` (`lib/config/app_info.dart`) is still the placeholder `support@REPLACE-ME.com`. Nothing in the app uses it any more: Delete Account became self-service (`DELETE /v1/account`) on 2026-10-12. Swap it for the real address before any Help Center contact row starts using it.
 
-**Why:** No mechanism in the repo today (no CI grep, no lint rule) stops a build from shipping with the placeholder still in place. This is also the exact mailto: flow `docs/BACKLOG.md`'s "Delete my account" entry flags as relevant to Apple App Store Guideline 5.1.1(v) if this app is ever submitted — a broken/fake destination address on that specific flow is worse than most placeholders.
+**Why:** No CI guard stops a build shipping with the placeholder.
 
-**Context:** Surfaced by `/plan-eng-review`'s outside-voice pass (2026-08-24) on the Settings IA rebuild. Considered adding an automated CI guard for this instead of a TODO — deliberately chose the lighter, human-tracked option since this is a solo-founder pre-scale app and a CI step felt like more process than the risk currently warrants.
+**Context:** Originally P1 because the Delete Account `mailto:` used it (`/plan-eng-review`, 2026-08-24).
 
 **Effort:** S
-**Priority:** P1 (blocks any real release, not blocks-this-PR)
-**Depends on:** None (the Delete Account mailto: flow shipped 2026-08-24).
+**Priority:** P3
+**Depends on:** A Help Center contact flow.
 
 ---
 
 ### Settings screens widget test coverage
 
-**What:** Widget tests for the rebuilt Settings pages (Profile, Money, Data & Privacy, Support) and specifically the new mailto: deletion-request error path (no mail client installed → `SnackbarHelper.showError`).
+**What:** Widget tests for the rebuilt Settings pages (Profile, Money, Support, and the rest of Data & Privacy). The Delete Account flow (failure snackbar, pop-then-sign-out) is covered since 2026-10-12 by `test/screens/data_privacy_delete_test.dart`.
 
 **Why:** Zero widget tests exist for any Settings screen today (confirmed — `test/` has no references to any settings page). The `/plan-ceo-review` Settings IA rebuild (2026-08-24) touched every settings file and is a natural moment to have flagged this, but building the suite itself was explicitly deferred to keep that change focused. Matches the general test-coverage gap already tracked in `docs/BACKLOG.md`, scoped specifically to Settings here.
 

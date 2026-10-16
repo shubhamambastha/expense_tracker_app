@@ -10,7 +10,6 @@ import '../../../components/settings/settings_guest_data_section.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_tile.dart';
-import '../../../config/app_info.dart';
 import '../../../config/design_tokens.dart';
 import '../../../models/account.dart';
 import '../../../models/category_budget.dart';
@@ -19,9 +18,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/category_catalog.dart';
 import '../../../services/income_category_catalog.dart';
 import '../../../services/api_service.dart';
-import '../../../utils/account_deletion_request.dart';
 import '../../../utils/data_export.dart';
-import '../../../utils/profile_identity.dart';
 import '../../../utils/snackbar_helper.dart';
 
 /// Export, backup, guest-data migration, and the destructive account
@@ -31,6 +28,7 @@ class DataPrivacyPage extends StatefulWidget {
     super.key,
     required this.onAccountReset,
     required this.onGuestDataChanged,
+    required this.onAccountDeleted,
   });
 
   /// Called after "Reset My Account" wipes the user's data, so the tab
@@ -41,12 +39,17 @@ class DataPrivacyPage extends StatefulWidget {
   /// transactions/accounts.
   final VoidCallback onGuestDataChanged;
 
+  /// Called after the account is deleted, once every route above the tab
+  /// shell is popped — signs out and returns to login.
+  final VoidCallback onAccountDeleted;
+
   @override
   State<DataPrivacyPage> createState() => _DataPrivacyPageState();
 }
 
 class _DataPrivacyPageState extends State<DataPrivacyPage> {
   bool _resetting = false;
+  bool _deleting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -99,39 +102,33 @@ class _DataPrivacyPageState extends State<DataPrivacyPage> {
         ),
         if (!isGuest) ...[
           const SizedBox(height: AppSpacing.md),
-          SettingsDeleteAccountSection(onDeleteConfirmed: _requestDeletion),
+          SettingsDeleteAccountSection(
+            isDeleting: _deleting,
+            onDeleteConfirmed: _deleteAccount,
+          ),
         ],
       ],
     );
   }
 
-  Future<void> _requestDeletion() async {
-    final email = ProfileIdentity.emailFor();
-    final userId = AuthService.instance.currentSession?.userId ?? 'unknown';
-
-    final result = await launchAccountDeletionRequest(
-      userEmail: email,
-      userId: userId,
-    );
-
-    if (!mounted) return;
-    switch (result) {
-      case AccountDeletionRequestResult.launched:
-        SnackbarHelper.showMessage(
-          context,
-          'Opening Mail — send the message to submit your request',
-        );
-      case AccountDeletionRequestResult.noMailApp:
-        SnackbarHelper.showError(
-          context,
-          'No email app found — email ${AppInfo.supportEmail} directly',
-        );
-      case AccountDeletionRequestResult.failed:
-        SnackbarHelper.showError(
-          context,
-          'Could not open your mail app — try again',
-        );
+  Future<void> _deleteAccount() async {
+    setState(() => _deleting = true);
+    try {
+      await ApiService.deleteUserAccount();
+    } catch (error) {
+      if (!mounted) return;
+      SnackbarHelper.showError(
+        context,
+        error is ApiException
+            ? 'Could not delete your account: ${error.message}'
+            : 'Could not delete your account. Please try again.',
+      );
+      setState(() => _deleting = false);
+      return;
     }
+    if (!mounted) return;
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    widget.onAccountDeleted();
   }
 
   Future<void> _confirmReset() async {
@@ -140,7 +137,7 @@ class _DataPrivacyPageState extends State<DataPrivacyPage> {
 
     setState(() => _resetting = true);
     try {
-      // A guest has no Auth0 session, and resetUserData()/syncForUser() are
+      // A guest has no session, and resetUserData()/syncForUser() are
       // already guest-branched, so any non-empty placeholder is fine here
       // (see ApiService._isGuest).
       final userId = AuthService.instance.currentSession?.userId ?? 'guest';

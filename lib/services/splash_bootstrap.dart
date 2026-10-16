@@ -172,7 +172,7 @@ class SplashBootstrap {
   /// is purely local — no timeout needed, nothing can hang. `CurrencySettings`
   /// and `SettingsPreferences` need no guest-specific call here: [load]
   /// already restored them from their session-independent local cache, and
-  /// their remote-sync paths already no-op when there's no Auth0 session.
+  /// their remote-sync paths already no-op when there's no signed-in session.
   Future<void> _warmGuestData() async {
     try {
       await Future.wait([

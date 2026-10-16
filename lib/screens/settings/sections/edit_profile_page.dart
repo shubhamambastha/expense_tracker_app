@@ -180,7 +180,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           readOnly: true,
           prefixIcon: Icons.alternate_email_rounded,
           keyboardType: TextInputType.emailAddress,
-          helperText: 'Managed by Auth0 — update in your Auth0 account.',
+          helperText: "Your sign-in email can't be changed here.",
           onChanged: (_) {},
         ),
         Divider(height: 1, thickness: 1, color: AppColors.border),
