@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import '../../components/auth/auth_page_scaffold.dart';
+import '../../components/auth/legal_notice.dart';
 import '../../components/auth/login_form.dart';
 import '../../components/auth/social_sign_in_buttons.dart';
 import '../../config/design_tokens.dart';
@@ -116,6 +117,8 @@ class _LoginPageState extends State<LoginPage> {
                 : null,
             onContinueAsGuest: _continueAsGuest,
           ),
+          const SizedBox(height: AppSpacing.lg),
+          const LegalNotice(),
         ],
       ),
     );

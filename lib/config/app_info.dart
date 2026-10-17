@@ -12,4 +12,7 @@ class AppInfo {
   /// Tracked in TODOS.md ("Swap the Delete Account placeholder support
   /// email before release") since nothing in the repo enforces this today.
   static const String supportEmail = 'support@REPLACE-ME.com';
+
+  static const String privacyUrl = 'https://jebbo.imcremars.xyz/privacy';
+  static const String termsUrl = 'https://jebbo.imcremars.xyz/terms';
 }
