@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { fetchAll, list, must } from '../db.js';
-import { RESEND_API_KEY, EXPORT_FROM_EMAIL } from '../config.js';
+import { must } from '../db.js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 
 const router = Router();
 export default router;
@@ -22,41 +22,17 @@ router.delete('/', async (req, res) => {
   res.status(204).end();
 });
 
-// Quote only when needed (RFC 4180). Headers are the DB column names; ids and user_id are never exported.
-const cell = (v) => (/[",\r\n]/.test(v ??= '') ? `"${String(v).replaceAll('"', '""')}"` : String(v));
-export const toCsv = (rows, cols) => [cols, ...rows.map((r) => cols.map((c) => r[c]))]
-  .map((line) => line.map(cell).join(',')).join('\r\n') + '\r\n';
-
-const EXPORTS = [
-  ['transactions.csv', 'transactions', ['date', 'kind', 'amount', 'currency_code', 'category',
-    'counterparty_name', 'note', 'is_recurring', 'recurrence_frequency']],
-  ['accounts.csv', 'accounts', ['name', 'type', 'opening_balance', 'credit_limit', 'nickname', 'provider_name', 'is_archived']],
-  ['budgets.csv', 'category_budgets', ['category_name', 'monthly_limit', 'currency_code']],
-];
-
-// "Export Data": emails the caller's data as CSV attachments to the address on their login.
-// ponytail: synchronous and unthrottled (a user can only mail themselves); queue it if exports outgrow a request.
+// "Export Data": the export-data Supabase Edge Function (supabase/functions/export-data) reads the
+// caller's data as them, builds the CSVs and emails them to the address on their login.
+// We forward the caller's own token, so the function's RLS reads and recipient match the API's user.
 router.post('/export', async (req, res) => {
-  if (!RESEND_API_KEY || !EXPORT_FROM_EMAIL) {
-    throw Object.assign(new Error('export email not configured (RESEND_API_KEY / EXPORT_FROM_EMAIL)'), { status: 503 });
-  }
-  if (!req.email) return res.status(400).json({ error: 'Your account has no email address.' });
-  const attachments = await Promise.all(EXPORTS.map(async ([filename, table, cols]) => ({
-    filename,
-    content: Buffer.from(toCsv(await fetchAll(() => list(req, table)), cols)).toString('base64'),
-  })));
-  const sent = await fetch('https://api.resend.com/emails', {
+  const fn = await fetch(`${SUPABASE_URL}/functions/v1/export-data`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: EXPORT_FROM_EMAIL,
-      to: [req.email],
-      subject: 'Your expense data export',
-      text: 'Attached: your transactions, accounts and budgets as CSV files. They open in Excel, Numbers or Google Sheets.',
-      attachments,
-    }),
-    signal: AbortSignal.timeout(15_000),
+    headers: { Authorization: req.get('authorization'), apikey: SUPABASE_ANON_KEY },
+    signal: AbortSignal.timeout(30_000),
   });
-  if (!sent.ok) throw Object.assign(new Error(`resend rejected export email: ${sent.status}`), { status: 502 });
-  res.status(202).json({ email: req.email });
+  const body = await fn.json().catch(() => ({}));
+  if (fn.status === 400) return res.status(400).json({ error: body.error ?? 'Invalid request.' });
+  if (!fn.ok) throw Object.assign(new Error(`export-data function failed: ${fn.status}`), { status: 502 });
+  res.status(202).json({ email: body.email });
 });

@@ -60,7 +60,7 @@ All under `/v1`, all require `Authorization: Bearer <token>`. Bodies are the sam
 | `GET /settings` | `fetchUserSettings` (also read for `onboardingCompletedAt`) | row or `null` |
 | `PATCH /settings` | `upsertUserSettings`, `markOnboardingComplete` | upserts only the columns sent |
 | `DELETE /data` | `resetUserData` | "Reset My Account", keeps settings |
-| `POST /data/export` | `emailDataExport` | "Export Data": emails transactions, accounts (incl. archived) and budgets as CSV attachments to the token's `email` via Resend. 202 `{ email }`; 400 if the token has no email, 502 if Resend refuses, 503 if `RESEND_API_KEY` / `EXPORT_FROM_EMAIL` are unset |
+| `POST /data/export` | `emailDataExport` | "Export Data": forwards the caller's token to the `export-data` Supabase Edge Function, which emails transactions, accounts (incl. archived) and budgets as CSV attachments to the login's email via Resend. 202 `{ email }`; the function's 400 (no email) passes through; any other function failure is a 502 |
 | `DELETE /account` | `deleteUserAccount` | "Delete Account": every row incl. settings, then the Supabase auth user (service-role key). The user goes last, so a failure part-way can be retried |
 | `GET /health` | — | unauthenticated liveness check for the host (Node is up) |
 | `GET /health/db` | — | unauthenticated, for an external uptime monitor: 200 only if Supabase answers too (anonymous query, RLS returns no rows, no retries) |
@@ -120,7 +120,7 @@ Then set `API_BASE_URL` in `config.dev.json` to match where the app runs:
 
 ## Deploy
 
-Any Node 22+ host (Render, Railway, Fly.io, a VM): `npm ci && npm start`, set the env vars from `.env.example` (the two Resend ones are optional; without them only Export Data 503s) (`PORT` is usually injected by the host), and point the host's health check at `/health`. Point an external uptime monitor at `/health/db` instead, so it also catches a Supabase outage. Release builds need an **HTTPS** `API_BASE_URL` set as the `API_BASE_URL` GitHub secret for CI.
+Any Node 22+ host (Render, Railway, Fly.io, a VM): `npm ci && npm start`, set the four env vars from `.env.example` (`PORT` is usually injected by the host), and point the host's health check at `/health`. Point an external uptime monitor at `/health/db` instead, so it also catches a Supabase outage. Release builds need an **HTTPS** `API_BASE_URL` set as the `API_BASE_URL` GitHub secret for CI.
 
 Data routes use the Supabase **anon** key plus the user's token, so RLS applies. The **service-role** key is used only by `DELETE /v1/account` to remove the auth user, but a leaked backend env *can* bypass RLS, so treat it as a top-tier secret.
 
