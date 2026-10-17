@@ -14,7 +14,7 @@ const TOKEN_ERRORS = new Set([
   'ERR_JOSE_ALG_NOT_ALLOWED', 'ERR_JOSE_NOT_SUPPORTED',
 ]);
 
-// Sets req.userId (the Supabase user id, `sub`) and req.db (a Supabase client acting as the caller).
+// Sets req.userId (the Supabase user id, `sub`), req.email, and req.db (a Supabase client acting as the caller).
 export async function auth(req, res, next) {
   const token = req.get('authorization')?.match(/^Bearer (.+)$/)?.[1];
   if (!token) return res.status(401).json({ error: 'Missing bearer token' });
@@ -28,6 +28,7 @@ export async function auth(req, res, next) {
     // Anonymous Supabase users also carry aud 'authenticated'; the API is for real accounts only.
     if (payload.is_anonymous) return res.status(401).json({ error: 'Invalid or expired token' });
     req.userId = payload.sub;
+    req.email = payload.email; // where POST /v1/data/export sends the CSVs
   } catch (err) {
     if (!TOKEN_ERRORS.has(err.code)) throw err;
     return res.status(401).json({ error: 'Invalid or expired token' });

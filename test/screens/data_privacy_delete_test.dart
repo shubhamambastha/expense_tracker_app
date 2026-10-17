@@ -112,4 +112,35 @@ void main() {
     expect(find.byType(DataPrivacyPage), findsNothing);
     expect(find.text('root'), findsOneWidget);
   });
+
+  testWidgets('signed-in Export Data asks the API to email the CSVs', (
+    tester,
+  ) async {
+    ApiService.client = MockClient((request) async {
+      expect([request.method, request.url.path], ['POST', '/v1/data/export']);
+      return http.Response(
+        '{"email":"me@example.com"}',
+        202,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DataPrivacyPage(
+          onAccountReset: () {},
+          onGuestDataChanged: () {},
+          onAccountDeleted: () {},
+        ),
+      ),
+    );
+    await tester.tap(find.text('Export Data'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      find.text('Your data is on its way to me@example.com'),
+      findsOneWidget,
+    );
+    await tester.pumpAndSettle(); // let the snackbar finish
+  });
 }

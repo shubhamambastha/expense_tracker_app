@@ -7,6 +7,8 @@ Object.assign(process.env, {
   SUPABASE_URL: 'http://supabase.test',
   SUPABASE_ANON_KEY: 'anon',
   SUPABASE_SERVICE_ROLE_KEY: 'service',
+  RESEND_API_KEY: 'resend',
+  EXPORT_FROM_EMAIL: 'export@app.test',
 });
 
 // Fake Supabase (JWKS, PostgREST, auth admin) by intercepting the global fetch that jose and
@@ -16,9 +18,15 @@ const jwk = { ...(await exportJWK(key.publicKey)), kid: 'k1', alg: 'ES256' };
 let calls = [];
 let respond = null; // (call) => Response | undefined, per test
 let jwksDown = false;
+let mails = [];
+let resendStatus = 200;
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (input, init = {}) => {
   const url = new URL(typeof input === 'string' ? input : input.url);
+  if (url.host === 'api.resend.com') {
+    mails.push({ auth: new Headers(init.headers).get('authorization'), ...JSON.parse(init.body) });
+    return Response.json({ id: 'm1' }, { status: resendStatus });
+  }
   if (url.host !== 'supabase.test') return realFetch(input, init);
   if (url.pathname === '/auth/v1/.well-known/jwks.json') {
     if (jwksDown) throw new TypeError('fetch failed');
@@ -45,8 +53,8 @@ const { app } = await import('../src/app.js');
 mock.method(console, 'info', () => {}); // request log lines; asserted on below
 
 const SUB = '5f0c6a8e-1b2d-4c3e-9f40-a1b2c3d4e5f6';
-const sign = ({ privateKey = key.privateKey, iss = 'http://supabase.test/auth/v1', aud = 'authenticated', exp = '5m' } = {}) =>
-  new SignJWT({ role: 'authenticated' }).setProtectedHeader({ alg: 'ES256', kid: 'k1' })
+const sign = ({ privateKey = key.privateKey, iss = 'http://supabase.test/auth/v1', aud = 'authenticated', exp = '5m', email } = {}) =>
+  new SignJWT({ role: 'authenticated', email }).setProtectedHeader({ alg: 'ES256', kid: 'k1' })
     .setIssuer(iss).setAudience(aud).setSubject(SUB).setExpirationTime(exp).sign(privateKey);
 
 let server, base, token;
@@ -60,7 +68,7 @@ before(async () => {
   });
 });
 after(() => server.close());
-beforeEach(() => { calls = []; respond = null; });
+beforeEach(() => { calls = []; respond = null; mails = []; resendStatus = 200; });
 
 const call = (method, path, body, auth = token) => realFetch(base + path, {
   method,
@@ -112,6 +120,7 @@ test('every data route rejects requests without a valid token', async () => {
     ['POST', '/v1/accounts'],
     ['PATCH', '/v1/settings'],
     ['DELETE', '/v1/data'],
+    ['POST', '/v1/data/export'],
     ['DELETE', '/v1/account'],
   ]) {
     const missing = await fetch(base + path, { method });
@@ -359,6 +368,34 @@ test('DELETE /data wipes every user table in FK order and stops on the first fai
   const failed = await call('DELETE', '/v1/data');
   assert.equal(failed.status, 409);
   assert.deepEqual(calls.map((c) => c.table), ['recurring_events', 'transactions']);
+});
+
+test('POST /data/export emails every user table as CSV to the address on the token', async (t) => {
+  const withEmail = await sign({ email: 'me@example.com' });
+  respond = (c) => (c.table === 'transactions'
+    ? Response.json([{ id: 9, user_id: SUB, date: '2026-10-01', kind: 'expense', amount: -4.5, note: 'tea, "chai"\nhot', is_recurring: false }])
+    : Response.json([]));
+  const res = await call('POST', '/v1/data/export', undefined, withEmail);
+  assert.equal(res.status, 202);
+  assert.deepEqual(await res.json(), { email: 'me@example.com' });
+  assert.deepEqual(calls.map((c) => c.table).sort(), ['accounts', 'category_budgets', 'transactions']);
+  assert.ok(calls.every((c) => c.method === 'GET' && c.params.user_id === `eq.${SUB}` && c.auth === `Bearer ${withEmail}`));
+  const [mail] = mails;
+  assert.deepEqual([mail.auth, mail.from, mail.to], ['Bearer resend', 'export@app.test', ['me@example.com']]);
+  const files = Object.fromEntries(mail.attachments.map((a) => [a.filename, Buffer.from(a.content, 'base64').toString()]));
+  assert.equal(files['transactions.csv'],
+    'date,kind,amount,currency_code,category,counterparty_name,note,is_recurring,recurrence_frequency\r\n'
+    + '2026-10-01,expense,-4.5,,,,"tea, ""chai""\nhot",false,\r\n');
+  assert.equal(files['budgets.csv'], 'category_name,monthly_limit,currency_code\r\n');
+  assert.ok(!files['transactions.csv'].includes(SUB), 'never exports ids');
+
+  // Resend refusing is our failure (502), and a token without an email can't be mailed (400).
+  t.mock.method(console, 'error', () => {});
+  resendStatus = 422;
+  assert.equal((await call('POST', '/v1/data/export', undefined, withEmail)).status, 502);
+  mails = [];
+  assert.equal((await call('POST', '/v1/data/export')).status, 400);
+  assert.equal(mails.length, 0);
 });
 
 const noSettingsLeft = (c) => (c.method === 'GET' ? Response.json([]) : undefined);

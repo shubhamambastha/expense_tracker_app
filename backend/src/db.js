@@ -36,15 +36,16 @@ export const send = (res, query, status = 200) =>
 // Supabase silently caps a response at max_rows (default 1000), so page until a short page.
 // ponytail: assumes the project's max_rows >= PAGE; lower PAGE if that setting is ever lowered.
 const PAGE = 1000;
-export async function sendAll(res, query) {
+export async function fetchAll(query) {
   const rows = [];
   for (;;) {
     // `id` tiebreak keeps page boundaries stable when the sort column has duplicates.
     const page = await must(query().order('id').range(rows.length, rows.length + PAGE - 1));
     rows.push(...page);
-    if (page.length < PAGE) return res.json(rows);
+    if (page.length < PAGE) return rows;
   }
 }
+export const sendAll = async (res, query) => res.json(await fetchAll(query));
 
 // Keep only whitelisted columns. `id` and `user_id` are never on a whitelist.
 export const pick = (body, cols) =>

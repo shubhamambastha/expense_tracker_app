@@ -64,7 +64,9 @@ class _DataPrivacyPageState extends State<DataPrivacyPage> {
             SettingsTile(
               icon: Icons.file_download_rounded,
               title: 'Export Data',
-              onTap: () => _exportData(context),
+              subtitle: isGuest ? null : 'Emailed to you as CSV files',
+              onTap: () =>
+                  isGuest ? _exportData(context) : _emailExport(context),
             ),
           ],
         ),
@@ -157,7 +159,32 @@ class _DataPrivacyPageState extends State<DataPrivacyPage> {
     }
   }
 
-  /// Fetches everything this user owns fresh from Supabase (not any
+  /// Signed-in export: the API builds the CSVs and emails them to the
+  /// address on the login, so nothing is written to the device.
+  Future<void> _emailExport(BuildContext context) async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: AppLoadingIndicator()),
+    );
+    try {
+      final email = await ApiService.emailDataExport();
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      SnackbarHelper.showSuccess(context, 'Your data is on its way to $email');
+    } catch (error) {
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      SnackbarHelper.showError(
+        context,
+        error is ApiException && error.statusCode < 500
+            ? 'Could not email your data: ${error.message}'
+            : 'Could not email your data. Please try again.',
+      );
+    }
+  }
+
+  /// Guest export (data lives on-device): fetches everything fresh (not any
   /// in-memory list, which may be stale/paginated), serializes it to CSV,
   /// and hands it to the OS share sheet.
   Future<void> _exportData(BuildContext context) async {
@@ -184,16 +211,8 @@ class _DataPrivacyPageState extends State<DataPrivacyPage> {
           'transactions.csv',
           transactionsToCsv(transactions),
         ),
-        await _writeCsv(
-          tempDir,
-          'accounts.csv',
-          accountsToCsv(exportAccounts),
-        ),
-        await _writeCsv(
-          tempDir,
-          'budgets.csv',
-          categoryBudgetsToCsv(budgets),
-        ),
+        await _writeCsv(tempDir, 'accounts.csv', accountsToCsv(exportAccounts)),
+        await _writeCsv(tempDir, 'budgets.csv', categoryBudgetsToCsv(budgets)),
       ];
 
       if (!context.mounted) return;
