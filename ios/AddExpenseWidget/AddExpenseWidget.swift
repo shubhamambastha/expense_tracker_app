@@ -1,7 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-private let addExpenseURL = URL(string: "expensetracker://add-expense")!
+private let addExpenseURL = URL(string: "jebbo://add-expense")!
 
 struct AddExpenseEntry: TimelineEntry {
     let date: Date

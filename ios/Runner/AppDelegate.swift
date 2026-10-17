@@ -5,7 +5,7 @@ import app_links
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private func handleWidgetDeepLinkIfNeeded(_ url: URL) {
-    guard url.scheme?.lowercased() == "expensetracker" else { return }
+    guard url.scheme?.lowercased() == "jebbo" else { return }
     AppLinks.shared.handleLink(url: url)
   }
 

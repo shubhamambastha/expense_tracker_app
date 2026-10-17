@@ -4,7 +4,7 @@ import 'package:app_links/app_links.dart';
 
 import 'app_launch_intent.dart';
 
-/// Listens for `expensetracker://` links from the iOS widget (and other sources).
+/// Listens for `jebbo://` links from the iOS widget (and other sources).
 class DeepLinkService {
   DeepLinkService._();
 

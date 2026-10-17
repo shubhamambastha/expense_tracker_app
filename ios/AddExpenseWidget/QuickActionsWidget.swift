@@ -1,7 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-private let analyticsURL = URL(string: "expensetracker://open-analytics")!
+private let analyticsURL = URL(string: "jebbo://open-analytics")!
 
 struct QuickActionsEntry: TimelineEntry {
     let date: Date
@@ -42,13 +42,13 @@ struct QuickActionsWidgetEntryView: View {
                         icon: "minus.circle.fill",
                         label: "Expense",
                         tint: WidgetTheme.teal,
-                        destination: URL(string: "expensetracker://add-expense")!
+                        destination: URL(string: "jebbo://add-expense")!
                     )
                     WidgetActionButton(
                         icon: "plus.circle.fill",
                         label: "Income",
                         tint: WidgetTheme.success,
-                        destination: URL(string: "expensetracker://add-income")!
+                        destination: URL(string: "jebbo://add-income")!
                     )
                     WidgetActionButton(
                         icon: "chart.pie.fill",

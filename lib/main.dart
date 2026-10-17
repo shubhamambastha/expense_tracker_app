@@ -23,7 +23,7 @@ Future<void> main() async {
     ]);
     _applyTheme();
     unawaited(DeepLinkService.instance.start());
-    runApp(const ExpenseTrackerApp());
+    runApp(const JebboApp());
   } catch (error) {
     runApp(ErrorApp(message: error.toString()));
   }
@@ -44,8 +44,8 @@ void _applyTheme() {
   SystemChrome.setSystemUIOverlayStyle(AppTheme.systemOverlay);
 }
 
-class ExpenseTrackerApp extends StatelessWidget {
-  const ExpenseTrackerApp({super.key});
+class JebboApp extends StatelessWidget {
+  const JebboApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +62,7 @@ class ExpenseTrackerApp extends StatelessWidget {
             ? AppTheme.lightTheme
             : AppTheme.darkTheme;
         return MaterialApp(
-          title: 'Expense Tracker',
+          title: 'Jebbo',
           debugShowCheckedModeBanner: false,
           theme: theme,
           darkTheme: theme,

@@ -1,6 +1,6 @@
 # Database Schema
 
-Mind-map view of the Supabase Postgres schema for the Expense Tracker app. The app reaches it only through the Node API ([BACKEND.md](./BACKEND.md)); RLS remains the enforcement point. Source SQL lives in [`sql/`](../sql/). App models in [`lib/models/`](../lib/models/).
+Mind-map view of the Supabase Postgres schema for Jebbo. The app reaches it only through the Node API ([BACKEND.md](./BACKEND.md)); RLS remains the enforcement point. Source SQL lives in [`sql/`](../sql/). App models in [`lib/models/`](../lib/models/).
 
 > **Auth note:** After `20260529_auth0_user_id_text.sql`, every `user_id` column is **`text`** holding the Supabase Auth user id (JWT `sub`, a UUID as text). No FK to `auth.users`, so `DELETE /v1/account` deletes rows before the user. RLS uses `public.requesting_user_id()` → `auth.jwt() ->> 'sub'`.
 

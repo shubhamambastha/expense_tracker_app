@@ -1,9 +1,9 @@
-import 'package:expense_tracker_app/components/auth/login_form.dart';
-import 'package:expense_tracker_app/components/settings/settings_delete_account_tile.dart';
-import 'package:expense_tracker_app/screens/auth/reset_password_page.dart';
-import 'package:expense_tracker_app/screens/auth/verify_email_page.dart';
-import 'package:expense_tracker_app/utils/snackbar_helper.dart';
-import 'package:expense_tracker_app/utils/validators.dart';
+import 'package:jebbo/components/auth/login_form.dart';
+import 'package:jebbo/components/settings/settings_delete_account_tile.dart';
+import 'package:jebbo/screens/auth/reset_password_page.dart';
+import 'package:jebbo/screens/auth/verify_email_page.dart';
+import 'package:jebbo/utils/snackbar_helper.dart';
+import 'package:jebbo/utils/validators.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;

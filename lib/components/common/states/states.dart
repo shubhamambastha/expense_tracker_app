@@ -2,7 +2,7 @@
 ///
 /// Import this barrel for state UX across features:
 /// ```dart
-/// import 'package:expense_tracker_app/components/common/states/states.dart';
+/// import 'package:jebbo/components/common/states/states.dart';
 /// ```
 library;
 

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:expense_tracker_app/models/user_settings.dart';
+import 'package:jebbo/models/user_settings.dart';
 
 void main() {
   group('UserSettings.fromMap onboarding_completed_at', () {

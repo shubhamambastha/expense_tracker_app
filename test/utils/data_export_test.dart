@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:expense_tracker_app/models/account.dart';
-import 'package:expense_tracker_app/models/category_budget.dart';
-import 'package:expense_tracker_app/models/expense.dart';
-import 'package:expense_tracker_app/models/transaction.dart';
-import 'package:expense_tracker_app/models/transaction_draft.dart';
-import 'package:expense_tracker_app/utils/data_export.dart';
+import 'package:jebbo/models/account.dart';
+import 'package:jebbo/models/category_budget.dart';
+import 'package:jebbo/models/expense.dart';
+import 'package:jebbo/models/transaction.dart';
+import 'package:jebbo/models/transaction_draft.dart';
+import 'package:jebbo/utils/data_export.dart';
 
 void main() {
   group('transactionsToCsv', () {

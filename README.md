@@ -1,4 +1,4 @@
-# expense_tracker_app
+# Jebbo
 
 Flutter expense tracker with Supabase Auth login — email + password, Google, Apple (or an on-device guest mode) and a Node REST API (`backend/`) over Supabase Postgres.
 

@@ -1,25 +1,25 @@
-import 'package:expense_tracker_app/services/app_launch_intent.dart';
+import 'package:jebbo/services/app_launch_intent.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('AppLaunchIntentHolder.fromUri', () {
-    test('parses expensetracker://add-expense host form', () {
+    test('parses jebbo://add-expense host form', () {
       expect(
-        AppLaunchIntentHolder.fromUri(Uri.parse('expensetracker://add-expense')),
+        AppLaunchIntentHolder.fromUri(Uri.parse('jebbo://add-expense')),
         AppLaunchIntent.addExpense,
       );
     });
 
-    test('parses expensetracker:///add-expense path form', () {
+    test('parses jebbo:///add-expense path form', () {
       expect(
-        AppLaunchIntentHolder.fromUri(Uri.parse('expensetracker:///add-expense')),
+        AppLaunchIntentHolder.fromUri(Uri.parse('jebbo:///add-expense')),
         AppLaunchIntent.addExpense,
       );
     });
 
     test('returns null for unknown paths', () {
       expect(
-        AppLaunchIntentHolder.fromUri(Uri.parse('expensetracker://unknown')),
+        AppLaunchIntentHolder.fromUri(Uri.parse('jebbo://unknown')),
         isNull,
       );
     });

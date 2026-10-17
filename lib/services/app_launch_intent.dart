@@ -28,9 +28,9 @@ class AppLaunchIntentHolder {
     return value;
   }
 
-  /// Maps `expensetracker://add-expense` (and path variants) to an intent.
+  /// Maps `jebbo://add-expense` (and path variants) to an intent.
   static AppLaunchIntent? fromUri(Uri uri) {
-    if (uri.scheme != 'expensetracker') return null;
+    if (uri.scheme != 'jebbo') return null;
 
     final segment = (uri.host.isNotEmpty
             ? uri.host
