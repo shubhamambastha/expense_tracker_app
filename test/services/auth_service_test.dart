@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show User;
 
-import 'package:expense_tracker_app/services/auth_service.dart';
+import 'package:jebbo/services/auth_service.dart';
 
 User _user(String id, [Map<String, dynamic> meta = const {}]) => User(
   id: id,

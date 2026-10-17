@@ -6,19 +6,19 @@ HTML templates for Auth0's transactional emails, styled to match the app's desig
 
 | File | Auth0 template | Suggested subject |
 | --- | --- | --- |
-| [`auth0_verification_email.html`](./auth0_verification_email.html) | **Verification Email (using Link)** | `Confirm your email for {{ friendly_name \| default: "Expense Tracker" }}` |
-| [`auth0_verification_code_email.html`](./auth0_verification_code_email.html) | **Verification Email (using Code)** | `{{ code }} is your {{ friendly_name \| default: "Expense Tracker" }} verification code` |
-| [`auth0_welcome_email.html`](./auth0_welcome_email.html) | **Welcome Email** | `Welcome to {{ friendly_name \| default: "Expense Tracker" }}` |
-| [`auth0_mfa_enrollment_email.html`](./auth0_mfa_enrollment_email.html) | **Enroll in MFA** | `Secure your {{ friendly_name \| default: "Expense Tracker" }} account with MFA` |
-| [`auth0_change_password_email.html`](./auth0_change_password_email.html) | **Change Password (Link)** | `Reset your {{ friendly_name \| default: "Expense Tracker" }} password` |
-| [`auth0_change_password_code_email.html`](./auth0_change_password_code_email.html) | **Change Password (Code)** | `{{ code }} is your {{ friendly_name \| default: "Expense Tracker" }} password reset code` |
-| [`auth0_blocked_account_email.html`](./auth0_blocked_account_email.html) | **Blocked Account Email** | `We blocked some sign-in attempts on your {{ friendly_name \| default: "Expense Tracker" }} account` |
-| [`auth0_password_breach_alert_email.html`](./auth0_password_breach_alert_email.html) | **Password Breach Alert** | `Action needed: change your {{ friendly_name \| default: "Expense Tracker" }} password` |
-| [`auth0_mfa_email_code.html`](./auth0_mfa_email_code.html) | **Verification Code for Email MFA** | `{{ code }} is your {{ friendly_name \| default: "Expense Tracker" }} sign-in code` |
+| [`auth0_verification_email.html`](./auth0_verification_email.html) | **Verification Email (using Link)** | `Confirm your email for {{ friendly_name \| default: "Jebbo" }}` |
+| [`auth0_verification_code_email.html`](./auth0_verification_code_email.html) | **Verification Email (using Code)** | `{{ code }} is your {{ friendly_name \| default: "Jebbo" }} verification code` |
+| [`auth0_welcome_email.html`](./auth0_welcome_email.html) | **Welcome Email** | `Welcome to {{ friendly_name \| default: "Jebbo" }}` |
+| [`auth0_mfa_enrollment_email.html`](./auth0_mfa_enrollment_email.html) | **Enroll in MFA** | `Secure your {{ friendly_name \| default: "Jebbo" }} account with MFA` |
+| [`auth0_change_password_email.html`](./auth0_change_password_email.html) | **Change Password (Link)** | `Reset your {{ friendly_name \| default: "Jebbo" }} password` |
+| [`auth0_change_password_code_email.html`](./auth0_change_password_code_email.html) | **Change Password (Code)** | `{{ code }} is your {{ friendly_name \| default: "Jebbo" }} password reset code` |
+| [`auth0_blocked_account_email.html`](./auth0_blocked_account_email.html) | **Blocked Account Email** | `We blocked some sign-in attempts on your {{ friendly_name \| default: "Jebbo" }} account` |
+| [`auth0_password_breach_alert_email.html`](./auth0_password_breach_alert_email.html) | **Password Breach Alert** | `Action needed: change your {{ friendly_name \| default: "Jebbo" }} password` |
+| [`auth0_mfa_email_code.html`](./auth0_mfa_email_code.html) | **Verification Code for Email MFA** | `{{ code }} is your {{ friendly_name \| default: "Jebbo" }} sign-in code` |
 
 Auth0 sends only one of the two verification emails, depending on the tenant's verification setting (link or code). Both share the same layout. The code version replaces the button and benefits list with a large code box and a "keep this code to yourself" warning, and puts the code in the inbox preview text.
 
-Auth0 sends the welcome email after someone verifies their email address (or on their first social login). It greets them by first name, with their profile picture when Auth0 has one, and walks through three first steps that match the app: the post-login setup wizard, logging an expense (+ button or the iOS widget), and adding income so Spending Room has a number. The "Open Expense Tracker" button only appears when the tenant has `home_url` set. If you change onboarding, Spending Room or the widget, check this copy still matches [docs/FEATURES.md](../../docs/FEATURES.md).
+Auth0 sends the welcome email after someone verifies their email address (or on their first social login). It greets them by first name, with their profile picture when Auth0 has one, and walks through three first steps that match the app: the post-login setup wizard, logging an expense (+ button or the iOS widget), and adding income so Spending Room has a number. The "Open Jebbo" button only appears when the tenant has `home_url` set. If you change onboarding, Spending Room or the widget, check this copy still matches [docs/FEATURES.md](../../docs/FEATURES.md).
 
 The MFA enrollment email goes out when an admin sends an enrollment ticket (Dashboard → User → Send enrollment invitation, or the Management API). It explains in plain words what MFA changes, shows the account email, links to `link`, and lists three steps without naming factors, since which methods are offered depends on the tenant's MFA settings. It says "don't use the link" for unexpected invites. `connection.name` isn't available in this template, and the template doesn't use it.
 
@@ -37,7 +37,7 @@ The email MFA code goes out during sign-in when email is the user's second facto
 3. Paste the full HTML file into **Message**, then **Try** to send a test, and **Save**.
 4. Link template only, optional: set **Redirect To** so people land back on a page after they verify. Without it, Auth0 shows its own success page. That field only accepts `application.name`, `application.clientID` and `application.callback_domain`, and custom Redirect To values aren't available on non-enterprise tenants created on or after May 5, 2026.
 
-`friendly_name`, `support_email` and `support_url` come from **Settings** → **General** (tenant). Fill them in. Otherwise the template uses its fallbacks: the brand name defaults to "Expense Tracker" and the support line is left out.
+`friendly_name`, `support_email` and `support_url` come from **Settings** → **General** (tenant). Fill them in. Otherwise the template uses its fallbacks: the brand name defaults to "Jebbo" and the support line is left out.
 
 ## Liquid variables used
 
@@ -50,7 +50,7 @@ The email MFA code goes out during sign-in when email is the user's second facto
 | `user.given_name` | Yes (untrusted) | Greeting ("Hi Jane," / "Welcome, Jane!"). Falls back to a plain welcome; database sign-ups usually don't have it |
 | `user.source_ip`, `user.city`, `user.country` | Yes (blocked account template only) | Blocked account template: details box and inbox preview. The Location row and its "estimated" note only appear when city or country is set |
 | `user.picture` | Yes (untrusted) | Welcome template: avatar. Falls back to the 👋 tile when blank |
-| `friendly_name` | Yes (tenant) | Brand name (`default: "Expense Tracker"`) |
+| `friendly_name` | Yes (tenant) | Brand name (`default: "Jebbo"`) |
 | `support_url`, `support_email` | Yes (tenant) | Optional "Need help?" footer line |
 | `code` in the email MFA template | **No.** The syntax doc lists no variables for this template; Auth0's default Email MFA template uses `code` | Code box, inbox preview, suggested subject. Not made optional, because the email is useless without it |
 | `url` in the breach alert | **No.** The syntax doc lists no variables for this template; Auth0's default breach template uses `url` | Change-password button and plain link, rendered only when non-blank |

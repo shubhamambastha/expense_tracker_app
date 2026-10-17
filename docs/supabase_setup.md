@@ -44,7 +44,7 @@ Settings → Export Data goes app → `POST /v1/data/export` → `supabase/funct
 
 ```bash
 supabase link --project-ref YOUR_PROJECT_ID
-supabase secrets set RESEND_API_KEY=re_... EXPORT_FROM_EMAIL="Expense Tracker <export@yourdomain.com>"
+supabase secrets set RESEND_API_KEY=re_... EXPORT_FROM_EMAIL="Jebbo <export@yourdomain.com>"
 supabase functions deploy export-data --no-verify-jwt
 ```
 

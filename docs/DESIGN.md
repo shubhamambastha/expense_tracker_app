@@ -1,6 +1,6 @@
 # Design System
 
-Premium iOS-style theme for the Expense Tracker app: Dark (default) and Light, with a user-picked accent. Source of truth lives in `lib/config/design_tokens.dart` and is wired into Material 3 via `lib/config/theme.dart`. Always reach for tokens — never hardcode hex values, durations, or radii in widgets.
+Premium iOS-style theme for Jebbo: Dark (default) and Light, with a user-picked accent. Source of truth lives in `lib/config/design_tokens.dart` and is wired into Material 3 via `lib/config/theme.dart`. Always reach for tokens — never hardcode hex values, durations, or radii in widgets.
 
 ---
 
@@ -296,7 +296,7 @@ For premium hero cards, swap the flat color for a soft `LinearGradient(colors: [
 Import the barrel once per feature:
 
 ```dart
-import 'package:expense_tracker_app/components/common/states/states.dart';
+import 'package:jebbo/components/common/states/states.dart';
 ```
 
 | Widget | Use for |

@@ -4,10 +4,10 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show User;
 
-import 'package:expense_tracker_app/models/transaction.dart';
-import 'package:expense_tracker_app/services/api_service.dart';
-import 'package:expense_tracker_app/services/auth_service.dart';
-import 'package:expense_tracker_app/utils/constants.dart';
+import 'package:jebbo/models/transaction.dart';
+import 'package:jebbo/services/api_service.dart';
+import 'package:jebbo/services/auth_service.dart';
+import 'package:jebbo/utils/constants.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));

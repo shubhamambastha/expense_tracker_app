@@ -9,15 +9,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Expense tracker loads', (WidgetTester tester) async {
+  testWidgets('Jebbo loads', (WidgetTester tester) async {
     // Pump a minimal app that contains the expected strings to avoid
     // initializing external services during tests.
     await tester.pumpWidget(MaterialApp(
-      title: 'Expense Tracker',
+      title: 'Jebbo',
       home: Scaffold(
         body: Column(
           children: const [
-            Text('Expense Tracker'),
+            Text('Jebbo'),
             Text('No expenses yet. Tap + to add one.'),
           ],
         ),
@@ -25,7 +25,7 @@ void main() {
     ));
 
     // Verify that the texts are present.
-    expect(find.text('Expense Tracker'), findsOneWidget);
+    expect(find.text('Jebbo'), findsOneWidget);
     expect(find.text('No expenses yet. Tap + to add one.'), findsOneWidget);
   });
 }

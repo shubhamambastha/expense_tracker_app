@@ -58,7 +58,7 @@ class SplashScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  'Expense Tracker',
+                  'Jebbo',
                   style: AppTextStyles.headingLarge,
                 )
                     .animate()

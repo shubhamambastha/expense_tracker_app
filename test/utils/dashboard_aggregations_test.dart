@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:expense_tracker_app/models/transaction.dart';
-import 'package:expense_tracker_app/models/transaction_draft.dart';
-import 'package:expense_tracker_app/utils/dashboard_aggregations.dart';
+import 'package:jebbo/models/transaction.dart';
+import 'package:jebbo/models/transaction_draft.dart';
+import 'package:jebbo/utils/dashboard_aggregations.dart';
 
 Transaction _income(
   double amount,

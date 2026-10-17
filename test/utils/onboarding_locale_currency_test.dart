@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:expense_tracker_app/utils/onboarding_locale_currency.dart';
+import 'package:jebbo/utils/onboarding_locale_currency.dart';
 
 void main() {
   group('currencyCodeForLocale', () {

@@ -1,6 +1,6 @@
-# expense_tracker_app
+# Jebbo
 
-Flutter expense tracker with Supabase Auth login — email + password, Google, Apple (or an on-device guest mode), a Node REST API (`backend/`), and Supabase Postgres behind it. Light/dark theme with a user-picked accent, no state-management framework (`ChangeNotifier`/`ValueNotifier` singletons + local `setState`).
+Jebbo — a Flutter expense tracker with Supabase Auth login — email + password, Google, Apple (or an on-device guest mode), a Node REST API (`backend/`), and Supabase Postgres behind it. Light/dark theme with a user-picked accent, no state-management framework (`ChangeNotifier`/`ValueNotifier` singletons + local `setState`).
 
 Full docs live in `docs/` — read them before making non-trivial changes:
 

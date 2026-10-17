@@ -27,7 +27,7 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>expensetracker</string>
+				<string>jebbo</string>
 			</array>
 		</dict>
 		<dict>

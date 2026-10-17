@@ -1,4 +1,4 @@
-# Expense Tracker App — Architecture
+# Jebbo — Architecture
 
 ## Overview
 
@@ -13,7 +13,7 @@ Visual conventions live in [DESIGN.md](./DESIGN.md). Database schema (mind map):
 ```mermaid
 flowchart TD
   main[main.dart] --> init[Parallel init: ApiService/Supabase Auth, CurrencySettings, SettingsPreferences]
-  init --> app[ExpenseTrackerApp]
+  init --> app[JebboApp]
   app --> gate[AuthGate]
   gate --> splash[SplashScreen + SplashBootstrap]
   gate --> login[LoginPage: email, Google, Apple or guest]
@@ -43,7 +43,7 @@ flowchart TD
 
 On failure, `ErrorApp` is shown instead of the main app.
 
-`ExpenseTrackerApp` wraps `MaterialApp` in a `ListenableBuilder` over global preference notifiers (`CurrencySettings`, `CategoryCatalog`, `SettingsPreferences`) so theme-adjacent rebuilds propagate when catalogs change.
+`JebboApp` wraps `MaterialApp` in a `ListenableBuilder` over global preference notifiers (`CurrencySettings`, `CategoryCatalog`, `SettingsPreferences`) so theme-adjacent rebuilds propagate when catalogs change.
 
 Compile-time secrets come from `--dart-define` (see `config.dev.json.example` and `lib/utils/app_config.dart`):
 

@@ -211,9 +211,9 @@ Settings → Data & Privacy → "Export Data".
 
 ## Deep link / widget quick-add intent
 
-The iOS home-screen widget (and any `expensetracker://` link) can launch the app directly into the add-expense flow.
+The iOS home-screen widget (and any `jebbo://` link) can launch the app directly into the add-expense flow.
 
-- Only one intent currently exists: `AppLaunchIntent.addExpense`, matched from `expensetracker://add-expense` (host or first path segment, case-insensitive); any other path is ignored (`app_launch_intent.dart::fromUri`).
+- Only one intent currently exists: `AppLaunchIntent.addExpense`, matched from `jebbo://add-expense` (host or first path segment, case-insensitive); any other path is ignored (`app_launch_intent.dart::fromUri`).
 - The intent is consumed exactly once — `consume()` reads and clears it — so re-navigating within the app afterward won't re-trigger the add flow (`app_launch_intent.dart::consume`).
 - On app resume, links are re-captured up to 4 times at staggered delays (0ms, 200ms, 600ms, 1200ms) after the home screen mounts, because widget taps can arrive slightly after the first frame (`expense_home_page.dart::_scheduleLaunchIntentChecks`).
 - A pending intent is only acted on once the transaction list has finished loading and no add-transaction screen is already open, to avoid double-pushing the add flow (`expense_home_page.dart::_tryHandleLaunchIntent`).

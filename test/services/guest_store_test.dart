@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:expense_tracker_app/models/account.dart';
-import 'package:expense_tracker_app/models/category_budget.dart';
-import 'package:expense_tracker_app/models/expense.dart' show AccountType;
-import 'package:expense_tracker_app/models/recurring_event.dart';
-import 'package:expense_tracker_app/models/transaction.dart';
-import 'package:expense_tracker_app/services/guest_store.dart';
+import 'package:jebbo/models/account.dart';
+import 'package:jebbo/models/category_budget.dart';
+import 'package:jebbo/models/expense.dart' show AccountType;
+import 'package:jebbo/models/recurring_event.dart';
+import 'package:jebbo/models/transaction.dart';
+import 'package:jebbo/services/guest_store.dart';
 
 void main() {
   setUp(() {
