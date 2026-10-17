@@ -14,7 +14,7 @@ Settings → **JWT Keys** → move the project to **asymmetric signing keys** (E
 
 Authentication → **Providers → Email**:
 - Enable **Email**, **Confirm email** on, minimum password length **8** (matches `minPasswordLength` in `lib/utils/validators.dart`).
-- Authentication → **Email Templates**: in **Confirm signup** and **Reset password**, show the code instead of a link, e.g. `<p>Your code: <strong>{{ .Token }}</strong></p>`. The app has no auth deep links, so a link-only template leaves users stuck.
+- Authentication → **Email Templates**: paste the branded, code-only templates from [templates/email/](../templates/email/README.md) (subjects are in its README). The app has no auth deep links, so a template with only a link leaves users stuck.
 - Authentication → **SMTP Settings**: set up a real sender (Resend, SES, Postmark) **before launch**. The built-in sender is heavily rate-limited and meant for testing.
 - Harden the codes, since the publishable key ships in the app and anyone can call `/auth/v1/signup`, `/recover` and `/verify` directly: **Email OTP expiration ~600 s** (default 3600), consider **OTP length 8** (`validateCode` accepts 6–10), tight **email rate limits** (Authentication → Rate Limits), and **CAPTCHA** (hCaptcha/Turnstile) before a public launch.
 - Leave **Anonymous sign-ins off**. The API rejects anonymous tokens anyway.
