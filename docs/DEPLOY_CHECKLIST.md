@@ -6,6 +6,8 @@ Legend: `[x]` pass · `[ ]` open · `n/a` doesn't apply to this stack
 
 > **2026-10-12:** login moved from Auth0 to Supabase Auth. Auth items below are updated for that; Auth0 mentions elsewhere describe the stack as audited on 2026-10-11. Re-run this checklist before release.
 
+> **2026-10-17:** the minimum iOS version is now **iOS 15.0** (was 14.0), because current Xcode only supports 15.0+ as a deployment target. Set in `ios/Podfile` and every `IPHONEOS_DEPLOYMENT_TARGET` in `ios/Runner.xcodeproj` (Runner and AddExpenseWidget).
+
 ---
 
 ## 1. Security
