@@ -35,6 +35,18 @@ app.use((req, res, next) => {
   });
   next();
 });
+// CORS, for Flutter web only (native apps ignore it). Auth is a bearer token, never a cookie, so `*` is safe:
+// another site's page can call the API but has no token to send. Preflights answer here, before auth 401s them.
+app.use((req, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  if (req.method !== 'OPTIONS') return next();
+  res.set({
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Max-Age': '86400',
+  });
+  res.sendStatus(204);
+});
 // Dart's HttpClient asks for gzip by default; full-list JSON shrinks ~90%.
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));

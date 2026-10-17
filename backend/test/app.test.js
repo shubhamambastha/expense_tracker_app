@@ -73,6 +73,20 @@ test('health is public', async () => {
   assert.equal(res.status, 200);
 });
 
+test('CORS preflight passes without a token, and responses carry the allow-origin header', async () => {
+  const pre = await realFetch(`${base}/v1/transactions`, {
+    method: 'OPTIONS',
+    headers: { Origin: 'http://localhost:5000', 'Access-Control-Request-Method': 'PATCH', 'Access-Control-Request-Headers': 'authorization,content-type' },
+  });
+  assert.equal(pre.status, 204);
+  assert.equal(pre.headers.get('access-control-allow-origin'), '*');
+  assert.match(pre.headers.get('access-control-allow-methods'), /PATCH/);
+  assert.match(pre.headers.get('access-control-allow-headers'), /Authorization/);
+  // Not an authed /v1 call: that would warm jose's JWKS cache and defeat the JWKS-outage test below.
+  const res = await realFetch(`${base}/health`, { headers: { Origin: 'http://localhost:5000' } });
+  assert.equal(res.headers.get('access-control-allow-origin'), '*');
+});
+
 test('/health/db proves Supabase answers, and 500s when it does not', async (t) => {
   t.mock.method(console, 'error', () => {});
   const ok = await fetch(`${base}/health/db`);
