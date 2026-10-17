@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="supported-color-schemes" content="light dark" />
+  <title>Confirm your email</title>
+  <style>
+    /* Values mirror lib/config/design_tokens.dart; see templates/email/README.md. */
+    body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table { border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+    a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; }
+      .gutter { padding-left: 16px !important; padding-right: 16px !important; }
+      .card-pad { padding: 28px 20px 24px !important; }
+      .code { font-size: 30px !important; line-height: 38px !important; letter-spacing: 6px !important; padding-left: 6px !important; }
+      .h1 { font-size: 24px !important; line-height: 30px !important; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .bg-page { background-color: #000000 !important; }
+      .bg-surface { background-color: #1C1C1E !important; border-color: #3B3B3D !important; }
+      .bg-surface-2 { background-color: #2C2C2E !important; border-color: #3B3B3D !important; }
+      .text-primary { color: #FFFFFF !important; }
+      .text-secondary { color: #98989E !important; }
+      .text-tertiary { color: #636366 !important; }
+      .divider { border-color: #3B3B3D !important; }
+    }
+    [data-ogsc] .bg-page { background-color: #000000 !important; }
+    [data-ogsc] .bg-surface { background-color: #1C1C1E !important; border-color: #3B3B3D !important; }
+    [data-ogsc] .bg-surface-2 { background-color: #2C2C2E !important; border-color: #3B3B3D !important; }
+    [data-ogsc] .text-primary { color: #FFFFFF !important; }
+    [data-ogsc] .text-secondary { color: #98989E !important; }
+    [data-ogsc] .text-tertiary { color: #636366 !important; }
+    [data-ogsc] .divider { border-color: #3B3B3D !important; }
+  </style>
+</head>
+<body class="bg-page" style="margin:0;padding:0;background-color:#F2F2F7;">
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">
+    Your Jebbo verification code is {{ .Token }}. Enter it in the app to finish signing up.
+    &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+  </div>
+
+  <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" class="bg-page" style="background-color:#F2F2F7;">
+    <tr>
+      <td align="center" class="gutter" style="padding:32px 16px 40px;">
+
+        <table role="presentation" class="container" width="560" align="center" border="0" cellpadding="0" cellspacing="0" style="width:560px;max-width:560px;">
+
+          <tr>
+            <td align="center" style="padding:0 0 24px;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td valign="middle" style="padding:0 10px 0 0;"><img src="https://raw.githubusercontent.com/shubhamambastha/expense_tracker_app/main/templates/email/assets/jebbo_mark.png" width="46" height="48" alt="" style="display:block;width:46px;height:48px;border:0;" /></td>
+                  <td valign="middle"><img src="https://raw.githubusercontent.com/shubhamambastha/expense_tracker_app/main/templates/email/assets/jebbo_wordmark.png" width="83" height="28" alt="Jebbo" style="display:block;width:83px;height:28px;border:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:22px;line-height:28px;font-weight:800;color:#00C896;" /></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="bg-surface card-pad" style="background-color:#FFFFFF;border:1px solid #E8E8E8;border-radius:20px;padding:36px 32px 32px;">
+              <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+
+                <tr>
+                  <td align="center" style="padding:0 0 20px;">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td width="48" height="4" style="width:48px;height:4px;border-radius:2px;background-color:#00C896;background-image:linear-gradient(90deg,#00C896,#0A84FF,#AF52DE);font-size:0;line-height:0;">&nbsp;</td></tr></table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td align="center" style="padding:0 0 12px;">
+                    <h1 class="h1 text-primary" style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:28px;line-height:34px;font-weight:800;letter-spacing:-0.4px;color:#000000;">Confirm your email</h1>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td align="center" style="padding:0 0 28px;">
+                    <p class="text-secondary" style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:24px;color:#3C3C43;">Enter this code in Jebbo to confirm <strong class="text-primary" style="color:#000000;font-weight:600;overflow-wrap:anywhere;word-break:normal;">{{ .Email }}</strong> and finish creating your account.</p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td align="center" style="padding:0 0 12px;">
+                    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td class="bg-surface-2" align="center" style="background-color:#F2F2F7;border:1px solid #E8E8E8;border-radius:18px;padding:20px 16px;">
+                          <p class="text-secondary" style="margin:0 0 6px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.2px;text-transform:uppercase;color:#8A8A8E;">Verification code</p>
+                          <p class="code text-primary" style="margin:0;font-family:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono','Courier New',monospace;font-size:36px;line-height:44px;font-weight:700;letter-spacing:8px;padding-left:8px;color:#000000;-webkit-user-select:all;user-select:all;mso-line-height-rule:exactly;">{{ .Token }}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td align="center" style="padding:0 0 28px;">
+                    <p class="text-secondary" style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;line-height:18px;color:#8A8A8E;">The code expires soon and works only once.</p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding:0 0 24px;">
+                    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="divider" style="border-top:1px solid #E8E8E8;font-size:0;line-height:0;height:1px;">&nbsp;</td></tr></table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td width="28" valign="top" style="font-size:15px;line-height:21px;color:#FF9500;font-weight:700;">&#9888;&#65038;</td>
+                        <td valign="top" class="text-secondary" style="font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;line-height:21px;color:#3C3C43;"><strong class="text-primary" style="color:#000000;">Keep this code to yourself.</strong> Jebbo will never ask for it by phone, chat or email. Only type it into the Jebbo app.</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px 8px 0;">
+              <p class="text-secondary" style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;line-height:18px;color:#8A8A8E;text-align:center;">Didn't sign up for Jebbo? You can safely ignore this email &mdash; no account is created without the code.</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td align="center" style="padding:28px 8px 0;">
+              <p class="text-tertiary" style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#AEAEB2;text-align:center;">You're receiving this because this address was used to sign up for Jebbo.</p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

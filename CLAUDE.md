@@ -63,7 +63,7 @@ There is no named router and no bundled `.env` — secrets are compile-time `--d
 - `lib/services/guest_store.dart` + `guest_migration_service.dart` — guest-mode on-device storage and its replay into a real account on first sign-in.
 - `sql/` — dated Supabase migration files (manually applied; see [docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md)).
 - `ios/AddExpenseWidget/` — iOS home-screen widget that deep-links into the add-expense flow.
-- `templates/email/` — **obsolete** Auth0 email templates (Liquid + HTML) styled with the design tokens. Login moved to Supabase Auth; porting the code emails to Supabase is tracked in [TODOS.md](./TODOS.md).
+- `templates/email/` — Supabase Auth email templates (code-only, no links), styled with the design tokens and new logo. Pasted into Supabase by hand; see its README.
 
 ## Skill routing
 

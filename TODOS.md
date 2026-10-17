@@ -66,18 +66,6 @@
 
 ---
 
-### Port the branded email templates to Supabase
-
-**What:** Login moved from Auth0 to Supabase Auth (2026-10-12), so the 9 Auth0 templates in `templates/email/` are dead. Port the two Supabase actually sends to its Go-template syntax: `auth0_verification_code_email.html` → **Confirm signup** and `auth0_change_password_code_email.html` → **Reset password** (swap `{{ code }}` for `{{ .Token }}`, `{{ user.email }}` for `{{ .Email }}`, drop Liquid `default:` filters). Then delete the Auth0-only ones (MFA, breach alert, blocked account, welcome, link versions) and `AUTH0_LIQUID_REFERENCE.md`.
-
-**Why:** Until then, sign-up and reset codes go out in Supabase's plain default email, and the repo carries templates nothing uses.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** Nothing; templates work with the built-in sender too, but custom SMTP is needed before launch anyway.
-
----
-
 ### Real-device QA of the API migration
 
 **What:** Manually walk the flows that the automated suite marks as uncovered: sign-up with the emailed code, password sign-in, forgot password, Google (iOS + Android) and Apple (iOS); login → home loads every resource over real HTTP; an access token expiring (refresh + one retry on 401); Delete Account removing the auth user; guest → sign-in migration and its rollback; what the app shows when the API is down or slow (20s timeout).
