@@ -66,10 +66,9 @@ flutter:
   # Typography uses the iOS system font (.SF Pro Text, see AppTextStyles) —
   # no bundled font family needed.
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  # Brand mark + wordmark (transparent PNGs; app icons are generated from the same art).
+  assets:
+    - assets/branding/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
