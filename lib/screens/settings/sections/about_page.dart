@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../components/auth/legal_notice.dart';
 import '../../../components/settings/settings_info_tile.dart';
 import '../../../components/settings/settings_section.dart';
 import '../../../components/settings/settings_subpage_scaffold.dart';
 import '../../../components/settings/settings_tile.dart';
 import '../../../config/app_info.dart';
 import '../../../config/design_tokens.dart';
-import '../../../utils/snackbar_helper.dart';
 
 /// App version and legal links.
 class AboutPage extends StatelessWidget {
@@ -34,12 +34,12 @@ class AboutPage extends StatelessWidget {
             SettingsTile(
               icon: Icons.policy_rounded,
               title: 'Privacy Policy',
-              onTap: () => _stub(context, 'Privacy policy'),
+              onTap: () => openLegalUrl(AppInfo.privacyUrl),
             ),
             SettingsTile(
               icon: Icons.gavel_rounded,
               title: 'Terms of Service',
-              onTap: () => _stub(context, 'Terms of service'),
+              onTap: () => openLegalUrl(AppInfo.termsUrl),
             ),
             SettingsTile(
               icon: Icons.description_rounded,
@@ -50,9 +50,5 @@ class AboutPage extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  void _stub(BuildContext context, String label) {
-    SnackbarHelper.showMessage(context, '$label is coming soon');
   }
 }
