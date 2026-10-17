@@ -84,7 +84,7 @@ class BehavioralInsightsSection extends StatelessWidget {
                           color: AppColors.secondary.withAlpha(28),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.calendar_view_week_rounded,
                           color: AppColors.secondary,
                           size: 16,

@@ -115,7 +115,7 @@ class ErrorState extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
             color: AppColors.danger,
             size: 22,
@@ -163,7 +163,7 @@ class ErrorState extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
             color: AppColors.danger,
             size: 20,

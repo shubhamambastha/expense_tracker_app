@@ -38,7 +38,7 @@ class HeroOverviewCard extends StatelessWidget {
           Text(
             'Total Balance',
             style: AppTextStyles.bodyMedium.copyWith(
-              color: Colors.white.withAlpha(191),
+              color: AppColors.onPrimary.withAlpha(191),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -46,7 +46,7 @@ class HeroOverviewCard extends StatelessWidget {
           Text(
                 currency.format(totalBalance),
                 style: AppTextStyles.displayMedium.copyWith(
-                  color: Colors.white,
+                  color: AppColors.onPrimary,
                   letterSpacing: -0.5,
                 ),
                 maxLines: 1,
@@ -102,11 +102,11 @@ class _StatBadge extends StatelessWidget {
           width: 22,
           height: 22,
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(51),
+            color: AppColors.onPrimary.withAlpha(51),
             borderRadius: BorderRadius.circular(7),
           ),
           alignment: Alignment.center,
-          child: Icon(icon, size: 12, color: Colors.white),
+          child: Icon(icon, size: 12, color: AppColors.onPrimary),
         ),
         const SizedBox(width: 6),
         Column(
@@ -115,7 +115,7 @@ class _StatBadge extends StatelessWidget {
             Text(
               label,
               style: AppTextStyles.label.copyWith(
-                color: Colors.white.withAlpha(178),
+                color: AppColors.onPrimary.withAlpha(178),
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
               ),
@@ -123,7 +123,7 @@ class _StatBadge extends StatelessWidget {
             Text(
               value,
               style: AppTextStyles.bodySmall.copyWith(
-                color: Colors.white,
+                color: AppColors.onPrimary,
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
               ),

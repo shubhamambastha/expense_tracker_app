@@ -63,7 +63,7 @@ class SourcePayerField extends StatelessWidget {
                       color: AppColors.secondary.withAlpha(28),
                       borderRadius: BorderRadius.circular(11),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.person_outline_rounded,
                       size: 18,
                       color: AppColors.secondary,

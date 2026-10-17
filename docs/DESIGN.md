@@ -83,17 +83,17 @@ Colors resolve dynamically off `AppColors.configure(brightness, accent)` (called
 | `AppColors.surface` | `#1C1C1E` | `#FFFFFF` | Cards, dialogs, sheets, nav bar |
 | `AppColors.surfaceSecondary` | `#2C2C2E` | `#E5E5EA` | Inputs, chips, nested fills, segmented tracks |
 | `AppColors.primary` | accent-driven — teal `#00C896` / blue `#0A84FF` / purple `#AF52DE` | same | Primary actions, selected states, charts accent A |
-| `AppColors.secondary` | `#0A84FF` (fixed, all accents) | same | Secondary accents, recurring badges, charts accent B |
+| `AppColors.secondary` | `#0A84FF`; indigo `#5856D6` under the blue accent (so gradients don't go flat) | same | Secondary accents, recurring badges, charts accent B |
 | `AppColors.textPrimary` | `#FFFFFF` | `#000000` | Headlines, body, icons |
 | `AppColors.textSecondary` | `#EBEBF5` @ 60% | `#3C3C43` @ 60% | Captions, labels, helper text, inactive icons |
 | `AppColors.textTertiary` | `#EBEBF5` @ 30% | `#3C3C43` @ 35% | Faint metadata (e.g. version string) |
 | `AppColors.border` | `#545458` @ 55% | `#3C3C43` @ 12% | Card borders, dividers, input outlines |
 | `AppColors.divider` | same as border | same as border | Alias for border (semantic clarity) |
-| `AppColors.danger` | `#FF3B30` | same | Destructive actions, error text, delete swipe |
+| `AppColors.danger` | `#FF3B30` | `#D70015` | Destructive actions, error text, expense amounts, delete swipe |
 | `AppColors.warning` | `#FF9500` | same | Cautionary state, warning snackbars |
-| `AppColors.success` | `#34C759` | same | Confirmation, success snackbars |
-| `AppColors.onPrimary` | `#FFFFFF` | same | Foreground on `primary`-filled surfaces — white reads cleanly across all 3 accents |
-| `AppColors.onAccent` | `#003328` | same | Dark foreground for small icon-scale marks on `primary` fills/gradients (sticky CTA text, avatar camera badge) — reads better dark than white at that scale |
+| `AppColors.success` | `#34C759` | `#248A3D` | Confirmation, income amounts, success snackbars |
+| `AppColors.onPrimary` | accent-driven (`AppAccent.onColor`) — `#1C1C1E` on teal, `#FFFFFF` on blue/purple | same | Foreground on `primary` fills and `primary`→`secondary` gradients (buttons, hero card, sticky CTA, Add button). White is only ~2.2:1 on teal |
+| `AppColors.onFill` | `#FFFFFF` | same | Foreground on `danger`/`secondary` fills (`onError`, `onSecondary`) |
 
 ### Container tints
 
@@ -112,7 +112,7 @@ Pre-mixed accent-tinted fills, derived via `Color.alphaBlend` so they follow the
 - **Text on surfaces:** always `textPrimary` for content, `textSecondary` for supporting text. Avoid raw white/grey.
 - **Borders preferred over shadows.** Most cards combine `border` + a single subtle shadow; never use both heavy borders and dramatic elevation.
 - **Semantic colors are reserved.** `danger`/`warning`/`success` must map to real meaning — don't reuse them for decoration.
-- **Never hardcode a hex value that already has a token** — including `onAccent`'s `#003328`. If you need dark-on-accent contrast, reach for `AppColors.onAccent` rather than repeating the literal.
+- **Never hardcode a hex value that already has a token.** Content on an accent fill uses `AppColors.onPrimary` (or `accent.onColor` for a specific swatch), never `Colors.white`.
 
 ---
 

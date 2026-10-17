@@ -105,7 +105,7 @@ class AuthSubmitButton extends StatelessWidget {
           ? FilledButton.styleFrom(disabledBackgroundColor: AppColors.primary)
           : null,
       child: isLoading
-          ? const AppLoadingIndicator(
+          ? AppLoadingIndicator(
               style: AppLoadingStyle.inline,
               color: AppColors.onPrimary,
             )

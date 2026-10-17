@@ -892,9 +892,9 @@ class _AddExpenseFab extends StatelessWidget {
               ],
             ),
             alignment: Alignment.center,
-            child: const Icon(
+            child: Icon(
               Icons.add_rounded,
-              color: Colors.white,
+              color: AppColors.onPrimary,
               size: 30,
             ),
           ),

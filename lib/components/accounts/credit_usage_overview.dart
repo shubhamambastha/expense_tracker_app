@@ -77,7 +77,7 @@ class CreditUsageOverview extends StatelessWidget {
                     tone: AppColors.warning,
                   ),
                 if (util.tone == AccountWarningTone.danger)
-                  const _WarningChip(
+                  _WarningChip(
                     label: 'High utilization',
                     tone: AppColors.danger,
                   ),

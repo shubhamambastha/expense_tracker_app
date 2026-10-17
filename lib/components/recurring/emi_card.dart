@@ -257,7 +257,7 @@ class _EmiOverflowMenu extends StatelessWidget {
             label: isPaused ? 'Resume reminders' : 'Pause reminders',
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: RecurringQuickAction.close,
           // "Completed" is the right verb for EMIs — loans don't get
           // cancelled the way subscriptions do.

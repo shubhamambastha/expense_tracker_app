@@ -181,7 +181,7 @@ class _SwipeableTile extends StatelessWidget {
         'upcoming-${item.transaction.id ?? item.transaction.counterpartyName}-'
         '${item.dueDate.toIso8601String()}',
       ),
-      background: const _SwipeBackground(
+      background: _SwipeBackground(
         color: AppColors.success,
         alignment: Alignment.centerLeft,
         icon: Icons.check_circle_rounded,

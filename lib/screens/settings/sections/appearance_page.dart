@@ -125,7 +125,7 @@ class _AccentSwatch extends StatelessWidget {
                 : null,
           ),
           child: selected
-              ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+              ? Icon(Icons.check_rounded, color: accent.onColor, size: 18)
               : null,
         ),
       ),

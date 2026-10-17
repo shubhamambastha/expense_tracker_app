@@ -59,7 +59,7 @@ class _IncomeExpenseBarChartState extends State<IncomeExpenseBarChart> {
           height: 24,
           child: selectedBucket == null
               ? Row(
-                  children: const [
+                  children: [
                     _LegendDot(color: AppColors.success, label: 'Income'),
                     SizedBox(width: AppSpacing.md),
                     _LegendDot(
