@@ -14,6 +14,7 @@ Full docs live in `docs/` — read them before making non-trivial changes:
 | [docs/BACKLOG.md](./docs/BACKLOG.md) | Known gaps, half-finished features, structural debt |
 | [docs/RUNBOOK.md](./docs/RUNBOOK.md) | Incidents: where the logs are, symptom → cause → fix, rollback |
 | [docs/DEPLOY_CHECKLIST.md](./docs/DEPLOY_CHECKLIST.md) | Production-readiness checklist, incl. the Supabase Auth cutover order (B4) |
+| [docs/PRIVACY_POLICY.md](./docs/PRIVACY_POLICY.md) + [APP_PRIVACY_LABELS.md](./docs/APP_PRIVACY_LABELS.md) + [TERMS.md](./docs/TERMS.md) | Public privacy policy, App Store / Play labels, and terms — update when adding an SDK, permission, data field, or paid feature |
 | [TODOS.md](./TODOS.md) | Review follow-ups with priority/effort |
 | [docs/designs/](./docs/designs/) | Point-in-time design docs (guest mode, onboarding, insight digest) |
 | [docs/supabase_setup.md](./docs/supabase_setup.md) | Supabase project, auth providers (email + password, Google, Apple), RLS, CI secrets |
