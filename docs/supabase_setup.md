@@ -38,6 +38,18 @@ Apple shares the user's name only on the first authorization; `AuthService.signI
 
 `DELETE /v1/account` removes the user's rows (as the user, through RLS) and then the auth user, using the **service role** key (`SUPABASE_SERVICE_ROLE_KEY` on the backend host only). Apply `sql/20261012_user_settings_delete_policy.sql` first: without a DELETE policy the settings row can't be removed, and the route refuses to delete the login.
 
+### 6. Export Data Edge Function
+
+Settings → Export Data goes app → `POST /v1/data/export` → `supabase/functions/export-data`, which emails the user's CSVs through [Resend](https://resend.com). One-time setup (Supabase CLI):
+
+```bash
+supabase link --project-ref YOUR_PROJECT_ID
+supabase secrets set RESEND_API_KEY=re_... EXPORT_FROM_EMAIL="Expense Tracker <export@yourdomain.com>"
+supabase functions deploy export-data --no-verify-jwt
+```
+
+`EXPORT_FROM_EMAIL` must be on a domain verified in Resend. `--no-verify-jwt` because the project uses asymmetric JWT keys; the function verifies the token itself (`auth.getUser`). Until it is deployed with both secrets, Export Data shows an error (the API answers 502). Errors are in Supabase → Edge Functions → export-data → Logs. CSV helper test: `node --test supabase/functions/export-data/csv.test.ts`.
+
 ### Cutover order
 
 See **B4** in [DEPLOY_CHECKLIST.md](./DEPLOY_CHECKLIST.md): set up the dashboard, apply the policy migration and set `SUPABASE_SERVICE_ROLE_KEY` on Railway **before** merging, because Railway auto-deploys `main`.

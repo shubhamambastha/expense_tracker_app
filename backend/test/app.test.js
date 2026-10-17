@@ -73,6 +73,20 @@ test('health is public', async () => {
   assert.equal(res.status, 200);
 });
 
+test('CORS preflight passes without a token, and responses carry the allow-origin header', async () => {
+  const pre = await realFetch(`${base}/v1/transactions`, {
+    method: 'OPTIONS',
+    headers: { Origin: 'http://localhost:5000', 'Access-Control-Request-Method': 'PATCH', 'Access-Control-Request-Headers': 'authorization,content-type' },
+  });
+  assert.equal(pre.status, 204);
+  assert.equal(pre.headers.get('access-control-allow-origin'), '*');
+  assert.match(pre.headers.get('access-control-allow-methods'), /PATCH/);
+  assert.match(pre.headers.get('access-control-allow-headers'), /Authorization/);
+  // Not an authed /v1 call: that would warm jose's JWKS cache and defeat the JWKS-outage test below.
+  const res = await realFetch(`${base}/health`, { headers: { Origin: 'http://localhost:5000' } });
+  assert.equal(res.headers.get('access-control-allow-origin'), '*');
+});
+
 test('/health/db proves Supabase answers, and 500s when it does not', async (t) => {
   t.mock.method(console, 'error', () => {});
   const ok = await fetch(`${base}/health/db`);
@@ -98,6 +112,7 @@ test('every data route rejects requests without a valid token', async () => {
     ['POST', '/v1/accounts'],
     ['PATCH', '/v1/settings'],
     ['DELETE', '/v1/data'],
+    ['POST', '/v1/data/export'],
     ['DELETE', '/v1/account'],
   ]) {
     const missing = await fetch(base + path, { method });
@@ -345,6 +360,23 @@ test('DELETE /data wipes every user table in FK order and stops on the first fai
   const failed = await call('DELETE', '/v1/data');
   assert.equal(failed.status, 409);
   assert.deepEqual(calls.map((c) => c.table), ['recurring_events', 'transactions']);
+});
+
+test('POST /data/export hands the caller\'s own token to the export-data function', async (t) => {
+  const fn = '/functions/v1/export-data';
+  respond = (c) => (c.table === fn ? Response.json({ email: 'me@example.com' }, { status: 202 }) : undefined);
+  const res = await call('POST', '/v1/data/export');
+  assert.equal(res.status, 202);
+  assert.deepEqual(await res.json(), { email: 'me@example.com' });
+  assert.deepEqual(calls.map((c) => [c.method, c.table, c.auth]), [['POST', fn, `Bearer ${token}`]]);
+
+  // The function's 400 (no email on the login) reaches the user; anything else is our 502.
+  respond = (c) => (c.table === fn ? Response.json({ error: 'Your account has no email address.' }, { status: 400 }) : undefined);
+  const noEmail = await call('POST', '/v1/data/export');
+  assert.deepEqual([noEmail.status, (await noEmail.json()).error], [400, 'Your account has no email address.']);
+  t.mock.method(console, 'error', () => {});
+  respond = (c) => (c.table === fn ? new Response('boom', { status: 503 }) : undefined);
+  assert.equal((await call('POST', '/v1/data/export')).status, 502);
 });
 
 const noSettingsLeft = (c) => (c.method === 'GET' ? Response.json([]) : undefined);

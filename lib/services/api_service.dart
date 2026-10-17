@@ -458,6 +458,14 @@ class ApiService {
     await _send('DELETE', '/data');
   }
 
+  /// Asks the API to email the user's transactions, accounts and budgets as
+  /// CSV attachments to the address on their login; returns that address.
+  /// Signed-in users only — guests export through the share sheet instead.
+  static Future<String> emailDataExport() async {
+    final data = await _send('POST', '/data/export');
+    return (data as Map<String, dynamic>)['email'] as String;
+  }
+
   /// Deletes every row *and* the login itself. Signed-in users only (the
   /// settings tile is hidden for guests). Callers sign out afterwards.
   static Future<void> deleteUserAccount() => _send('DELETE', '/account');

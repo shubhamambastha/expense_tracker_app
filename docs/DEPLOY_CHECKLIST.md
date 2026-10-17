@@ -43,7 +43,7 @@ Legend: `[x]` pass · `[ ]` open · `n/a` doesn't apply to this stack
 - [x] **Sensitive data encrypted.** Supabase data is encrypted at rest and tokens sit in the OS keystores. Guest-mode data is plain SharedPreferences/UserDefaults, protected only by the OS sandbox and device encryption. That's accepted, since it never leaves the device.
 - [ ] **Backups encrypted.** Supabase manages the backups and encrypts them at rest. → Check your plan's backup retention / PITR in the dashboard.
 - [x] **Data transmission encrypted.** App→API, API→Supabase and API→Auth0 JWKS all use HTTPS.
-- [ ] **PII handling compliant.** Export (CSV), Reset and Delete Account are all self-service. The privacy policy is still a stub, see **B3**.
+- [ ] **PII handling compliant.** Export (CSV, emailed by the `export-data` Edge Function; deploy it and set its secrets, see [supabase_setup.md](./supabase_setup.md#6-export-data-edge-function)), Reset and Delete Account are all self-service. The privacy policy is still a stub, see **B3**.
 
 ### API security
 

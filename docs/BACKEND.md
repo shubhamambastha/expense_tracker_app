@@ -60,6 +60,7 @@ All under `/v1`, all require `Authorization: Bearer <token>`. Bodies are the sam
 | `GET /settings` | `fetchUserSettings` (also read for `onboardingCompletedAt`) | row or `null` |
 | `PATCH /settings` | `upsertUserSettings`, `markOnboardingComplete` | upserts only the columns sent |
 | `DELETE /data` | `resetUserData` | "Reset My Account", keeps settings |
+| `POST /data/export` | `emailDataExport` | "Export Data": forwards the caller's token to the `export-data` Supabase Edge Function, which emails transactions, accounts (incl. archived) and budgets as CSV attachments to the login's email via Resend. 202 `{ email }`; the function's 400 (no email) passes through; any other function failure is a 502 |
 | `DELETE /account` | `deleteUserAccount` | "Delete Account": every row incl. settings, then the Supabase auth user (service-role key). The user goes last, so a failure part-way can be retried |
 | `GET /health` | — | unauthenticated liveness check for the host (Node is up) |
 | `GET /health/db` | — | unauthenticated, for an external uptime monitor: 200 only if Supabase answers too (anonymous query, RLS returns no rows, no retries) |
