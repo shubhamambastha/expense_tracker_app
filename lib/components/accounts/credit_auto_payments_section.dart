@@ -51,7 +51,7 @@ class CreditAutoPaymentsSection extends StatelessWidget {
                         color: AppColors.secondary.withAlpha(32),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.subscriptions_rounded,
                         size: 18,
                         color: AppColors.secondary,

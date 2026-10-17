@@ -38,7 +38,7 @@ class ErrorApp extends StatelessWidget {
                         color: AppColors.dangerSoft,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.error_outline_rounded,
                         size: 36,
                         color: AppColors.danger,

@@ -15,19 +15,19 @@ class SnackbarHelper {
   static Timer? _activeUndoTimer;
   static AnimationController? _activeUndoController;
 
-  static const _errorStyle = (
+  static ({Color accent, IconData icon}) get _errorStyle => (
     accent: AppColors.danger,
     icon: Icons.error_outline_rounded,
   );
-  static const _successStyle = (
+  static ({Color accent, IconData icon}) get _successStyle => (
     accent: AppColors.success,
     icon: Icons.check_circle_outline_rounded,
   );
-  static const _warningStyle = (
+  static ({Color accent, IconData icon}) get _warningStyle => (
     accent: AppColors.warning,
     icon: Icons.warning_amber_rounded,
   );
-  static const _messageStyle = (
+  static ({Color accent, IconData icon}) get _messageStyle => (
     accent: AppColors.secondary,
     icon: Icons.info_outline_rounded,
   );
@@ -58,8 +58,9 @@ class SnackbarHelper {
     required String undoLabel,
     required VoidCallback onUndo,
     Duration duration = const Duration(seconds: 4),
-    Color accent = AppColors.success,
+    Color? accent,
   }) {
+    final tone = accent ?? AppColors.success;
     _dismissActiveUndo();
 
     final overlayState = Overlay.of(context);
@@ -119,7 +120,7 @@ class SnackbarHelper {
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSecondary,
                     borderRadius: AppRadii.chipRadius,
-                    border: Border.all(color: accent.withAlpha(80), width: 1),
+                    border: Border.all(color: tone.withAlpha(80), width: 1),
                     boxShadow: AppShadows.elevated,
                   ),
                   child: Row(
@@ -128,12 +129,12 @@ class SnackbarHelper {
                         width: 30,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: accent.withAlpha(40),
+                          color: tone.withAlpha(40),
                           borderRadius: BorderRadius.circular(9),
                         ),
                         child: Icon(
                           Icons.check_circle_outline_rounded,
-                          color: accent,
+                          color: tone,
                           size: 18,
                         ),
                       ),

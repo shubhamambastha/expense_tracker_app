@@ -11,17 +11,6 @@ import '../../services/currency_settings.dart';
 import '../../services/category_catalog.dart';
 import 'dashboard/dashboard_section_header.dart';
 
-/// Shared palette for category charts (premium dark accents).
-const kAnalyticsChartColors = <Color>[
-  Color(0xFF00C896),
-  Color(0xFF00B8D9),
-  Color(0xFFFFB547),
-  Color(0xFFFF5C7A),
-  Color(0xFF8E5AF7),
-  Color(0xFF4F8EF7),
-  Color(0xFFF88D42),
-];
-
 Color analyticsColorForCategory(String category) =>
     CategoryCatalog.instance.colorForName(category);
 

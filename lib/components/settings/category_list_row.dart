@@ -50,7 +50,7 @@ class CategoryListRow extends StatelessWidget {
             ? IconButton(
                 tooltip: 'Delete',
                 onPressed: onDelete,
-                icon: const Icon(
+                icon: Icon(
                   Icons.delete_outline_rounded,
                   color: AppColors.danger,
                 ),

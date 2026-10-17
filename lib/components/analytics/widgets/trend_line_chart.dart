@@ -65,13 +65,13 @@ class _TrendLineChartState extends State<TrendLineChart> {
               ? Row(
                   children: [
                     if (widget.showIncome) ...[
-                      const _LegendDot(
+                      _LegendDot(
                         color: AppColors.success,
                         label: 'Income',
                       ),
                       const SizedBox(width: AppSpacing.md),
                     ],
-                    const _LegendDot(
+                    _LegendDot(
                       color: AppColors.danger,
                       label: 'Expense',
                     ),

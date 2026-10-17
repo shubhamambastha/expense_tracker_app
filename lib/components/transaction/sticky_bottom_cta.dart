@@ -110,20 +110,20 @@ class _PrimarySaveButton extends StatelessWidget {
           ),
           child: Center(
             child: isBusy
-                ? const SizedBox(
+                ? SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.onAccent,
+                        AppColors.onPrimary,
                       ),
                     ),
                   )
                 : Text(
                     label,
                     style: AppTextStyles.button.copyWith(
-                      color: AppColors.onAccent,
+                      color: AppColors.onPrimary,
                       fontWeight: FontWeight.w800,
                     ),
                   ),

@@ -139,10 +139,10 @@ class _AvatarButton extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppColors.surface, width: 2),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.camera_alt_rounded,
                   size: 14,
-                  color: AppColors.onAccent,
+                  color: AppColors.onPrimary,
                 ),
               ),
             ),

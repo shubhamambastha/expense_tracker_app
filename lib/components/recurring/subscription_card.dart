@@ -189,7 +189,7 @@ class SubscriptionCard extends StatelessWidget {
                           : AppColors.textSecondary,
                     )
                   else if (item.isAutoDeduct)
-                    const _StatusChip(
+                    _StatusChip(
                       label: 'Auto Pay',
                       color: AppColors.success,
                     ),
@@ -199,7 +199,7 @@ class SubscriptionCard extends StatelessWidget {
                       color: AppColors.textSecondary,
                     )
                   else if (_isOverdue)
-                    const _StatusChip(
+                    _StatusChip(
                       label: 'Overdue',
                       color: AppColors.danger,
                     ),

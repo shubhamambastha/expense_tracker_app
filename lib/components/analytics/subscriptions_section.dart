@@ -65,7 +65,7 @@ class SubscriptionsSection extends StatelessWidget {
                     color: AppColors.secondary.withAlpha(24),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.subscriptions_rounded,
                     color: AppColors.secondary,
                     size: 20,

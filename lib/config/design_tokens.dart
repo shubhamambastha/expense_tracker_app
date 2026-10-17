@@ -25,6 +25,12 @@ extension AppAccentStyle on AppAccent {
         return const Color(0xFFAF52DE);
     }
   }
+
+  /// Foreground for text/icons drawn on this accent. White is only ~2.2:1
+  /// on teal, so teal gets a dark neutral; blue and purple keep white.
+  Color get onColor => this == AppAccent.teal
+      ? const Color(0xFF1C1C1E)
+      : const Color(0xFFFFFFFF);
 }
 
 /// Centralised iOS-native design tokens.
@@ -72,7 +78,12 @@ class AppColors {
 
   // Accents
   static Color get primary => _accent.color;
-  static const secondary = Color(0xFF0A84FF);
+
+  /// Blue, except under the blue accent where it shifts to iOS indigo so
+  /// the primary→secondary gradients don't collapse into one flat color.
+  static Color get secondary => _accent == AppAccent.blue
+      ? const Color(0xFF5856D6)
+      : const Color(0xFF0A84FF);
 
   // Text
   static Color get textPrimary =>
@@ -87,21 +98,22 @@ class AppColors {
       _isDark ? const Color(0x8C545458) : const Color(0x1F3C3C43);
   static Color get divider => border;
 
-  // Semantic (true iOS system colors — constant across brightness/accent)
-  static const danger = Color(0xFFFF3B30);
+  // Semantic (iOS system colors; light mode uses Apple's accessible
+  // variants because the stock ones are ~2.2:1 / ~3.5:1 on white and
+  // these double as income/expense text colors)
+  static Color get danger =>
+      _isDark ? const Color(0xFFFF3B30) : const Color(0xFFD70015);
   static const warning = Color(0xFFFF9500);
-  static const success = Color(0xFF34C759);
+  static Color get success =>
+      _isDark ? const Color(0xFF34C759) : const Color(0xFF248A3D);
 
-  /// Foreground for content drawn on top of [primary]-filled surfaces.
-  /// White reads cleanly across all three accent hues, so this doesn't
-  /// need to vary like the old per-accent dark literals did.
-  static const onPrimary = Color(0xFFFFFFFF);
+  /// White foreground for saturated fills that stay dark enough for it
+  /// ([danger], [secondary]).
+  static const onFill = Color(0xFFFFFFFF);
 
-  /// Dark foreground for content drawn on flat [primary] fills or the
-  /// primary→secondary gradient (e.g. the sticky save CTA, the avatar
-  /// camera badge) — kept distinct from [onPrimary] because these small,
-  /// icon-scale accents read better with a dark mark than white.
-  static const onAccent = Color(0xFF003328);
+  /// Foreground for text/icons on [primary] fills and the primary→secondary
+  /// gradient (see [AppAccentStyle.onColor]).
+  static Color get onPrimary => _accent.onColor;
 
   // Container tints (subtle accent-tinted fills, derived so they follow
   // the active accent/brightness instead of being hand-picked hex values)
