@@ -57,9 +57,10 @@ class SplashScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                Text(
-                  'Jebbo',
-                  style: AppTextStyles.headingLarge,
+                Image.asset(
+                  'assets/branding/jebbo_wordmark.png',
+                  height: 40,
+                  semanticLabel: 'Jebbo',
                 )
                     .animate()
                     .fadeIn(
@@ -243,33 +244,11 @@ class _LogoMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 76,
-      height: 76,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary.withAlpha(64),
-            AppColors.secondary.withAlpha(36),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.primary.withAlpha(64)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withAlpha(40),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Icon(
-        Icons.account_balance_wallet_rounded,
-        color: AppColors.primary,
-        size: 36,
-      ),
+    // Decorative: the wordmark below carries the "Jebbo" label.
+    return Image.asset(
+      'assets/branding/jebbo_mark.png',
+      height: 88,
+      excludeFromSemantics: true,
     );
   }
 }
